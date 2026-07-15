@@ -1,0 +1,11 @@
+{
+  "traceability": {
+    "enabled": true,
+    "reason": ""
+  },
+  "observer": {
+    "enabled": false,
+    "interval_minutes": 10
+  },
+  "tracker": "trello"
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-13T12:00:00Z",
+  "recipe": "netapp-gsd-recipe",
+  "capabilities": [
+    {
+      "id": "install-core",
+      "task_id": "TASK-010",
+      "kind": "installer",
+      "description": "Umbrella fallback installer.",
+      "invoke_name": null,
+      "staged_path": null,
+      "installer": ".gsd-recipe/scripts/install.sh",
+      "composed_by_install_sh": true,
+      "ledger_component": "install-core",
+      "staged": true,
+      "ledger_tracked": true,
+      "version": "1.0.0"
+    },
+    {
+      "id": "tracker-sync",
+      "task_id": "TASK-014",
+      "kind": "cursor-skill",
+      "description": "Tracker-agnostic front door for GSD lifecycle sync.",
+      "invoke_name": "tracker-sync",
+      "staged_path": ".cursor/skills/tracker-sync/SKILL.md",
+      "installer": ".gsd-recipe/scripts/install-tracker-sync.sh",
+      "composed_by_install_sh": true,
+      "ledger_component": "tracker-sync",
+      "staged": true,
+      "ledger_tracked": true,
+      "version": "1.0.0"
+    }
+  ]
+}

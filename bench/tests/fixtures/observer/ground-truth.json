@@ -1,0 +1,41 @@
+{
+  "_comment": "Answer key for the FOTW observer feasibility spike. Never shown to the classifying tick. Line indices are 0-based, matching session-transcript.jsonl line numbers.",
+  "labels": {
+    "0": "signal", "1": "signal", "2": "noise_irrelevant", "3": "noise_irrelevant",
+    "4": "signal", "5": "signal", "6": "noise_hedge", "7": "signal",
+    "8": "signal", "9": "signal", "10": "noise_irrelevant", "11": "noise_irrelevant",
+    "12": "signal", "13": "signal", "14": "noise_hedge", "15": "noise_hedge",
+    "16": "signal", "17": "signal", "18": "noise_irrelevant", "19": "noise_irrelevant",
+    "20": "signal", "21": "signal", "22": "noise_hedge", "23": "signal",
+    "24": "signal", "25": "signal", "26": "noise_irrelevant", "27": "noise_irrelevant",
+    "28": "signal", "29": "signal", "30": "noise_hedge", "31": "signal"
+  },
+  "label_counts": {
+    "signal": 19,
+    "noise_irrelevant": 8,
+    "noise_hedge": 5
+  },
+  "contradictions": [
+    {
+      "id": "contradiction_within_session",
+      "type": "within_session",
+      "pair": [1, 23],
+      "description": "Line 1 sets max retries = 5 ('capped at 5 retries maximum'). Line 23 reverses this to max retries = 3 ('change max retries from 5 down to 3'). Both entries should end up tagged status=contradictory, needs_verification=true, and the reversal (line 23) should be resurfaced as the live value in a later tick/rollup touching retry count."
+    },
+    {
+      "id": "contradiction_cross_session",
+      "type": "cross_session",
+      "pair": [1, "seeded:.learnings/kb/playbooks/notification-retry-policy.md"],
+      "description": "Pre-seeded prior-knowledge playbook states backoff is linear, fixed 10-second interval, uncapped retries. Line 1 states exponential backoff starting at 2s, capped at 5 retries. These conflict on both backoff shape and cap. The seeded playbook entry and the new tick derived from line 1 should both be tagged status=contradictory, needs_verification=true."
+    }
+  ],
+  "must_remember_facts": [
+    {"fact": "Queue state table is named notif_queue", "source_line": 5},
+    {"fact": "attempts column tracks retry count, starting at 0", "source_line": 7},
+    {"fact": "Messaging Platform team owns notif_queue and the retry worker", "source_line": 9},
+    {"fact": "Deadline for retry policy + schema is March 15", "source_line": 13},
+    {"fact": "Final max retries value is 3 (supersedes the earlier value of 5 from line 1)", "source_line": 23}
+  ],
+  "prd_complete_line": 29,
+  "prd_complete_description": "Assistant declares all three mini-requirements.md items satisfied (retry policy defined, table schema finalized, tests written). Classifying tick should detect this and treat it as a session-end trigger candidate (trigger type: prd_complete)."
+}

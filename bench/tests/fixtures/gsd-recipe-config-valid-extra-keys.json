@@ -1,0 +1,14 @@
+{
+  "traceability": {
+    "enabled": true,
+    "reason": ""
+  },
+  "observer": {
+    "enabled": true,
+    "interval_minutes": 5
+  },
+  "tracker": "github",
+  "some_future_key": {
+    "nested": "value not yet defined by any normative field table"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "traceability": {
+    "enabled": true,
+    "reason": ""
+  },
+  "observer": {
+    "enabled": true,
+    "interval_minutes": "ten"
+  },
+  "tracker": "jira"
+}

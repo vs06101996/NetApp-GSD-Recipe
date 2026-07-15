@@ -1,0 +1,2 @@
+{"stamp_id": "696ad510-3b0f-4a59-95a8-566ee58b1737", "step": "prd", "status": "prd-approved", "at": "2026-07-07T14:04:04.667083+00:00", "arm": "recipe", "actor": "agent", "run_id": "gsd-jira-sync-live-test-01", "tracker": {"system": "jira", "issue_key": "KAN-39"}}
+{"stamp_id": "36d606ae-dd9b-4a44-8857-ee01217eaf56", "step": "prd-to-stories", "status": "engineering-ready", "at": "2026-07-07T14:04:04.748132+00:00", "arm": "recipe", "actor": "agent", "run_id": "gsd-jira-sync-live-test-01", "tracker": {"system": "jira", "issue_key": "KAN-40"}}

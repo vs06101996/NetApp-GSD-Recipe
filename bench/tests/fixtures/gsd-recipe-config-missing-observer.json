@@ -1,0 +1,7 @@
+{
+  "traceability": {
+    "enabled": true,
+    "reason": ""
+  },
+  "tracker": "jira"
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gsd-benchmark.local/gsd-recipe/config.schema.json",
+  "title": ".gsd-recipe/config.json",
+  "description": "Recipe runtime configuration (TASK-011). Validates the actual shape .gsd-recipe/scripts/install.sh and bench/lib/tracker-sync-config.sh write today (confirmed against a real scratch-repo install run — see bench/report/capability-config-schema-integration-report.md). Normative field table also lives in docs/netapp-recipe/contracts/DATA-CONTRACTS.md#config-json; this file is that table's machine-readable, strictly-validating counterpart. additionalProperties is deliberately true at every level: install.sh's own config_json_merge()/tracker-sync-config.sh comments document config.json as 'may hold other keys' that other, not-yet-written components may add later, so unknown keys must never fail validation.",
+  "type": "object",
+  "properties": {
+    "tracker": {
+      "type": "string",
+      "description": "Which tracker tracker-sync dispatches on. Written by bench/lib/tracker-sync-config.sh (via install-tracker-sync.sh) — defaults to 'jira' the first time that installer runs, never overwrites an existing value. Optional here (not in DATA-CONTRACTS.md's required table) because get-tracker itself treats an absent key as 'jira' rather than erroring — a config.json that predates the tracker-sync installer, or one hand-authored before it runs, is still valid.",
+      "enum": ["jira", "github"]
+    },
+    "traceability": {
+      "type": "object",
+      "description": "Master switch for sync/reconcile behavior. Written unconditionally by install.sh's config_json_merge() on every fresh install.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "reason": {
+          "type": "string",
+          "description": "Operator reason for disabling traceability. Only enforced as required+non-empty when enabled is false (see the if/then below) — matches DATA-CONTRACTS.md's 'required when disabled' rule and install.sh --verify's own assert."
+        }
+      },
+      "required": ["enabled"],
+      "if": {
+        "properties": { "enabled": { "const": false } },
+        "required": ["enabled"]
+      },
+      "then": {
+        "required": ["reason"],
+        "properties": {
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      },
+      "additionalProperties": true
+    },
+    "observer": {
+      "type": "object",
+      "description": "Enable/disable the p2 FOTW observer *recommendation* recorded in config.json. Distinct from .gsd-recipe/observer-config.json, which install-observer.sh writes separately and which actually drives the observer loop. Written unconditionally by install.sh's config_json_merge() on every fresh install.",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "interval_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Loop interval recommendation. Only enforced as required when enabled is true (see the if/then below) — matches DATA-CONTRACTS.md's 'required when observer enabled' rule and install.sh --verify's own assert."
+        }
+      },
+      "required": ["enabled"],
+      "if": {
+        "properties": { "enabled": { "const": true } },
+        "required": ["enabled"]
+      },
+      "then": {
+        "required": ["interval_minutes"]
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": ["traceability", "observer"],
+  "additionalProperties": true
+}

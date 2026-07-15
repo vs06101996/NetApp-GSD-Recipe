@@ -1,0 +1,34 @@
+{
+  "$schema": "https://gsd-benchmark.local/schemas/github-events.json",
+  "description": "GSD recipe: PR milestone comments. Template: github-pr-comments/_comment.template.md",
+  "events": [
+    {
+      "id": "execute_wave",
+      "gsd_trigger": "gsd-execute-phase wave completed",
+      "template": "_comment.template.md",
+      "target": "github",
+      "cadence": "wave"
+    },
+    {
+      "id": "execute_complete",
+      "gsd_trigger": "gsd-execute-phase N completed",
+      "template": "_comment.template.md",
+      "target": "github",
+      "cadence": "phase_boundary"
+    },
+    {
+      "id": "review_complete",
+      "gsd_trigger": "gsd-code-review completion",
+      "template": "_comment.template.md",
+      "target": "github",
+      "cadence": "pre_review"
+    },
+    {
+      "id": "phase_complete",
+      "gsd_trigger": "explicit phase close",
+      "template": "_comment.template.md",
+      "target": "github",
+      "cadence": "phase_boundary"
+    }
+  ]
+}

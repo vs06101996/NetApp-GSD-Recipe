@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-13T12:00:00Z",
+  "recipe": "netapp-gsd-recipe",
+  "capabilities": [
+    {
+      "task_id": "TASK-014",
+      "kind": "cursor-skill",
+      "staged": true,
+      "version": "1.0.0"
+    }
+  ]
+}

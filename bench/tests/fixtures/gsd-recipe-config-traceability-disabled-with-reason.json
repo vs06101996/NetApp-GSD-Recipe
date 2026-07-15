@@ -1,0 +1,11 @@
+{
+  "traceability": {
+    "enabled": false,
+    "reason": "pilot arm is baseline; traceability intentionally off"
+  },
+  "observer": {
+    "enabled": false,
+    "interval_minutes": 10
+  },
+  "tracker": "jira"
+}

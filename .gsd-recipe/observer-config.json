@@ -1,0 +1,28 @@
+{
+  "_comment": "FOTW observer feasibility spike config. Thresholds deliberately small so rollup and end-triggers actually fire during a short accelerated run. A real TASK-013 would scale tick_interval_seconds to 5-10min and rollup_threshold_signal_lines to repo size/complexity.",
+  "enabled": true,
+  "tick_interval_seconds": 300,
+  "rollup_threshold_signal_lines": 6,
+  "inactivity_consecutive_empty_ticks_threshold": 3,
+  "end_trigger_finalize_margin_ticks": 2,
+  "paths": {
+    "lockfile": ".learnings/observer/.tick.lock",
+    "offset_file": ".learnings/observer/.offset",
+    "live_transcript_file": ".learnings/observer/live-transcript.jsonl",
+    "ticks_file": ".learnings/observer/ticks.jsonl",
+    "noise_log_file": ".learnings/observer/noise-log.jsonl",
+    "stop_sentinel_file": ".learnings/observer/.stop",
+    "kb_sessions_dir": ".learnings/kb/sessions",
+    "kb_playbooks_dir": ".learnings/kb/playbooks"
+  },
+  "classification_rubric": {
+    "signal": "on-topic AND conclusive: a stated decision, fact, requirement, or confirmed answer about the PRD/recipe/codebase under discussion",
+    "noise_irrelevant": "off-topic content unrelated to the PRD/recipe/codebase being discussed",
+    "noise_hedge": "on-topic but non-conclusive: hedges, assumptions, placeholders (e.g. 'maybe', 'TBD', 'not sure', 'let's assume for now')"
+  },
+  "session_end_triggers": {
+    "explicit_stop": "stop_sentinel_file exists at top of tick -> finalize immediately",
+    "inactivity": "inactivity_consecutive_empty_ticks_threshold consecutive ticks with zero new lines -> finalize as idle",
+    "prd_complete": "tick's own judgment detects a turn declaring all tracked requirements satisfied -> finalize immediately, do not wait for inactivity"
+  }
+}

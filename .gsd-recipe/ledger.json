@@ -1,0 +1,6 @@
+{
+  "recipe-prd-intake": [
+    ".templates/PRD.template.md",
+    ".cursor/skills/recipe-prd-intake/SKILL.md"
+  ]
+}

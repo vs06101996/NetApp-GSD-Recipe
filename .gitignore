@@ -7,3 +7,7 @@ runs/**/.planning/
 tasks/uber-eats/grader/go.mod.bak
 # Reference oracles are local clones (provisioned via register.sh --git); never track them as embedded repos/submodules
 tasks/*/reference/
+
+# FOTW observer runtime data (lld/INSTALL-LLD.md .gitignore additions) — session-local, not committed
+.learnings/
+.gsd-recipe/install-report.json

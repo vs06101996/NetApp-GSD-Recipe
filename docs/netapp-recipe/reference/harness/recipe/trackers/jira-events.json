@@ -1,0 +1,90 @@
+{
+  "$schema": "https://gsd-benchmark.local/schemas/jira-events.json",
+  "description": "GSD recipe: lifecycle events → Jira comment + optional stamp. Template: jira-comments/_comment.template.md",
+  "events": [
+    {
+      "id": "intake_started",
+      "gsd_trigger": "gsd-new-project or gsd-import",
+      "stamp": { "step": "intake", "status": "started" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "discuss_complete",
+      "gsd_trigger": "gsd-discuss-phase N complete",
+      "stamp": { "step": "prd", "status": "prd-approved" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "plan_complete",
+      "gsd_trigger": "gsd-plan-phase N complete",
+      "stamp": { "step": "prd-to-stories", "status": "engineering-ready" },
+      "jira": { "comment": true, "transition": "optional: In Progress" },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "plan_revised",
+      "gsd_trigger": "plan revision after plan-checker",
+      "stamp": { "step": "prd-to-stories", "status": "review-ready" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "execute_started",
+      "gsd_trigger": "gsd-execute-phase N started",
+      "stamp": { "step": "build", "status": "build-started" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "execute_wave",
+      "gsd_trigger": "execute wave completed (optional)",
+      "stamp": null,
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "execute_complete",
+      "gsd_trigger": "gsd-execute-phase N complete",
+      "stamp": { "step": "build", "status": "build-done" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "verify_complete",
+      "gsd_trigger": "gsd-verify-work N complete",
+      "stamp": null,
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "review_complete",
+      "gsd_trigger": "gsd-code-review N complete",
+      "stamp": { "step": "review", "status": "approved" },
+      "jira": { "comment": true, "transition": "optional: In Review" },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "learning_stored",
+      "gsd_trigger": "gsd-extract-learnings N complete",
+      "stamp": { "step": "prd", "status": "kb-updated" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "settled",
+      "gsd_trigger": "PO accept + CI green",
+      "stamp": { "step": "review", "status": "settled" },
+      "jira": { "comment": true, "transition": "optional: Done" },
+      "template": "_comment.template.md"
+    },
+    {
+      "id": "reopened",
+      "gsd_trigger": "rework requested",
+      "stamp": { "step": "build", "status": "reopened" },
+      "jira": { "comment": true, "transition": null },
+      "template": "_comment.template.md"
+    }
+  ]
+}
