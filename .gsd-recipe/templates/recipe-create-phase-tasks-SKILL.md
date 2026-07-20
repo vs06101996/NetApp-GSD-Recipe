@@ -33,10 +33,18 @@ Examples:
 
 ## C. Tool Usage
 
-1. `Shell`: `bench/runners/create-phase-tasks.sh detect [--dry-run] [--roadmap PATH] [--state PATH]
+`bench/runners/create-phase-tasks.sh` is not duplicated into every target by design — resolve its
+real path once, via `.gsd-recipe/scripts/recipe-paths.sh` (same mechanism
+`recipe-validate-tokens-SKILL.md` § C step 1 documents in full), and reuse that resolved path for
+every step below (1, 2, 8):
+```
+RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/create-phase-tasks.sh)"
+```
+
+1. `Shell`: `<resolved> detect [--dry-run] [--roadmap PATH] [--state PATH]
    [--queue PATH] [--arm recipe] [--run RUN_ID]` — drafts anything newly discovered from
    `ROADMAP.md` into the queue. Run this **exactly once**, up front.
-2. `Shell`: `bench/runners/create-phase-tasks.sh list [--queue PATH] [--state PATH]` — self-heals
+2. `Shell`: `<resolved> list [--queue PATH] [--state PATH]` — self-heals
    anything already linked out-of-band and returns the genuinely-pending `work` array.
 3. If `work` is empty: report "nothing to create" (including any `self_healed` count from step 2)
    and **stop cleanly** — no further steps, no MCP calls.
@@ -47,8 +55,8 @@ Examples:
 7. For each work item, ascending `phase_id` order: `CallMcpTool createJiraIssue`, then link it to
    the epic — either a `parent` field in the same call (Sub-task) or, if unsure which link type to
    use, `GetMcpTools`/`CallMcpTool getIssueLinkTypes` first, then `CallMcpTool createIssueLink`.
-8. `Shell`: `bench/runners/create-phase-tasks.sh mark-done <phase_id> <issue_key> [--state PATH]
-   [--queue PATH]` on success, or `mark-failed <phase_id> --error "<reason>" [--queue PATH]` on
+8. `Shell`: `<resolved> mark-done <phase_id> <issue_key> [--state PATH]
+   [--queue PATH]` on success, or `<resolved> mark-failed <phase_id> --error "<reason>" [--queue PATH]` on
    failure — every single row, no exceptions.
 
 ## D. Do NOT

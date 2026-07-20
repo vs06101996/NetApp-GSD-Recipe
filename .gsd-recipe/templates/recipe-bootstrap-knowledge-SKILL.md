@@ -15,7 +15,14 @@ Examples:
 
 ## B. Prerequisites
 
-- None strictly required. This skill works whether `.knowledge/` already exists or not, and
+- None strictly required for the skeleton or map steps. For `/gsd-graphify build`
+  (step 3), `graphify` must be on PATH. If it is missing, run the recipe's
+  **sudo-free** installer before step 3 — never use `sudo`, never use
+  `uv pip install graphifyy` (fails on PEP-668 Homebrew Python and on machines
+  where `~/.cache` / `~/.local` are not writable):
+  `.gsd-recipe/scripts/install-graphify.sh`
+  (requires `uv` first: `brew install uv` — also sudo-free on most Macs).
+- This skill works whether `.knowledge/` already exists or not, and
   whether `.gsd-recipe/ingest-manifest.yaml` exists or not (see step 4) — both are handled
   idempotently/gracefully, never blocking invocation.
 - Run this once per repo after install, and again "on major change" per
@@ -57,7 +64,8 @@ Examples:
    those two skills' own explanatory sections).
 
 3. **Call native `/gsd-graphify build` directly**, in this same turn, same Option-B reasoning as
-   step 2. No flags to forward — `/gsd-graphify build` takes none here.
+   step 2. No flags to forward — `/gsd-graphify build` takes none here. If `graphify` is not on
+   PATH, run `.gsd-recipe/scripts/install-graphify.sh` first (sudo-free — see Prerequisites).
 
 4. **Check for `.gsd-recipe/ingest-manifest.yaml` before calling `/gsd-ingest-docs`.** This is the
    one step of the three native commands that is conditionally skippable — `/gsd-map-codebase` and

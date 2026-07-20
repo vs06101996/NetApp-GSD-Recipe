@@ -50,15 +50,21 @@ Examples:
      that as `ref`. If it errors (no open PR for the current branch), fall back to
      `git rev-parse --abbrev-ref HEAD` for `ref`.
 
-2. **Run the real, scriptable CI check (do not reimplement it inline).** `Shell`: run
-   `.gsd-recipe/scripts/install-recipe-settle.sh --check-ci <owner/repo> <ref>` (bundled path once
-   staged; if this skill hasn't been installed yet in the current repo, the canonical source is
-   `.gsd-recipe/scripts/install-recipe-settle.sh` in the recipe's own source tree). This mirrors
-   `recipe-validate-tokens`'s own `--check-github` precedent — a real `gh pr checks`/`gh api
-   .../check-runs` probe, never fabricated, reported as exactly one of `CI: PASS` / `CI: FAIL` /
-   `CI: WARN`. Read its output verbatim into your summary in step 6. Never re-derive the check
-   yourself from a raw `gh` call inline — always go through the script so there is exactly one
-   implementation of the check logic.
+2. **Run the real, scriptable CI check (do not reimplement it inline).** `install-recipe-settle.sh`
+   is not duplicated into every target by design — resolve its real path through
+   `.gsd-recipe/scripts/recipe-paths.sh` (same mechanism `recipe-validate-tokens` uses, see its own
+   SKILL.md § C step 1 for the full resolution-order rationale) rather than assuming the naive
+   relative path is staged locally. `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve .gsd-recipe/scripts/install-recipe-settle.sh)"
+   "$RESOLVED" --check-ci <owner/repo> <ref>
+   ```
+   This mirrors `recipe-validate-tokens`'s own `--check-github` precedent — a real `gh pr checks`/
+   `gh api .../check-runs` probe, never fabricated, reported as exactly one of `CI: PASS` /
+   `CI: FAIL` / `CI: WARN`. Read its output verbatim into your summary in step 6. Never re-derive
+   the check yourself from a raw `gh` call inline — always go through the script so there is exactly
+   one implementation of the check logic. If `recipe-paths.sh` itself fails to resolve (stderr will
+   say why), tell the operator plainly and stop — do not fabricate a `CI:` result.
 
 3. **CI gate (hard block on anything but PASS).** Per `FAILURE-MATRIX.md`'s "CI red at settle
    gate" row ("blocks `recipe-settle` ... No `settled` event should be posted"):
@@ -81,14 +87,21 @@ Examples:
    - Negative (n/no) or the operator otherwise declines → stop here. Report "PO declined — not
      settled, no sync performed" in your summary. Do not call `gsd-jira-sync`.
 
-5. **Sync `settled`** (only reached when step 3 was `PASS` and step 4 was affirmative). Resolve
-   the issue key with `bench/lib/parse-state.sh resolve-issue settled` (no `--phase` — this is
+5. **Sync `settled`** (only reached when step 3 was `PASS` and step 4 was affirmative).
+   `bench/lib/parse-state.sh` and `bench/lib/sync-ledger.sh` are not duplicated into every target by
+   design — resolve both real paths via `.gsd-recipe/scripts/recipe-paths.sh` first (same mechanism
+   `recipe-validate-tokens-SKILL.md` § C step 1 documents in full):
+   ```
+   PARSE_STATE="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/parse-state.sh)"
+   SYNC_LEDGER="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/sync-ledger.sh)"
+   ```
+   Resolve the issue key with `"$PARSE_STATE" resolve-issue settled` (no `--phase` — this is
    epic-routed). Unresolved (no `## Tracker` section, or empty `epic` field) → do not block;
    warn the operator ("No tracker epic linked — skipping Jira sync, settle still recorded
    locally in this summary") and skip straight to step 6 — same fail-open precedent every prior
    `recipe-*` sync call already uses for a missing tracker linkage. Resolved → compute the
-   idempotency key via `bench/lib/sync-ledger.sh key settled <issue_key>` and check
-   `bench/lib/sync-ledger.sh has <key>` first. Already present → skip (report
+   idempotency key via `"$SYNC_LEDGER" key settled <issue_key>` and check
+   `"$SYNC_LEDGER" has <key>` first. Already present → skip (report
    `duplicate_skipped`, no re-post). Otherwise, invoke the `gsd-jira-sync` skill's own documented
    single-event workflow (`gsd-jira-sync settled <issue_key> [--transition "Name"]`) — do not
    inline `draft-jira-comment.sh`'s draft/post/stamp steps here. See "Why Option B" below.

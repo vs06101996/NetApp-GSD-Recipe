@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
-# demo-reset-target.sh — scrape GSD + operator demo artifacts so recipe-install
-# can recreate scaffolding visibly (live demo on gsd-benchmark as target repo).
+# reset-recipe-scaffold.sh — remove installed recipe scaffold from a repo while
+# keeping the recipe source tree (scripts, templates, harness).
 #
-# Keeps the recipe *source* tree (.gsd-recipe/scripts, .gsd-recipe/templates,
-# bench/) intact. Removes installed copies, GSD planning memory, and runtime
-# queues so the next install/run looks like a first-time setup.
+# Use on the recipe source repo or any target where install.sh should visibly
+# recreate .templates/, .knowledge/, code_base_details/, and recipe skills without
+# deleting installer sources under .gsd-recipe/scripts and bench/.
 #
 # Usage:
-#   ./bench/runners/demo-reset-target.sh [--target <repo_root>] [--dry-run] [--yes]
-#   ./bench/runners/demo-reset-target.sh --verify [--target <repo_root>]
+#   ./bench/runners/reset-recipe-scaffold.sh [--target <repo_root>] [--dry-run] [--yes]
+#   ./bench/runners/reset-recipe-scaffold.sh --verify [--target <repo_root>]
 #
-# --verify   Print what would be removed / what must still exist (no changes).
-# --dry-run  Print removals only (no uninstall, no deletes).
-# --yes      Skip the live confirmation prompt.
+# When --target is omitted, defaults to this harness repo root.
+#
+# --verify          Print what would be removed / what must still exist (no changes).
+# --dry-run         Print removals only (no uninstall, no deletes).
+# --yes             Skip the confirmation prompt.
 # --skip-uninstall  Only scrape files; do not run install.sh --uninstall first.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BENCHMARK_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TARGET=""
 MODE="reset"
 DRY_RUN=0
@@ -35,18 +38,19 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$TARGET" ]; then
-  TARGET="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  TARGET="$BENCHMARK_ROOT"
 fi
 
 if [ ! -d "$TARGET/.git" ]; then
-  echo "demo-reset-target.sh: $TARGET is not a git repo root. Refusing (fail closed)." >&2
+  echo "reset-recipe-scaffold.sh: $TARGET is not a git repo root. Refusing (fail closed)." >&2
   exit 1
 fi
 
 INSTALL_SH="$TARGET/.gsd-recipe/scripts/install.sh"
+if [ ! -x "$INSTALL_SH" ]; then
+  INSTALL_SH="$BENCHMARK_ROOT/.gsd-recipe/scripts/install.sh"
+fi
 
-# Paths removed so install.sh / GSD / recipe skills recreate them on the next run.
-# Relative to $TARGET.
 SCRAPE_PATHS=(
   ".planning"
   "docs/PRD.md"
@@ -62,7 +66,6 @@ SCRAPE_PATHS=(
   ".gsd-recipe/capability.json"
 )
 
-# Never delete — installer source + harness (demo runs from this repo).
 KEEP_PATHS=(
   ".gsd-recipe/scripts"
   ".gsd-recipe/templates"
@@ -108,7 +111,6 @@ verify_absent() {
       echo "  OK  absent: $rel"
     fi
   done
-  # Recipe skills should be gone after a full reset (reinstalled by install.sh).
   if ls "$TARGET/.cursor/skills"/recipe-* >/dev/null 2>&1; then
     echo "  STILL PRESENT: .cursor/skills/recipe-*"
     ok=0
@@ -119,7 +121,7 @@ verify_absent() {
 }
 
 if [ "$MODE" = "verify" ]; then
-  echo "=== demo-reset verify: $TARGET ==="
+  echo "=== reset-recipe-scaffold verify: $TARGET ==="
   echo "--- keepers (must exist) ---"
   verify_keepers || true
   echo "--- scrape targets (should be absent after reset) ---"
@@ -127,14 +129,14 @@ if [ "$MODE" = "verify" ]; then
   exit 0
 fi
 
-echo "=== demo-reset: $TARGET ==="
-echo "Keep (never touched): ${KEEP_PATHS[*]}"
-echo "Scrape (removed so install/GSD recreate visibly):"
+echo "=== reset-recipe-scaffold: $TARGET ==="
+echo "Keep (recipe source + harness): ${KEEP_PATHS[*]}"
+echo "Scrape (removed so install recreates scaffold):"
 printf '  %s\n' "${SCRAPE_PATHS[@]}"
 echo "Also: recipe uninstall removes .cursor/skills/recipe-* (and other ledgered skills)"
 
 if [ "$DRY_RUN" -eq 0 ] && [ "$YES" -eq 0 ]; then
-  read -r -p "Reset $TARGET for live demo? This deletes .planning/, docs/PRD.md, .templates/, etc. [y/N] " reply
+  read -r -p "Reset recipe scaffold in $TARGET? This deletes .planning/, docs/PRD.md, .templates/, etc. [y/N] " reply
   case "$reply" in
     y|Y|yes|YES) ;;
     *) echo "Aborted."; exit 0 ;;
@@ -152,12 +154,11 @@ else
   echo "--- skip uninstall (install.sh not executable at $INSTALL_SH) ---"
 fi
 
-echo "--- scrape GSD + operator + install copies ---"
+echo "--- scrape GSD + operator + installed scaffold copies ---"
 for rel in "${SCRAPE_PATHS[@]}"; do
   remove_path "$rel"
 done
 
-# config.json: reset to minimal tracker default so install can rewrite visibly.
 if [ -f "$TARGET/.gsd-recipe/config.json" ]; then
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "  would reset: .gsd-recipe/config.json -> {\"tracker\": \"jira\"}"
@@ -174,7 +175,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 verify_keepers
-verify_absent && echo "PASS: demo-reset complete — ready for recipe-install" || {
+verify_absent && echo "PASS: reset-recipe-scaffold complete — ready for recipe-install" || {
   echo "WARN: some scrape targets still present (see above)"
   exit 1
 }

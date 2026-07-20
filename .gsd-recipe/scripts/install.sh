@@ -35,8 +35,10 @@
 #   - graphify is a soft/optional prerequisite (standalone CLI, checked via
 #     `command -v graphify`; GSD's own wrapper additionally probes
 #     `graphify --help`, not `--version`, which graphify doesn't support).
-#     Auto-fix only ever attempted when `uv` is already present:
-#     `uv pip install graphifyy && graphify install`. Uniquely for
+#     Auto-fix only ever attempted when `uv` is already present, via
+#     install-graphify.sh (sudo-free, user-owned cache dirs, `uv tool install`
+#     — never `uv pip install`, which fails on PEP-668 Homebrew Python and
+#     root-owned ~/.cache). Uniquely for
 #     this one prerequisite, whenever graphify ends up present (pre-existing
 #     or freshly auto-installed), graphify_config_enable() auto-sets
 #     graphify.enabled=true in the *target project's* GSD-native
@@ -110,6 +112,17 @@ if [ ! -d "$TARGET/.git" ]; then
   echo "install.sh: $TARGET is not a git repo root. Refusing to scaffold (fail closed)." >&2
   exit 1
 fi
+
+# SELF_ROOT is the recipe's own source tree (where this install.sh lives) —
+# used to detect whether TARGET is an external repo (write recipe_source
+# into its config.json) or a self-install (TARGET is SELF_ROOT itself, no
+# recipe_source needed). See bench/lib/recipe-paths.sh's own header comment
+# for the full "why" — this is the permanent fix for any recipe-*
+# skill/installer that needs to locate harness code (a
+# .gsd-recipe/scripts/*, bench/runners/*, or bench/lib/* file) at runtime on
+# a target that doesn't have the whole harness duplicated into it.
+SELF_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+RECIPE_PATHS_SRC="$SELF_ROOT/bench/lib/recipe-paths.sh"
 
 GSD_RECIPE_DIR="$TARGET/.gsd-recipe"
 LEDGER="$GSD_RECIPE_DIR/ledger.json"
@@ -299,11 +312,19 @@ uv_fix_cmd() {
   # only when its own precondition (uv itself present) already holds.
   # Never guesses at installing uv — ensure_prereq skips straight to the
   # warn-fallback when uv is absent, same as brew_fix_cmd on non-macOS/
-  # brew-absent.
+  # brew-absent. Routes through install-graphify.sh (sudo-free).
   if ! command -v uv >/dev/null 2>&1; then
     return 0
   fi
-  echo "uv pip install graphifyy && graphify install"
+  local graphify_installer="$SCRIPT_DIR/install-graphify.sh"
+  if [ ! -x "$graphify_installer" ]; then
+    graphify_installer="$GSD_RECIPE_DIR/scripts/install-graphify.sh"
+  fi
+  if [ -x "$graphify_installer" ]; then
+    echo "\"$graphify_installer\""
+    return 0
+  fi
+  echo "UV_CACHE_DIR=\"\$HOME/.uv-cache\" XDG_DATA_HOME=\"\$HOME/.xdg-data\" uv tool install graphifyy && graphify install"
 }
 
 # Generic check -> auto-fix-attempt -> verify -> prompt-and-reverify ->
@@ -406,16 +427,16 @@ preflight() {
   # empty otherwise), matching brew_fix_cmd's "never guess at installing
   # the installer" precedent.
   ensure_prereq "graphify" "command -v graphify" "$(uv_fix_cmd)" 0 \
-    "graphify not found — optional knowledge-graph tooling will be skipped (install still proceeds). Install it: uv pip install graphifyy && graphify install (requires uv: https://docs.astral.sh/uv/)."
+    "graphify not found — optional knowledge-graph tooling will be skipped (install still proceeds). Install it (no sudo): .gsd-recipe/scripts/install-graphify.sh (requires uv: brew install uv or https://docs.astral.sh/uv/)."
   PREREQ_GRAPHIFY="$PREREQ_RESULT"
 }
 
 config_json_merge() {
   mkdir -p "$(dirname "$CONFIG")"
-  python3 - "$CONFIG" <<'PY'
+  python3 - "$CONFIG" "$TARGET" "$SELF_ROOT" <<'PY'
 import json, os, sys
 
-path = sys.argv[1]
+path, target, self_root = sys.argv[1:4]
 data = {}
 if os.path.exists(path):
     with open(path) as f:
@@ -428,6 +449,17 @@ if "traceability" not in data:
     data["traceability"] = {"enabled": True, "reason": ""}
 if "observer" not in data:
     data["observer"] = {"enabled": False, "interval_minutes": 10}
+
+# recipe_source: absolute path to the recipe's own source repo, written only
+# when TARGET is a *different* repo than the one install.sh itself lives in
+# (an external --target install). Every recipe-*/gsd-jira-sync skill and
+# recipe-paths.sh (the one small resolver script staged into every target,
+# see below) read this to locate harness code that isn't duplicated into
+# every target by design. Never written/overwritten for a self-install —
+# everything is already local there. Never overwritten once set either
+# (re-running install.sh against the same target shouldn't move this).
+if os.path.realpath(target) != os.path.realpath(self_root) and "recipe_source" not in data:
+    data["recipe_source"] = self_root
 
 with open(path, "w") as f:
     json.dump(data, f, indent=2)
@@ -678,11 +710,50 @@ EOF
     ledger_record "code_base_details/README.md"
   fi
 
-  gitignore_ensure ".learnings/"
-  gitignore_ensure ".gsd-recipe/install-report.json"
-  gitignore_ensure ".gsd-codebase/"
+  # Additive-only entries — must stay in sync with bench/tests/test-install.sh
+  # and the --verify gitignore check below.
+  local gitignore_line
+  while IFS= read -r gitignore_line; do
+    [ -n "$gitignore_line" ] || continue
+    gitignore_ensure "$gitignore_line"
+  done <<'GITIGNORE_LINES'
+/bin/
+/dist/
+*.exe
+.idea/
+.vscode/
+.env
+.env.*
+.learnings/
+.gsd-codebase/
+.gsd-recipe/install-report.json
+.gsd-recipe/phase-tasks-queue.jsonl
+.gsd-recipe/.observer-target.json
+.gsd-recipe/sync-ledger.jsonl
+bench/
+.cursor/get-shit-done/
+.cursor/gsd-install-state.json
+.cursor/gsd-file-manifest.json
+.cursor/.gsd-profile
+graphify-out/
+GITIGNORE_LINES
 
   config_json_merge
+
+  # Unconditionally refreshed (never gated on "already exists") — this is
+  # pure harness code with no operator customization to protect, the same
+  # category as the generated capability.json below, unlike the
+  # never-overwritten .templates/ files. Every recipe-*/gsd-jira-sync skill
+  # that needs a harness path (a .gsd-recipe/scripts/*, bench/runners/*, or
+  # bench/lib/* file not duplicated into every target) resolves it through
+  # this one small script instead of hardcoding a relative path.
+  mkdir -p "$GSD_RECIPE_DIR/scripts"
+  safe_copy "$RECIPE_PATHS_SRC" "$GSD_RECIPE_DIR/scripts/recipe-paths.sh"
+  chmod +x "$GSD_RECIPE_DIR/scripts/recipe-paths.sh"
+  ledger_record ".gsd-recipe/scripts/recipe-paths.sh"
+  safe_copy "$SCRIPT_DIR/install-graphify.sh" "$GSD_RECIPE_DIR/scripts/install-graphify.sh"
+  chmod +x "$GSD_RECIPE_DIR/scripts/install-graphify.sh"
+  ledger_record ".gsd-recipe/scripts/install-graphify.sh"
 
   echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
@@ -779,11 +850,48 @@ for k in ('python3', 'git', 'node', 'gh', 'gsd_core', 'graphify'):
   fi
 
   local missing_gitignore=""
-  for line in ".learnings/" ".gsd-recipe/install-report.json" ".gsd-codebase/"; do
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
     if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$line" "$GITIGNORE"; then
       missing_gitignore="$missing_gitignore [$line]"
     fi
-  done
+  done <<'GITIGNORE_VERIFY'
+/bin/
+/dist/
+*.exe
+.idea/
+.vscode/
+.env
+.env.*
+.learnings/
+.gsd-codebase/
+.gsd-recipe/install-report.json
+.gsd-recipe/phase-tasks-queue.jsonl
+.gsd-recipe/.observer-target.json
+bench/
+.cursor/get-shit-done/
+.cursor/gsd-install-state.json
+.cursor/gsd-file-manifest.json
+.cursor/.gsd-profile
+GITIGNORE_VERIFY
+  if [ -x "$GSD_RECIPE_DIR/scripts/recipe-paths.sh" ]; then
+    echo "[C] recipe-paths.sh staged — pass"
+  else
+    echo "[C] recipe-paths.sh staged — FAIL (missing or not executable at $GSD_RECIPE_DIR/scripts/recipe-paths.sh)"
+    ok=0
+  fi
+
+  if [ "$(cd "$TARGET" && pwd)" = "$SELF_ROOT" ] || python3 -c "
+import json
+d = json.load(open('$CONFIG')) if __import__('os').path.exists('$CONFIG') else {}
+raise SystemExit(0 if d.get('recipe_source') else 1)
+" 2>/dev/null; then
+    echo "[C] recipe_source resolvable (self-install or recorded in config.json) — pass"
+  else
+    echo "[C] recipe_source resolvable — FAIL (external target but config.json has no 'recipe_source')"
+    ok=0
+  fi
+
   if [ -z "$missing_gitignore" ]; then
     echo "[C] 7. Gitignore entries — pass"
   else

@@ -37,8 +37,15 @@ Examples:
    here with an actionable message: "No `docs/PRD.md` found — run `recipe-prd-intake` first, then
    retry `recipe-create-epic`." Never fabricate a PRD to work around this.
 
-2. **Resolve any pre-existing, possibly-conflicting linked epic.** `Shell`:
-   `bench/lib/parse-state.sh get-tracker --state .planning/STATE.md`. Three outcomes:
+2. **Resolve any pre-existing, possibly-conflicting linked epic.** `bench/lib/parse-state.sh` is not
+   duplicated into every target by design — resolve its real path via
+   `.gsd-recipe/scripts/recipe-paths.sh` first (same mechanism `recipe-validate-tokens-SKILL.md` §
+   C step 1 documents in full; steps 8 and 9 below reuse the same resolved path). `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/parse-state.sh)"
+   "$RESOLVED" get-tracker --state .planning/STATE.md
+   ```
+   Three outcomes:
    - Fails (no `.planning/STATE.md`, or no `## Tracker` section yet) → nothing to conflict with;
      continue straight to step 3.
    - Succeeds with an empty `epic` field → same as above, nothing to conflict with; continue.
@@ -69,8 +76,14 @@ Examples:
      - Not found → list the issue types that *are* available for this project and ask the operator,
        live, which one to use instead. Never guess or silently substitute a different type.
 
-5. **Draft the Epic body.** `Shell`: `bench/runners/draft-jira-epic.sh --project <KEY>` (the
-   project resolved in step 3). Returns `{"summary": "...", "description": "..."}` — a real,
+5. **Draft the Epic body.** `bench/runners/draft-jira-epic.sh` is not duplicated into every target
+   by design — resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` the same way step 2
+   does. `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/draft-jira-epic.sh)"
+   "$RESOLVED" --project <KEY>
+   ```
+   (the project resolved in step 3). Returns `{"summary": "...", "description": "..."}` — a real,
    standalone, testable script; do not re-derive this from `docs/PRD.md` inline.
 
 6. **Soft confirm gate — non-skippable but declinable.** Print, in this conversation: the resolved
@@ -92,9 +105,12 @@ Examples:
    `createJiraIssue`'s response. Derive a browsable URL as `https://<site>/browse/<KEY>`, where
    `<site>` comes from whatever Atlassian resource/cloud metadata step 3's `getVisibleJiraProjects`
    call (or, if `--project` skipped that call, a fresh `getAccessibleAtlassianResources` call made
-   right here) already returned — never fabricate a URL by guessing a hostname. Then `Shell`:
+   right here) already returned — never fabricate a URL by guessing a hostname. Re-resolve
+   `bench/lib/parse-state.sh` the same way step 2 did (same `recipe-paths.sh resolve` command).
+   `Shell`:
    ```
-   bench/lib/parse-state.sh init-tracker --epic <KEY> --system jira --url <URL> \
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/parse-state.sh)"
+   "$RESOLVED" init-tracker --epic <KEY> --system jira --url <URL> \
      --run-id <RUN_ID> --arm <ARM> --state .planning/STATE.md [--force]
    ```
    forwarding `--force` only when step 2 identified a genuine relink the operator confirmed. Report

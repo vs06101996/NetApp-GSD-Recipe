@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# recipe — recipe harness CLI (run from inside any target git repo).
+#
+# Resolves the target repo from cwd; --target is optional everywhere.
+#
+# Usage:
+#   /path/to/gsd-benchmark/bin/recipe reset [--yes] [--verify] [--dry-run]
+#   /path/to/gsd-benchmark/bin/recipe install [--verify] [--record-jira-check pass|fail]
+#
+# Set RECIPE_ROOT in your shell profile to shorten the path:
+#   export RECIPE_ROOT=~/Projects/gsd-benchmark
+#   recipe reset --yes
+#   recipe install
+set -euo pipefail
+
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_ROOT="$(cd "$BIN_DIR/.." && pwd)"
+RUNNERS="$HARNESS_ROOT/bench/runners"
+
+usage() {
+  cat >&2 <<EOF
+Usage:
+  $0 reset [--yes] [--verify] [--dry-run] [--skip-uninstall] [--target <repo>]
+  $0 install [--verify] [--record-jira-check pass|fail] [--target <repo>]
+
+Run from inside the target git repo; --target is optional (defaults to git root of cwd).
+EOF
+  exit 2
+}
+
+[ $# -ge 1 ] || usage
+
+CMD="$1"
+shift
+
+case "$CMD" in
+  reset)
+    exec "$RUNNERS/reset-recipe-target.sh" "$@"
+    ;;
+  install)
+    exec "$RUNNERS/install-recipe-to-target.sh" "$@"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    echo "$0: unknown command: $CMD" >&2
+    usage
+    ;;
+esac

@@ -191,15 +191,28 @@ linked = {
 }
 
 # ROADMAP.md phase enumeration. RUNTIME-LLD.md gives no fixed grammar beyond
-# "ROADMAP phases" -- this repo's own .planning/ROADMAP.md (and every ROADMAP.md
-# GSD's gsd-new-project/gsd-plan-phase produce) uses '## Phase N — Title'
-# headings, optionally followed by a '**Goal:** ...' line before the next
-# heading. Phase 0 ("Done", "harness", etc.) is intentionally included --
-# RUNTIME-LLD.md's "one task per phase" doesn't carve out phase 0, and a repo
-# choosing to track it in Jira should get a phase-0 sub-task too.
-PHASE_HEADING = re.compile(r"^##\s+Phase\s+(\d+)\b\s*[—\-]?\s*(.*)$")
-GOAL_LINE = re.compile(r"^\*\*Goal:\*\*\s*(.*)$")
-ANY_HEADING = re.compile(r"^##\s+")
+# "ROADMAP phases". Two dialects exist in practice:
+#   - This repo's own .planning/ROADMAP.md (and the bench/ test fixtures) use
+#     '## Phase N — Title' (H2, em-dash/hyphen separator).
+#   - GSD's actual gsd-new-project/gsd-plan-phase output (see
+#     get-shit-done/templates/roadmap.md's "## Phase Details" section, and any
+#     real GSD-managed .planning/ROADMAP.md) uses '### Phase N: Title' (H3,
+#     colon separator, nested under a '## Phase Details' H2). The comment that
+#     used to live here claiming GSD produces the H2/em-dash form was wrong --
+#     verified wrong against the actual GSD template and against a real GSD
+#     sandbox ROADMAP.md, which this regex previously failed to parse at all.
+# Accept both: level is H2 or H3 ('#{2,3}'), separator is em-dash, hyphen, or
+# colon (or omitted entirely). Phase 0 ("Done", "harness", etc.) is
+# intentionally included -- RUNTIME-LLD.md's "one task per phase" doesn't
+# carve out phase 0, and a repo choosing to track it in Jira should get a
+# phase-0 sub-task too.
+PHASE_HEADING = re.compile(r"^#{2,3}\s+Phase\s+(\d+)\b\s*[—\-:]?\s*(.*)$")
+# Goal line similarly has two dialects: '**Goal:** ...' (colon inside the bold)
+# and GSD's actual '**Goal**: ...' (colon outside the bold). Accept both.
+GOAL_LINE = re.compile(r"^\*\*Goal(?::\*\*|\*\*:)\s*(.*)$")
+# Must match the same heading levels as PHASE_HEADING so the goal-line scan
+# stops at the next phase heading (H2 or H3) instead of reading into it.
+ANY_HEADING = re.compile(r"^#{2,3}\s+")
 
 text = ROADMAP_FILE.read_text(errors="replace")
 lines = text.splitlines()
@@ -223,7 +236,10 @@ while i < n:
     i += 1
 
 if not phases:
-    fail(f"no '## Phase N — Title' headings found in {ROADMAP_FILE}")
+    fail(
+        f"no '## Phase N — Title' or '### Phase N: Title' headings found in "
+        f"{ROADMAP_FILE}"
+    )
 
 template_body = TEMPLATE.read_text()
 

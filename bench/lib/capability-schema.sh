@@ -477,6 +477,28 @@ CATALOG = [
         "composed_by_install_sh": True,
         "ledger_component": "recipe-create-phase-tasks",
     },
+    {
+        "id": "recipe-new-project",
+        "task_id": "TASK-036",
+        "kind": "cursor-skill",
+        "description": "Gated repo-bootstrap wrapper closing the 'make my current repo ready' SDLC coverage gap. Determines first-init vs re-init (soft warn-and-confirm), resolves the bootstrap input (explicit argument, else docs/PRD.md if present, else native input-gathering), calls native gsd-new-project (or gsd-import with --import) directly, then re-verifies .planning/PROJECT.md + ROADMAP.md + STATE.md actually got created. Never syncs intake_started itself — that stays recipe-create-epic's job.",
+        "invoke_name": "recipe-new-project",
+        "staged_path": ".cursor/skills/recipe-new-project/SKILL.md",
+        "installer": ".gsd-recipe/scripts/install-recipe-new-project.sh",
+        "composed_by_install_sh": True,
+        "ledger_component": "recipe-new-project",
+    },
+    {
+        "id": "recipe-onboard",
+        "task_id": "TASK-037",
+        "kind": "cursor-skill",
+        "description": "Single onboarding orchestrator closing the 'no single on-ramp' SDLC coverage gap. Chains, in order, whichever of recipe-prd-intake / recipe-new-project / recipe-create-epic / recipe-create-phase-tasks are actually missing their artifact (docs/PRD.md, .planning/ROADMAP.md, a linked Jira Epic, per-phase Jira sub-tasks), after one soft preview-then-confirm gate. Stops the whole chain on the first step that fails or is declined; never re-implements any invoked skill's own logic or duplicates its Jira sync.",
+        "invoke_name": "recipe-onboard",
+        "staged_path": ".cursor/skills/recipe-onboard/SKILL.md",
+        "installer": ".gsd-recipe/scripts/install-recipe-onboard.sh",
+        "composed_by_install_sh": True,
+        "ledger_component": "recipe-onboard",
+    },
 ]
 
 ledger_path = os.path.join(TARGET, ".gsd-recipe", "ledger.json")

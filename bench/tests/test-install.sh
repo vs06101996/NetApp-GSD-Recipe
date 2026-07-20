@@ -97,8 +97,30 @@ check "fresh install stages the 5 empty .knowledge/ subdirs" "$?"
 [ -f "$TARGET1/code_base_details/README.md" ]
 check "fresh install stages code_base_details/README.md" "$?"
 
-grep -qxF ".learnings/" "$TARGET1/.gitignore" && grep -qxF ".gsd-recipe/install-report.json" "$TARGET1/.gitignore" && grep -qxF ".gsd-codebase/" "$TARGET1/.gitignore" && rc=0 || rc=$?
-check "fresh install adds all 3 required .gitignore entries" "$rc"
+rc=0
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  grep -qxF "$line" "$TARGET1/.gitignore" || { rc=1; break; }
+done <<'EOF'
+/bin/
+/dist/
+*.exe
+.idea/
+.vscode/
+.env
+.env.*
+.learnings/
+.gsd-codebase/
+.gsd-recipe/install-report.json
+.gsd-recipe/phase-tasks-queue.jsonl
+.gsd-recipe/.observer-target.json
+bench/
+.cursor/get-shit-done/
+.cursor/gsd-install-state.json
+.cursor/gsd-file-manifest.json
+.cursor/.gsd-profile
+EOF
+check "fresh install writes standard .gitignore entries" "$rc"
 
 python3 -c "
 import json
@@ -116,6 +138,19 @@ assert d['github_check'] in ('pass', 'fail', 'skipped'), d
 assert d['jira_check'] == 'pending', d
 "
 check "fresh install writes install-report.json with jira_check: pending" "$?"
+
+# recipe_source / recipe-paths.sh — permanent fix for "script missing on
+# external --target" (see bench/tests/test-recipe-paths.sh for the fuller
+# resolver behavior suite; these are just the install.sh-side assertions).
+python3 -c "
+import json, os
+d = json.load(open('$TARGET1/.gsd-recipe/config.json'))
+assert os.path.realpath(d.get('recipe_source', '')) == os.path.realpath('$REPO_ROOT'), d
+"
+check "fresh external --target install writes recipe_source pointing at the recipe source repo" "$?"
+
+[ -x "$TARGET1/.gsd-recipe/scripts/recipe-paths.sh" ]
+check "fresh install stages recipe-paths.sh, executable" "$?"
 
 # 3. Cascading composition: install-observer.sh / install-tracker-sync.sh /
 # install-recipe-planning-policy.sh / install-recipe-run-phase.sh actually ran
@@ -157,6 +192,10 @@ check "install.sh composes install-recipe-observe.sh (skill staged)" "$?"
 check "install.sh composes install-recipe-create-epic.sh (skill + runner staged)" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-create-phase-tasks/SKILL.md" ]
 check "install.sh composes install-recipe-create-phase-tasks.sh (skill staged)" "$?"
+[ -f "$TARGET1/.cursor/skills/recipe-new-project/SKILL.md" ]
+check "install.sh composes install-recipe-new-project.sh (skill staged)" "$?"
+[ -f "$TARGET1/.cursor/skills/recipe-onboard/SKILL.md" ]
+check "install.sh composes install-recipe-onboard.sh (skill staged)" "$?"
 
 python3 -c "
 import json
@@ -180,6 +219,8 @@ assert 'recipe-install' in d and d['recipe-install'], d
 assert 'recipe-observe' in d and d['recipe-observe'], d
 assert 'recipe-create-epic' in d and d['recipe-create-epic'], d
 assert 'recipe-create-phase-tasks' in d and d['recipe-create-phase-tasks'], d
+assert 'recipe-new-project' in d and d['recipe-new-project'], d
+assert 'recipe-onboard' in d and d['recipe-onboard'], d
 assert 'install-core' in d and d['install-core'], d
 # install.sh must not re-ledger files the sub-installers already track under
 # their own component names.
@@ -202,8 +243,10 @@ assert set(d['install-core']).isdisjoint(set(d['recipe-install'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-observe'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-epic'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-phase-tasks'])), d
+assert set(d['install-core']).isdisjoint(set(d['recipe-new-project'])), d
+assert set(d['install-core']).isdisjoint(set(d['recipe-onboard'])), d
 "
-check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks components (no cross-tracking)" "$?"
+check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-new-project/recipe-onboard components (no cross-tracking)" "$?"
 
 # capability.json is generated once install() has composed every sub-installer,
 # and validates against the new capability.schema.json (TASK-011).
@@ -308,6 +351,10 @@ echo "$VERIFY_OUT1" | grep -q "recipe-create-epic composed — pass" && rc=0 || 
 check "--verify output mentions recipe-create-epic composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-create-phase-tasks composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-create-phase-tasks composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-new-project composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-new-project composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-onboard composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-onboard composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "config.schema.json — strict schema validation — pass" && rc=0 || rc=$?
 check "--verify output mentions config.schema.json strict validation" "$rc"
 
@@ -371,6 +418,10 @@ check "uninstall cascades to install-recipe-observe.sh --uninstall" "$?"
 check "uninstall cascades to install-recipe-create-epic.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-create-phase-tasks/SKILL.md" ]
 check "uninstall cascades to install-recipe-create-phase-tasks.sh --uninstall" "$?"
+[ ! -f "$TARGET3/.cursor/skills/recipe-new-project/SKILL.md" ]
+check "uninstall cascades to install-recipe-new-project.sh --uninstall" "$?"
+[ ! -f "$TARGET3/.cursor/skills/recipe-onboard/SKILL.md" ]
+check "uninstall cascades to install-recipe-onboard.sh --uninstall" "$?"
 
 [ -d "$TARGET3/code_base_details" ] && [ -f "$TARGET3/code_base_details/README.md" ]
 check "uninstall preserves code_base_details/" "$?"
@@ -509,18 +560,22 @@ EOF
   chmod +x "$1"
 }
 
-# Writes a fake `uv` binary at $1 that, when invoked as `uv pip install ...`,
-# logs the call to $2 and simulates a successful `graphifyy` install by
-# creating a working `graphify` stub at $3 (the scratch bin dir graphify is
-# expected to land in — mirrors the real `uv pip install graphifyy &&
-# graphify install` fix command's effect without ever touching the network
-# or a real package manager).
+# Writes a fake `uv` binary at $1 that, when invoked as `uv tool install ...` or
+# `uv pip install ...`, logs the call to $2 and simulates a successful `graphifyy`
+# install by creating a working `graphify` stub at $3 (the scratch bin dir graphify is
+# expected to land in — mirrors install-graphify.sh's effect without network access).
 write_fake_uv_installs_graphify() {
   local uv_path="$1" log_file="$2" fakebin_dir="$3"
   cat > "$uv_path" <<EOF
 #!/usr/bin/env bash
 echo "\$@" >> "$log_file"
-if [ "\$1" = "pip" ] && [ "\$2" = "install" ]; then
+if [ "\$1" = "tool" ] && [ "\$2" = "install" ]; then
+  cat > "$fakebin_dir/graphify" <<'INNER'
+#!/usr/bin/env bash
+exit 0
+INNER
+  chmod +x "$fakebin_dir/graphify"
+elif [ "\$1" = "pip" ] && [ "\$2" = "install" ]; then
   cat > "$fakebin_dir/graphify" <<'INNER'
 #!/usr/bin/env bash
 exit 0
@@ -833,11 +888,16 @@ write_fake_gsd_tools_shell "$FAKEBIN19/gsd-tools" "$LOG19"
 SIGNAL19="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL19")" && touch "$SIGNAL19"
 TARGET19="$(new_repo)"
 write_scratch_planning_config "$TARGET19"
-(cd "$TARGET19" && PATH="$FAKEBIN19" GSD_SIGNAL_PATH="$SIGNAL19" \
+# HOME is scoped to a scratch dir here because install-graphify.sh (the
+# uv_fix_cmd() target) resolves its own TOOL_BIN/cache dirs off $HOME by
+# default — a real, already-populated ~/bin/graphify on the dev machine
+# would otherwise leak through and short-circuit this test's fake uv.
+HOME19="$(mktemp -d)"
+(cd "$TARGET19" && PATH="$FAKEBIN19" GSD_SIGNAL_PATH="$SIGNAL19" HOME="$HOME19" \
   "$INSTALLER" --yes --target "$TARGET19" >/dev/null 2>&1) && rc=0 || rc=$?
 check "(b) install succeeds when graphify is absent and the fake uv auto-fix installs it" "$rc"
-grep -qF "pip install graphifyy" "$UVLOG19"
-check "(b) ensure_prereq invokes the fake uv with 'pip install graphifyy'" "$?"
+grep -qE 'tool install graphifyy|pip install graphifyy' "$UVLOG19"
+check "(b) ensure_prereq invokes the fake uv to install graphifyy" "$?"
 python3 -c "
 import json
 d = json.load(open('$TARGET19/.gsd-recipe/install-report.json'))
@@ -845,7 +905,7 @@ assert d['prereqs']['graphify'] == 'auto_installed', d['prereqs']
 assert d['graphify_config_enabled'] is True, d['graphify_config_enabled']
 "
 check "(b) graphify recorded auto_installed and graphify_config_enabled=true" "$?"
-rm -rf "$FAKEBIN19" "$(dirname "$(dirname "$SIGNAL19")")" "$UVLOG19" "$LOG19"
+rm -rf "$FAKEBIN19" "$(dirname "$(dirname "$SIGNAL19")")" "$UVLOG19" "$LOG19" "$HOME19"
 
 # 20. (c) graphify absent + no uv on scratch PATH -> fail, warn-only, install
 # still exits 0, and graphify_config_enable() never even attempts to run

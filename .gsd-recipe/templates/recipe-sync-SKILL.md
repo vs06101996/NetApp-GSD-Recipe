@@ -27,11 +27,15 @@ Examples:
 
 ## C. Tool Usage
 
-1. **Step 1 — detect + queue (`Shell`, real script call, not agent-mediated).** Run
-   `bench/runners/sync-reconcile.sh` (bundled harness mirror at
-   `docs/netapp-recipe/reference/harness/runners/sync-reconcile.sh` if the `bench/` path doesn't
-   exist yet on a target that hasn't ported it — same precedence rule every other skill in this
-   recipe follows). Pass `--dry-run` through unchanged if the operator passed it to `recipe-sync`.
+1. **Step 1 — detect + queue (`Shell`, real script call, not agent-mediated).** `bench/runners/
+   sync-reconcile.sh` is not duplicated into every target by design — resolve its real path first
+   via `.gsd-recipe/scripts/recipe-paths.sh` (same mechanism `recipe-validate-tokens-SKILL.md` § C
+   step 1 documents in full):
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/sync-reconcile.sh)"
+   "$RESOLVED" [--dry-run]
+   ```
+   Pass `--dry-run` through unchanged if the operator passed it to `recipe-sync`.
    This is the same category of direct shell call `recipe-install-verify` makes to
    `install.sh --verify` — a real, scriptable, testable script invocation, not "Option B"
    native-GSD-call territory. Capture and report its `queued`/`duplicate_skipped`/`errors` counts.

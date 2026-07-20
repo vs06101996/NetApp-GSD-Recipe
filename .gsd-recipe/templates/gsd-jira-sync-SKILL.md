@@ -27,16 +27,22 @@ Invoke this when `sync-reconcile.sh` (TASK-003) has been run and left rows in
 
 ## C. Tool Usage
 1. Read MCP tool schemas: `addCommentToJiraIssue`, `transitionJiraIssue`, `getJiraIssue`, `getTransitionsForJiraIssue`
-2. `Shell`: draft comment — `bench/runners/draft-jira-comment.sh <event> <issue> [--phase N] ...`
-   (this repo's own canonical implementation — gsd-benchmark is the reference
-   implementation host for this harness, not merely a copy target. Bundled
-   harness mirror at `docs/netapp-recipe/reference/harness/runners/draft-jira-comment.sh`,
-   if present — only relevant on a target that hasn't ported the `bench/`
-   scripts yet; use `bench/runners/draft-jira-comment.sh` whenever it exists.)
+2. **Draft comment.** `bench/runners/draft-jira-comment.sh` is not duplicated into every target by
+   design (only `gsd-benchmark`, the recipe's own source repo, keeps the full `bench/` tree) —
+   resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` (same mechanism
+   `recipe-validate-tokens-SKILL.md` § C step 1 documents in full; this is the current fix,
+   replacing the older "bundled harness mirror under `docs/netapp-recipe/reference/harness/`"
+   convention that file tree no longer exists). `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/draft-jira-comment.sh)"
+   "$RESOLVED" <event> <issue> [--phase N] ...
+   ```
 3. `CallMcpTool` server `plugin-atlassian-atlassian` to post comment (and transition if requested)
-4. `Shell`: emit stamp — `bench/runners/emit-stamp.sh` (bundled mirror:
-   `docs/netapp-recipe/reference/harness/runners/emit-stamp.sh`, same
-   precedence as step 2)
+4. **Emit stamp.** Same resolution as step 2, for `bench/runners/emit-stamp.sh`. `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/emit-stamp.sh)"
+   "$RESOLVED" ...
+   ```
 
 ## D. Do NOT
 - Skip Jira comment when recipe arm is active and issue key is known
@@ -57,9 +63,10 @@ Post **every GSD lifecycle milestone** to the linked Jira issue. This is the **r
 
 1. **Resolve issue key** — from args or grep `.planning/STATE.md` / `CONTEXT.md` for `INS-` / `PROJ-` pattern.
 2. **Validate event** — `event_id` must exist in `jira-events.json`.
-3. **Draft comment** — run `bench/runners/draft-jira-comment.sh` (this repo's own canonical
-   implementation; bundled mirror at `docs/netapp-recipe/reference/harness/runners/draft-jira-comment.sh`
-   for a target that hasn't ported the `bench/` scripts yet); enrich placeholders from `.planning/` artifacts.
+3. **Draft comment** — run `bench/runners/draft-jira-comment.sh`, resolved via
+   `.gsd-recipe/scripts/recipe-paths.sh` per § C step 2 above (this repo's own canonical
+   implementation of the script; not duplicated into every target by design); enrich placeholders
+   from `.planning/` artifacts.
 4. **Post to Jira** — Atlassian MCP `addCommentToJiraIssue` with `cloudId` + `issueKey` + comment body (markdown/wiki as supported).
 5. **Optional transition** — if `--transition` or event config says so, call `getTransitionsForJiraIssue` then `transitionJiraIssue`.
 6. **Emit stamp** — run `emit-stamp.sh` line printed by draft script (immutable KPI record).
@@ -71,9 +78,9 @@ Post **every GSD lifecycle milestone** to the linked Jira issue. This is the **r
 `.gsd-recipe/sync-queue.jsonl` but never posts — it has no MCP tool-calling
 access. Drain mode is the agent-mediated step that closes that loop, using
 `bench/runners/sync-drain-queue.sh` (same `bench/` location as
-`sync-reconcile.sh`/`sync-ledger.sh` — no `reference/harness/` bundling for
-this script, matching TASK-001–003's precedent) for everything around the
-actual post:
+`sync-reconcile.sh`/`sync-ledger.sh`, resolved the same
+`.gsd-recipe/scripts/recipe-paths.sh` way as step 2 above — not duplicated into
+every target by design) for everything around the actual post:
 
 1. **List pending work** — `sync-drain-queue.sh list`. This re-verifies every
    `queued`/`failed` row against the ledger first (self-healing anything

@@ -331,6 +331,40 @@ else
   check "parses this repo's real .planning/ROADMAP.md phase headings without error (skipped, file absent)" "0"
 fi
 
+# --- 21b. GSD-dialect ROADMAP.md ('### Phase N: Title' under '## Phase
+#          Details', '**Goal**:' colon-outside-bold) parses correctly --
+#          regression fixture for the heading-mismatch bug where this dialect
+#          (the one gsd-new-project/gsd-plan-phase actually produce) was
+#          silently detected as zero phases. ---------------------------------
+GSD_FIX="$FIX/roadmap-gsd-dialect-sample.md"
+SCRATCH_GSD="$(mktemp -d)"
+cat > "$SCRATCH_GSD/STATE.md" <<'EOF'
+## Tracker
+- epic: PROJ-600
+- system: jira
+- url: https://your-org.atlassian.net/browse/PROJ-600
+- run_id: t007-gsd-dialect
+- arm: recipe
+
+## Phase tasks
+| phase_id | issue_key |
+|----------|-----------|
+EOF
+OUT_GSD="$(REPO_ROOT="$REPO_ROOT" "$SCRIPT" detect --dry-run --roadmap "$GSD_FIX" --state "$SCRATCH_GSD/STATE.md" --queue "$SCRATCH_GSD/q.jsonl" --run t007-gsd-dialect)"
+echo "$OUT_GSD" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert [x['phase_id'] for x in d['to_create']] == ['1', '2'], d['to_create']
+by_id = {x['phase_id']: x for x in d['to_create']}
+assert by_id['1']['drafted_summary'] == '[GSD Recipe] Phase 1: Foundation', by_id['1']
+assert 'A \`Task\` type and in-memory store' in by_id['1']['drafted_description'], by_id['1']
+assert by_id['2']['drafted_summary'] == '[GSD Recipe] Phase 2: HTTP API', by_id['2']
+assert 'Clients can read and create tasks over HTTP using JSON' in by_id['2']['drafted_description'], by_id['2']
+assert d['errors'] == []
+"
+check "parses GSD-dialect '### Phase N: Title' + '**Goal**:' headings, extracting correct titles and goals" "$?"
+rm -rf "$SCRATCH_GSD"
+
 # --- 22. errors array is empty on a clean, valid run ------------------------
 echo "$OUT1" | python3 -c "
 import json, sys

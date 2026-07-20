@@ -1,12 +1,13 @@
-# GSD Benchmark
+# NetApp GSD Recipe
 
-Benchmark **feature delivery with coding agents** — three rungs (baseline / vanilla GSD / recipe) on the same spec, with **hidden acceptance tests** as the external quality gate. See [docs/EXPERIMENT-AGENDA.md](docs/EXPERIMENT-AGENDA.md).
+NetApp GSD recipe for Cursor: structured feature delivery from PRD through planning, execution, verification, and tracker sync. Install into your project repo with `bench/runners/install-recipe-to-target.sh`.
 
-Default task: **Uber-Eats** greenfield (`tasks/uber-eats/`). Register **Go** (`go.mod`) or **Scala/SBT** (`build.sbt`) repos — see [docs/TASKS.md](docs/TASKS.md).
+This repository is the **source of truth** for recipe skills (`.gsd-recipe/`), installers, harness scripts (`bench/`), and integration tests.
 
-## Quick start
+## Quick start (recipe install)
 
-1. **List / register tasks:** `./bench/tasks/list.sh` · `./bench/tasks/register.sh --id <name> --path /abs/repo`
+1. **Install recipe into a target repo:** `./bench/runners/install-recipe-to-target.sh --target /path/to/your/repo --verify`
+2. **List / register benchmark tasks (optional):** `./bench/tasks/list.sh` · `./bench/tasks/register.sh --id <name> --path /abs/repo`
 2. **Validate grading (no LLM):** `./bench/runners/validate-pipeline.sh`
 3. **Prepare a run:** `./bench/runners/prepare-run.sh runs/baseline/run-01`
 4. **Grade an artifact:** `./bench/grade/grade.sh results/baseline/run-01/artifact`

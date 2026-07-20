@@ -77,11 +77,21 @@ Run steps A-E below, in order, **unless `--uninstall` was passed** — in that c
    - **Negative (n/no) or the operator otherwise declines** → stop here entirely. Report "operator
      declined — install not run" in the final summary. Do not run Step C or Step D.
 
-3. **Step C — run `install.sh` directly (real script call, INSTALL-LLD.md Steps 2-4).** `Shell`:
-   run `<target>/.gsd-recipe/scripts/install.sh --yes --target <target>` (absolute paths; the
-   canonical source is `.gsd-recipe/scripts/install.sh` in this recipe's own source tree if `<target>`
-   hasn't had this recipe installed into it before — same bundled-source precedence every other
-   skill in this recipe follows). This is the same category of direct shell call `recipe-sync`'s own
+3. **Step C — run `install.sh` directly (real script call, INSTALL-LLD.md Steps 2-4).** This is the
+   one call in this skill that genuinely cannot go through `.gsd-recipe/scripts/recipe-paths.sh`
+   the way every other `recipe-*` skill's harness-path lookups do (see
+   `recipe-validate-tokens-SKILL.md` § C step 1 for that mechanism's full rationale) — a chicken-
+   and-egg problem: on a first-ever bootstrap, `<target>` has no `.gsd-recipe/` tree yet, so there
+   is no staged `recipe-paths.sh` there to ask. Resolve `install.sh` directly from **this recipe's
+   own source repo** instead — the repo this `recipe-install` skill invocation is actually running
+   from, which is guaranteed to have `bench/lib/recipe-paths.sh` (the resolver's canonical source
+   location, always present in the recipe's own source tree regardless of that repo's own install
+   state). `Shell`:
+   ```
+   RESOLVED="$(bench/lib/recipe-paths.sh resolve .gsd-recipe/scripts/install.sh --target <target>)"
+   "$RESOLVED" --yes --target <target>
+   ```
+   (absolute paths). This is the same category of direct shell call `recipe-sync`'s own
    step 1 makes to `sync-reconcile.sh`, and `recipe-install-verify`'s own step 1 makes to
    `install.sh --verify` — a real, scriptable, testable script invocation, never
    Option-B/native-GSD-call territory (there is no native GSD command being wrapped here at all).

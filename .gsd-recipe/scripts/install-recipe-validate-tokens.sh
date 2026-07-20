@@ -125,6 +125,17 @@ GSD_RECIPE_DIR="$TARGET/.gsd-recipe"
 LEDGER="$GSD_RECIPE_DIR/ledger.json"
 SKILL_DEST="$TARGET/.cursor/skills/recipe-validate-tokens/SKILL.md"
 SKILL_SRC="$SCRIPT_DIR/../templates/recipe-validate-tokens-SKILL.md"
+# This script's own --check-github mode is a single self-contained file with
+# no dependency on the rest of bench/ — same category as
+# install-recipe-pr-comment.sh's post-github-pr-comment.sh /
+# install-recipe-create-epic.sh's draft-jira-epic.sh self-staging precedent
+# — so it is staged directly onto the target, not resolved cross-repo via
+# recipe-paths.sh (that mechanism is for shared bench/lib/*.sh and
+# bench/runners/*.sh files used by many skills, where duplicating into every
+# target would mean drifting copies; see bench/lib/recipe-paths.sh's own
+# header comment for that side of the story).
+SCRIPT_SRC="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+SCRIPT_DEST="$GSD_RECIPE_DIR/scripts/install-recipe-validate-tokens.sh"
 COMPONENT="recipe-validate-tokens"
 
 mkdir -p "$GSD_RECIPE_DIR"
@@ -175,13 +186,13 @@ safe_copy() {
 }
 
 is_canonical_source() {
-  # $1 = absolute path being considered for removal. Returns 0 (skip removal)
-  # if it resolves to our own template source — true whenever TARGET is this
-  # implementation repo itself (self-install case).
-  local candidate="$1"
+  # $1 = candidate absolute path, $2 = canonical source absolute path.
+  # Returns 0 (skip removal) if they resolve to the same file — true
+  # whenever TARGET is this implementation repo itself (self-install case).
+  local candidate="$1" src="$2"
   [ -e "$candidate" ] || return 1
-  [ -e "$SKILL_SRC" ] || return 1
-  [ "$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")" = "$(cd "$(dirname "$SKILL_SRC")" && pwd)/$(basename "$SKILL_SRC")" ]
+  [ -e "$src" ] || return 1
+  [ "$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")" = "$(cd "$(dirname "$src")" && pwd)/$(basename "$src")" ]
 }
 
 install() {
@@ -195,6 +206,10 @@ install() {
 
   safe_copy "$SKILL_SRC" "$SKILL_DEST"
   ledger_record ".cursor/skills/recipe-validate-tokens/SKILL.md"
+
+  safe_copy "$SCRIPT_SRC" "$SCRIPT_DEST"
+  chmod +x "$SCRIPT_DEST" 2>/dev/null || true
+  ledger_record ".gsd-recipe/scripts/install-recipe-validate-tokens.sh"
 
   echo "recipe-validate-tokens installer: staged. Files tracked in $LEDGER:"
   ledger_files | sed 's/^/  - /'
@@ -211,8 +226,13 @@ install() {
 uninstall() {
   echo "recipe-validate-tokens installer: removing tracked files for component '$COMPONENT'..."
   while IFS= read -r rel; do
-    if is_canonical_source "$TARGET/$rel"; then
-      echo "  keeping $rel (this is the canonical skill template source, not an installed copy — self-install case)"
+    local canonical_src=""
+    case "$rel" in
+      .cursor/skills/recipe-validate-tokens/SKILL.md) canonical_src="$SKILL_SRC" ;;
+      .gsd-recipe/scripts/install-recipe-validate-tokens.sh) canonical_src="$SCRIPT_SRC" ;;
+    esac
+    if [ -n "$canonical_src" ] && is_canonical_source "$TARGET/$rel" "$canonical_src"; then
+      echo "  keeping $rel (this is the canonical template source, not an installed copy — self-install case)"
       continue
     fi
     if [ -f "$TARGET/$rel" ]; then

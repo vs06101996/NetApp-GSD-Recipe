@@ -28,8 +28,18 @@ Examples:
 
 ## C. Tool Usage
 
+`install.sh` and `bench/lib/install-verify-report.sh` are not duplicated into every target by
+design (only `gsd-benchmark`, the recipe's own source repo, keeps the full `.gsd-recipe/scripts/`
+and `bench/` trees) — resolve both real paths once, via `.gsd-recipe/scripts/recipe-paths.sh` (same
+mechanism `recipe-validate-tokens-SKILL.md` § C step 1 documents in full), and reuse those resolved
+paths for every step below that needs them:
+```
+INSTALL_SH="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve .gsd-recipe/scripts/install.sh --target <target>)"
+REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/install-verify-report.sh --target <target>)"
+```
+
 1. **Run the bash-checkable foundation.** `Shell`: run
-   `<target>/.gsd-recipe/scripts/install.sh --verify --target <target>` (absolute paths, no reliance
+   `$INSTALL_SH --verify --target <target>` (absolute paths, no reliance
    on a prior `cd`). This is the delegation boundary decision for this skill (see "Delegation
    boundary" below): `install.sh --verify` already implements items **5** (Templates present), **6**
    (OKF index), and **7** (Gitignore entries) correctly and completely — a bash script can `test -f`
@@ -40,7 +50,7 @@ Examples:
    does *not* also duplicate that pair as item 4). Parse its stdout for the `[C] 5.`/`[C] 6.`/
    `[C] 7.` lines' pass/FAIL verdicts (and the `config.json —` line, which is a bonus check beyond
    the 10-item table, worth surfacing in the summary but not itself one of items 1-10) and record
-   each with `bench/lib/install-verify-report.sh record <N> "<name>" <pass|fail> --detail "<line>"
+   each with `$REPORT_LIB record <N> "<name>" <pass|fail> --detail "<line>"
    --report <target>/.gsd-recipe/install-report.json`.
    - `install.sh --verify` exits non-zero whenever anything it checks is failing/pending (including
      its own `jira_check: pending` gate) — a non-zero exit here does **not** mean this skill stops.
@@ -53,19 +63,19 @@ Examples:
    not an unapproved autonomous invocation of a native GSD command. If `/gsd-health` reports
    failures that `--repair` can address, you may re-run it with `--repair` and note the outcome; if
    it reports failures that are not auto-repairable, record `fail` and surface the exact failure
-   text to the operator. Record with `install-verify-report.sh record 1 "GSD integrity" <pass|fail>
+   text to the operator. Record with `$REPORT_LIB record 1 "GSD integrity" <pass|fail>
    --detail "<summary of /gsd-health output>"`.
 
 3. **Item 2 — Context headroom.** Call native `/gsd-health --context` directly, same turn, same
    Option-B justification. Record `pass` if headroom is reported healthy, `warn` if it flags
    pressure but nothing outright broken, `fail` if it reports a hard problem. Record with
-   `install-verify-report.sh record 2 "Context headroom" <pass|warn|fail> --detail "<summary>"`.
+   `$REPORT_LIB record 2 "Context headroom" <pass|warn|fail> --detail "<summary>"`.
 
 4. **Item 3 — Capability surface.** Call native `/gsd-surface status` directly (fall back to `gsd
    capability list --json` if `/gsd-surface` isn't available in this GSD install), same turn, same
    Option-B justification. Record `pass` if the recipe's expected skills/capabilities show up as
    surfaced, `warn` if the command runs but the recipe's own skills are unexpectedly absent from the
-   surfaced set, `fail` if the command itself errors. Record with `install-verify-report.sh record 3
+   surfaced set, `fail` if the command itself errors. Record with `$REPORT_LIB record 3
    "Capability surface" <pass|warn|fail> --detail "<summary>"`.
 
 5. **Item 4 — Token still valid (delegates to TASK-021, never duplicates it).** `Glob` for
@@ -73,12 +83,12 @@ Examples:
    - **Staged** → this is the skill-to-skill delegation case (same shape as `recipe-run-phase`
      invoking `gsd-jira-sync`): invoke `recipe-validate-tokens` directly, in this same turn, and use
      *its* reported pass/fail as item 4's status verbatim — do not re-derive or second-guess it.
-     Record with `install-verify-report.sh record 4 "Token still valid" <its status> --detail
+     Record with `$REPORT_LIB record 4 "Token still valid" <its status> --detail
      "delegated to recipe-validate-tokens"`.
    - **Not staged** → do the **minimal** fallback only: `Shell`: `gh auth status` (absolute, no `gh
      api user` probe, no scope-gap analysis — that richer probe is `recipe-validate-tokens`'s entire
      job, not this skill's business to reimplement). Record `pass` if `gh auth status` exits 0,
-     `fail` otherwise, with detail noting this was the minimal fallback, e.g. `install-verify-report.sh
+     `fail` otherwise, with detail noting this was the minimal fallback, e.g. `$REPORT_LIB
      record 4 "Token still valid" <pass|fail> --detail "recipe-validate-tokens not staged — fallback
      gh auth status only"`.
    - Never implement a fuller token/scope probe than the minimal fallback above inside this skill,
@@ -86,20 +96,25 @@ Examples:
      "Item 4 delegation relationship" below.
 
 6. **Item 8 — MCP reachable (optional, read-only).** Resolve the configured tracker via
-   `bench/lib/tracker-sync-config.sh get-tracker --config <target>/.gsd-recipe/config.json` (default
-   `jira` if unset/missing). Use `GetMcpTools` to list tools on the tracker's MCP server (e.g. the
-   Atlassian MCP server for `jira`) — a smoke check only, listing tool schemas, never invoking a
-   tool. Reachable and returns a non-empty tool list → `pass`. Server not configured/not connected
-   in this environment → `warn` (this item is explicitly optional per the checklist — a repo with no
-   `{TRACKER}-mcp` server wired up yet is a valid, common state, not a failure). Record with
-   `install-verify-report.sh record 8 "MCP reachable" <pass|warn> --detail "<tracker>-mcp: <n> tools
+   `bench/lib/tracker-sync-config.sh` (also not duplicated into every target — resolve it the same
+   `recipe-paths.sh` way as `$INSTALL_SH`/`$REPORT_LIB` above):
+   ```
+   TRACKER_CFG="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/tracker-sync-config.sh --target <target>)"
+   "$TRACKER_CFG" get-tracker --config <target>/.gsd-recipe/config.json
+   ```
+   (default `jira` if unset/missing). Use `GetMcpTools` to list tools on the tracker's MCP server
+   (e.g. the Atlassian MCP server for `jira`) — a smoke check only, listing tool schemas, never
+   invoking a tool. Reachable and returns a non-empty tool list → `pass`. Server not configured/not
+   connected in this environment → `warn` (this item is explicitly optional per the checklist — a
+   repo with no `{TRACKER}-mcp` server wired up yet is a valid, common state, not a failure). Record
+   with `$REPORT_LIB record 8 "MCP reachable" <pass|warn> --detail "<tracker>-mcp: <n> tools
    listed"` (or `--detail "not configured/reachable in this environment"`).
 
 7. **Item 9 — Observer loop scheduled (optional v1, read-only).** `Glob`/`Read`
    `<target>/.gsd-recipe/observer-config.json`.
-   - **Missing** → `warn` — per `docs/netapp-recipe/lld/OBSERVER-LLD.md`, the observer is
-     "post-pilot, do not implement for v1 pilot"; its absence is expected in most repos today, not a
-     defect. Record `install-verify-report.sh record 9 "Observer loop scheduled" warn --detail
+  - **Missing** → `warn` — per `docs/netapp-recipe/lld/OBSERVER-LLD.md`, the observer is
+    "post-pilot, do not implement for v1 pilot"; its absence is expected in most repos today, not a
+    defect. Record `$REPORT_LIB record 9 "Observer loop scheduled" warn --detail
      "observer-config.json absent — expected for v1 (OBSERVER-LLD.md: post-pilot)"`.
    - **Present** → check the `enabled` field. `enabled: true` (plus a `tick_interval_seconds` value)
      → `pass`. `enabled: false` → `warn` (observer installed but not currently scheduled — an
@@ -110,13 +125,13 @@ Examples:
    `<target>/.templates/bare_metal.template.md`.
    - **Still generic** (contains the installer's own "Delete this comment block when filling in real
      bootstrap commands" HTML comment, or any of the four required rows — `install_deps`, `build`,
-     `unit_tests`, `smoke` — still hold the literal `` `<command>` `` placeholder) → **warn and
-     skip**. Never invent, guess, or fabricate repo-specific bootstrap commands to make this item
-     "pass" — this mirrors `docs/netapp-recipe/lld/INSTALL-LLD.md`'s own documented feasibility
-     caveat for this exact item ("Truly zero-touch bootstrap across all stacks is hard; per-repo
-     human authorship of commands is expected"). Record `install-verify-report.sh record 10
-     "Bare metal Gate A" warn --detail "bare_metal.template.md still generic/unfilled — skipped per
-     feasibility caveat, operator sign-off required per Step 5's human-gate row"`.
+     `unit_tests`, `smoke` — still hold the literal `` `<command>` `` placeholder)     → **warn and
+    skip**. Never invent, guess, or fabricate repo-specific bootstrap commands to make this item
+    "pass" — this mirrors `docs/netapp-recipe/lld/INSTALL-LLD.md`'s own documented feasibility
+    caveat for this exact item ("Truly zero-touch bootstrap across all stacks is hard; per-repo
+    human authorship of commands is expected"). Record `$REPORT_LIB record 10
+    "Bare metal Gate A" warn --detail "bare_metal.template.md still generic/unfilled — skipped per
+    feasibility caveat, operator sign-off required per Step 5's human-gate row"`.
    - **Genuinely filled in** (all four required rows hold real, non-placeholder commands) → run each
      of `install_deps`, `build`, `unit_tests`, `smoke` once, in order, via `Shell`, stopping at the
      first non-zero exit. All four exit 0 (and, if a `smoke output contains:` substring is declared
@@ -125,7 +140,7 @@ Examples:
      way, this is a genuine one-time run of the operator's own declared commands, not a fabrication —
      the operator authored them, this skill only executes what's already written down.
 
-9. **Write the final report and summarize.** `Shell`: `bench/lib/install-verify-report.sh summary
+9. **Write the final report and summarize.** `Shell`: `$REPORT_LIB summary
    --report <target>/.gsd-recipe/install-report.json` to read back everything just recorded, then
    report to the operator in one pass/warn/fail table (items 1-10, plus the bonus `config.json`
    check from step 1) and a single explicit closing line stating whether `install_verified` is

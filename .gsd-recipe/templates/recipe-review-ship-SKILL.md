@@ -33,16 +33,22 @@ Examples:
    `recipe-plan-phase`'s direct call to `gsd-plan-phase` and `recipe-run-phase`'s direct call to
    `gsd-execute-phase`). This produces `REVIEW.md` per `RUNTIME-LLD.md` §4.a.
 
-2. **Resolve the issue key.** Run
-   `bench/lib/parse-state.sh resolve-issue review_complete --phase N`.
+2. **Resolve the issue key.** `bench/lib/parse-state.sh` is not duplicated into every target by
+   design — resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` first (same mechanism
+   `recipe-validate-tokens-SKILL.md` § C step 1 documents in full), then run:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/parse-state.sh)"
+   "$RESOLVED" resolve-issue review_complete --phase N
+   ```
    - Resolves → carry that issue key into step 3.
    - Fails (no `.planning/STATE.md`, no `## Tracker` section, or no matching phase-task row for
      `N`) → do not block. Warn the operator ("No tracker issue linked for phase N — skipping Jira
      sync, continuing with gsd-ship") and skip straight to step 4.
 
-3. **Emit `review_complete`** (only when step 2 resolved an issue key). Compute the idempotency key
-   via `bench/lib/sync-ledger.sh key review_complete <issue_key> --phase N` and check
-   `bench/lib/sync-ledger.sh has <key>` first. Already present → skip (report `duplicate_skipped`,
+3. **Emit `review_complete`** (only when step 2 resolved an issue key). `bench/lib/sync-ledger.sh`
+   needs the same `recipe-paths.sh` resolution as step 2 above — resolve it once, then compute the
+   idempotency key via `<resolved> key review_complete <issue_key> --phase N` and check
+   `<resolved> has <key>` first. Already present → skip (report `duplicate_skipped`,
    no re-post). Otherwise, invoke the `gsd-jira-sync` skill's own documented single-event workflow
    (`gsd-jira-sync review_complete <issue_key> --phase N`) — do not inline
    `draft-jira-comment.sh`'s draft/post/stamp steps here. That skill owns drafting the comment

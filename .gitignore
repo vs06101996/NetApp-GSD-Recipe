@@ -11,3 +11,4 @@ tasks/*/reference/
 # FOTW observer runtime data (lld/INSTALL-LLD.md .gitignore additions) — session-local, not committed
 .learnings/
 .gsd-recipe/install-report.json
+.gsd-codebase/

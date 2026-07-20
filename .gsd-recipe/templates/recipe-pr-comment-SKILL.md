@@ -47,10 +47,15 @@ Examples:
 ## C. Tool Usage
 
 1. **Resolve args and run the real script (`Shell`, direct call — not agent-mediated, not an
-   MCP call).** Translate the positional `<pr_number>` into the runner's `--pr` flag, and
-   forward every other flag unchanged:
-   `bench/runners/post-github-pr-comment.sh <event_id> --pr <pr_number> --phase N [--wave W]
-   [--issue KEY] [--repo owner/repo] [--arm recipe] [--run run-01] [--ledger PATH] [--dry-run]`.
+   MCP call).** `bench/runners/post-github-pr-comment.sh` is not duplicated into every target by
+   design — resolve its real path first via `.gsd-recipe/scripts/recipe-paths.sh` (same mechanism
+   `recipe-validate-tokens-SKILL.md` § C step 1 documents in full). Translate the positional
+   `<pr_number>` into the runner's `--pr` flag, and forward every other flag unchanged:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/post-github-pr-comment.sh)"
+   "$RESOLVED" <event_id> --pr <pr_number> --phase N [--wave W]
+   [--issue KEY] [--repo owner/repo] [--arm recipe] [--run run-01] [--ledger PATH] [--dry-run]
+   ```
    This is the same category of direct shell call `recipe-sync`'s own step 1 makes to
    `sync-reconcile.sh` — a real, scriptable, testable script invocation, never "Option B"
    native-GSD-call or MCP-call territory, because `gh pr comment` (unlike

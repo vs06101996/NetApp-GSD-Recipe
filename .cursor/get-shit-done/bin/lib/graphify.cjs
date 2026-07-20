@@ -106,7 +106,7 @@ function checkGraphifyInstalled() {
   if (result.error) {
     return {
       installed: false,
-      message: 'graphify is not installed.\n\nInstall with:\n  uv pip install graphifyy && graphify install',
+      message: 'graphify is not installed.\n\nInstall with (no sudo):\n  .gsd-recipe/scripts/install-graphify.sh\n\nRequires uv first: brew install uv',
     };
   }
 

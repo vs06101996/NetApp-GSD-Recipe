@@ -75,8 +75,13 @@ TARGET1="$(new_repo)"
 check "fresh install stages .cursor/skills/recipe-validate-tokens/SKILL.md" "$?"
 
 LEDGER_COUNT1="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-validate-tokens']))")"
-[ "$LEDGER_COUNT1" = "1" ]
-check "fresh install records exactly 1 ledger row (the skill file)" "$?"
+[ "$LEDGER_COUNT1" = "2" ]
+check "fresh install records exactly 2 ledger rows (skill + --check-github script)" "$?"
+
+[ -f "$TARGET1/.gsd-recipe/scripts/install-recipe-validate-tokens.sh" ]
+check "fresh install stages .gsd-recipe/scripts/install-recipe-validate-tokens.sh on external target" "$?"
+[ -x "$TARGET1/.gsd-recipe/scripts/install-recipe-validate-tokens.sh" ]
+check "staged --check-github script is executable" "$?"
 
 # 3. Never touches .gsd-recipe/config.json or .planning/config.json
 [ ! -f "$TARGET1/.gsd-recipe/config.json" ]
@@ -118,7 +123,7 @@ check "staged skill documents non-blocking behavior" "$rc"
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 LEDGER_COUNT2="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-validate-tokens']))")"
-[ "$LEDGER_COUNT2" = "1" ]
+[ "$LEDGER_COUNT2" = "2" ]
 check "re-running install does not duplicate ledger rows" "$?"
 
 # 6. Uninstall removes the skill and clears the ledger entry
@@ -128,6 +133,8 @@ TARGET2="$(new_repo)"
 
 [ ! -f "$TARGET2/.cursor/skills/recipe-validate-tokens/SKILL.md" ]
 check "uninstall removes the staged skill" "$?"
+[ ! -f "$TARGET2/.gsd-recipe/scripts/install-recipe-validate-tokens.sh" ]
+check "uninstall removes the staged --check-github script" "$?"
 LEDGER_AFTER="$(python3 -c "import json; d=json.load(open('$TARGET2/.gsd-recipe/ledger.json')); print('recipe-validate-tokens' in d)")"
 [ "$LEDGER_AFTER" = "False" ]
 check "uninstall clears the component's ledger entry" "$?"

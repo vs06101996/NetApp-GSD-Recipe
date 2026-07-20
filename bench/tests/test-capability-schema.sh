@@ -159,7 +159,7 @@ python3 -c "
 import json
 d = json.load(open('$GEN_OUT'))
 by_id = {c['id']: c for c in d['capabilities']}
-for cid in ('recipe-prd-intake', 'recipe-plan-phase', 'fotw-observer', 'recipe-validate-tokens', 'recipe-bootstrap-knowledge', 'recipe-install-verify', 'recipe-run-phases', 'recipe-verify-feature', 'recipe-review-ship', 'recipe-settle', 'gsd-jira-sync', 'recipe-sync', 'recipe-pr-comment', 'recipe-install', 'recipe-observe', 'recipe-create-epic', 'recipe-create-phase-tasks'):
+for cid in ('recipe-prd-intake', 'recipe-plan-phase', 'fotw-observer', 'recipe-validate-tokens', 'recipe-bootstrap-knowledge', 'recipe-install-verify', 'recipe-run-phases', 'recipe-verify-feature', 'recipe-review-ship', 'recipe-settle', 'gsd-jira-sync', 'recipe-sync', 'recipe-pr-comment', 'recipe-install', 'recipe-observe', 'recipe-create-epic', 'recipe-create-phase-tasks', 'recipe-new-project', 'recipe-onboard'):
     assert by_id[cid]['staged'] is False, f'{cid} should NOT be staged in this scratch target'
 "
 check "generate-capability correctly reports staged=false for absent capabilities" "$?"
@@ -170,9 +170,9 @@ import json
 d = json.load(open('$GEN_OUT'))
 ids = [c['id'] for c in d['capabilities']]
 assert len(ids) == len(set(ids)), 'duplicate capability ids'
-assert len(ids) == 21, f'expected 21 catalog entries, got {len(ids)}'
+assert len(ids) == 23, f'expected 23 catalog entries, got {len(ids)}'
 "
-check "generate-capability emits exactly 21 catalog entries with unique ids" "$?"
+check "generate-capability emits exactly 23 catalog entries with unique ids" "$?"
 
 # 22. task_id values match BACKLOG.md's task table
 python3 -c "
@@ -200,6 +200,8 @@ assert by_id['recipe-install']['task_id'] == 'TASK-031'
 assert by_id['recipe-observe']['task_id'] == 'TASK-032'
 assert by_id['recipe-create-epic']['task_id'] == 'TASK-033'
 assert by_id['recipe-create-phase-tasks']['task_id'] == 'TASK-034'
+assert by_id['recipe-new-project']['task_id'] == 'TASK-036'
+assert by_id['recipe-onboard']['task_id'] == 'TASK-037'
 "
 check "generate-capability's task_id values match BACKLOG.md's task table" "$?"
 

@@ -26,8 +26,13 @@ Examples:
 
 ## C. Tool Usage
 
-1. **Resolve the issue key.** Run
-   `bench/lib/parse-state.sh resolve-issue verify_complete --phase N`.
+1. **Resolve the issue key.** `bench/lib/parse-state.sh` is not duplicated into every target by
+   design — resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` first (same mechanism
+   `recipe-validate-tokens-SKILL.md` § C step 1 documents in full), then run:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/parse-state.sh)"
+   "$RESOLVED" resolve-issue verify_complete --phase N
+   ```
    - Resolves → carry that issue key into step 5.
    - Fails (no `.planning/STATE.md`, no `## Tracker` section, or no matching phase-task row for
      `N`) → do not block. Warn the operator ("No tracker issue linked for phase N — skipping Jira
@@ -73,9 +78,10 @@ Examples:
    an end state — accepted, rejected with fix plans queued, or otherwise closed out).
 
 5. **Emit `verify_complete`** (only when step 1 resolved an issue key), once `gsd-verify-work N`
-   has genuinely concluded. Compute the idempotency key via
-   `bench/lib/sync-ledger.sh key verify_complete <issue_key> --phase N` and check
-   `bench/lib/sync-ledger.sh has <key>` first. Already present → skip (report `duplicate_skipped`,
+   has genuinely concluded. `bench/lib/sync-ledger.sh` needs the same `recipe-paths.sh` resolution
+   as step 1 above — resolve it once, then compute the idempotency key via
+   `<resolved> key verify_complete <issue_key> --phase N` and check
+   `<resolved> has <key>` first. Already present → skip (report `duplicate_skipped`,
    no re-post). Otherwise, invoke the `gsd-jira-sync` skill's own documented single-event workflow
    (`gsd-jira-sync verify_complete <issue_key> --phase N`) — do not inline
    `draft-jira-comment.sh`'s draft/post/stamp steps here. That skill owns drafting the comment

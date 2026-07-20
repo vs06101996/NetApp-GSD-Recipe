@@ -22,9 +22,15 @@ tracker-specific skill this dispatches to.
 
 ## C. Tool Usage
 
-1. `Shell`: `bench/lib/tracker-sync-config.sh get-tracker` (bundled harness
-   path before copy: `docs/netapp-recipe/reference/harness/lib/tracker-sync-config.sh`,
-   if present — otherwise use the installed `bench/lib/tracker-sync-config.sh`).
+1. **Read the configured tracker.** `bench/lib/tracker-sync-config.sh` is not duplicated into every
+   target by design — resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` (same
+   mechanism `recipe-validate-tokens-SKILL.md` § C step 1 documents in full; this replaces the
+   older "bundled harness mirror under `docs/netapp-recipe/reference/harness/`" convention that
+   file tree no longer exists). `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/tracker-sync-config.sh)"
+   "$RESOLVED" get-tracker
+   ```
 2. Branch on the result:
    - **`jira`** — invoke the `gsd-jira-sync` skill with `{{GSD_ARGS}}`
      unchanged. Follow *its* `SKILL.md` for everything from here (single-event
@@ -75,7 +81,8 @@ still need to touch.
 
 ## Workflow
 
-1. Read the configured tracker: `tracker-sync-config.sh get-tracker`.
+1. Read the configured tracker: `tracker-sync-config.sh get-tracker`, resolved via
+   `.gsd-recipe/scripts/recipe-paths.sh` per § C step 1 above.
 2. `tracker: jira` → hand off entirely to `gsd-jira-sync` (single-event or
    Drain mode, per its own `SKILL.md`).
 3. `tracker: github` → report "not implemented yet, needs TASK-006" and stop.
@@ -84,8 +91,9 @@ still need to touch.
 ## Switching trackers
 
 ```bash
-bench/lib/tracker-sync-config.sh set-tracker jira    # default, fully built
-bench/lib/tracker-sync-config.sh set-tracker github  # not yet functional (TASK-006)
+RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/tracker-sync-config.sh)"
+"$RESOLVED" set-tracker jira    # default, fully built
+"$RESOLVED" set-tracker github  # not yet functional (TASK-006)
 ```
 
 ## Relationship to gsd-jira-sync

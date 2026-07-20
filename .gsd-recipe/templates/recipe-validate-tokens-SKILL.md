@@ -23,15 +23,28 @@ its own, and is safe to invoke on a repo that hasn't been scaffolded yet.
 
 ## C. Tool Usage
 
-1. **GitHub check (scriptable — run the real script, do not reimplement it inline).** `Shell`: run
-   `.gsd-recipe/scripts/install-recipe-validate-tokens.sh --check-github` (bundled path once
-   staged; if this skill hasn't been installed yet in the current repo, the canonical source is
-   `.gsd-recipe/scripts/install-recipe-validate-tokens.sh` in the recipe's own source tree). This
-   mirrors `install.sh`'s own `github_check()` — real `gh auth status` + `gh api user`, warn-only —
-   extended to also surface OAuth scopes when determinable. Read its `PASS`/`WARN`/`FAIL` line and
-   any `Scopes:`/`Remediation:` detail lines verbatim into your summary in step 3. Never re-derive
-   the check yourself from a raw `gh` call inline — always go through the script so there is exactly
-   one implementation of the check logic.
+1. **GitHub check (scriptable — run the real script, do not reimplement it inline).** The script
+   this step needs, `install-recipe-validate-tokens.sh`, is **not** duplicated into every target by
+   design (only `gsd-benchmark`, the recipe's own source repo, keeps the full
+   `.gsd-recipe/scripts/` tree) — always resolve its real path through the small resolver every
+   install stages at `.gsd-recipe/scripts/recipe-paths.sh` instead of assuming the naive relative
+   path is staged locally. `Shell`:
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve .gsd-recipe/scripts/install-recipe-validate-tokens.sh)"
+   "$RESOLVED" --check-github
+   ```
+   `recipe-paths.sh` itself checks, in order: a local copy at that path (rare — only true for a
+   self-install into the recipe's own source repo), then `recipe_source` from
+   `.gsd-recipe/config.json` (the absolute path to the recipe's source repo, written by `install.sh`
+   on every external `--target` install), then its own two-levels-up location as a last resort. It
+   fails closed with an actionable stderr message if none of those resolve — if that happens, tell
+   the operator plainly (e.g. "`recipe-paths.sh` isn't staged yet — re-run `install.sh` against
+   this repo first") rather than guessing at a fallback path yourself. This mirrors `install.sh`'s
+   own `github_check()` — real `gh auth status` + `gh api user`, warn-only — extended to also
+   surface OAuth scopes when determinable. Read its `PASS`/`WARN`/`FAIL` line and any
+   `Scopes:`/`Remediation:` detail lines verbatim into your summary in step 3. Never re-derive the
+   check yourself from a raw `gh` call inline — always go through the script so there is exactly one
+   implementation of the check logic.
 
 2. **Jira/Atlassian MCP check (agent-mediated — this is NOT scriptable).** A bash script has no
    MCP tool-calling access — the same architectural split `bench/runners/sync-reconcile.sh`
