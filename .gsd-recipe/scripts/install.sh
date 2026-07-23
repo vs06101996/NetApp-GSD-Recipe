@@ -79,8 +79,9 @@
 #     "recipe-install-verify"/"recipe-run-phases"/"recipe-verify-feature"/
 #     "recipe-review-ship"/"recipe-settle"/"gsd-jira-sync"/"recipe-sync"/
 #     "recipe-pr-comment"/"recipe-install"/"recipe-observe"/
-#     "recipe-create-epic"/"recipe-create-phase-tasks", which the
-#     sub-installers/skills track under their own component names.
+#     "recipe-create-epic"/"recipe-create-phase-tasks"/"recipe-help"/
+#     "recipe-onboard", which the sub-installers/skills track under their
+#     own component names.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -158,6 +159,8 @@ RECIPE_INSTALL_INSTALLER="$SCRIPT_DIR/install-recipe-install.sh"
 RECIPE_OBSERVE_INSTALLER="$SCRIPT_DIR/install-recipe-observe.sh"
 RECIPE_CREATE_EPIC_INSTALLER="$SCRIPT_DIR/install-recipe-create-epic.sh"
 RECIPE_CREATE_PHASE_TASKS_INSTALLER="$SCRIPT_DIR/install-recipe-create-phase-tasks.sh"
+RECIPE_HELP_INSTALLER="$SCRIPT_DIR/install-recipe-help.sh"
+RECIPE_ONBOARD_INSTALLER="$SCRIPT_DIR/install-recipe-onboard.sh"
 CAPABILITY_SCHEMA_LIB="$SCRIPT_DIR/../../bench/lib/capability-schema.sh"
 
 # Cursor-facing GSD presence signal (see "Key research finding" in the plan:
@@ -636,7 +639,7 @@ install() {
   fi
 
   if [ "$YES" -ne 1 ]; then
-    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks) into $TARGET? [y/N] " reply
+    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-onboard) into $TARGET? [y/N] " reply
     case "$reply" in
       [yY]|[yY][eE][sS]) : ;;
       *) echo "install.sh: aborted, no consent given."; exit 0 ;;
@@ -755,7 +758,7 @@ GITIGNORE_LINES
   chmod +x "$GSD_RECIPE_DIR/scripts/install-graphify.sh"
   ledger_record ".gsd-recipe/scripts/install-graphify.sh"
 
-  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks)..."
+  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-onboard)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
   "$TRACKER_SYNC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PLANNING_POLICY_INSTALLER" --yes --target "$TARGET"
@@ -775,6 +778,8 @@ GITIGNORE_LINES
   "$RECIPE_OBSERVE_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_CREATE_EPIC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_HELP_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_ONBOARD_INSTALLER" --yes --target "$TARGET"
 
   install_report_write "$gh_result" "$PREREQ_PYTHON3" "$PREREQ_GIT" "$PREREQ_NODE" "$PREREQ_GH" "$PREREQ_GSD_CORE" "$PREREQ_GRAPHIFY" "$GRAPHIFY_CONFIG_ENABLED"
   ledger_record ".gsd-recipe/install-report.json"
@@ -1046,6 +1051,18 @@ if o['enabled']:
     echo "    recipe-create-phase-tasks composed — FAIL (recipe-create-phase-tasks ledger component absent)"
     ok=0
   fi
+  if ledger_has_component "recipe-help"; then
+    echo "    recipe-help composed — pass"
+  else
+    echo "    recipe-help composed — FAIL (recipe-help ledger component absent)"
+    ok=0
+  fi
+  if ledger_has_component "recipe-onboard"; then
+    echo "    recipe-onboard composed — pass"
+  else
+    echo "    recipe-onboard composed — FAIL (recipe-onboard ledger component absent)"
+    ok=0
+  fi
 
   echo "[X] 10. Bare metal Gate A (.templates/bare_metal.template.md bootstrap run) — run manually"
 
@@ -1151,6 +1168,8 @@ PY
   "$RECIPE_OBSERVE_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_CREATE_EPIC_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_HELP_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_ONBOARD_INSTALLER" --uninstall --target "$TARGET"
 
   echo "install.sh: uninstall complete. code_base_details/, .knowledge/, config.json, and .gitignore are left in place (shared/human data this installer doesn't own for deletion)."
 }

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netapp.gsd-recipe.local/benchmarks/field-pilot.schema.json",
+  "title": "NetApp GSD Recipe field benchmark record",
+  "type": "object",
+  "required": ["id", "kind", "feature", "recorded_at", "arms", "outcome"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "kind": { "enum": ["field-pilot"] },
+    "status": { "enum": ["recorded", "draft"] },
+    "feature": { "type": "string" },
+    "recorded_at": { "type": "string", "format": "date" },
+    "operator_count": { "type": "integer", "minimum": 1 },
+    "grader_scored": { "type": "boolean" },
+    "prd_source": { "type": "string" },
+    "target_repo": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "mode": { "enum": ["greenfield", "brownfield"] }
+      }
+    },
+    "tracker": {
+      "type": "object",
+      "properties": {
+        "system": { "enum": ["jira"] },
+        "issue_key": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "ship_artifact": {
+      "type": "object",
+      "properties": {
+        "kind": { "enum": ["github_pr"] },
+        "number": { "type": "integer" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "wall_clock_hours": {
+            "type": "object",
+            "properties": {
+              "min": { "type": "number" },
+              "max": { "type": "number" },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "metric": { "type": "string" },
+        "speedup_ratio_min": { "type": "number" },
+        "speedup_ratio_max": { "type": "number" },
+        "summary": { "type": "string" }
+      }
+    },
+    "caveats": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

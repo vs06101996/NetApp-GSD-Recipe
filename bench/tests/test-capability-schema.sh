@@ -170,7 +170,7 @@ import json
 d = json.load(open('$GEN_OUT'))
 ids = [c['id'] for c in d['capabilities']]
 assert len(ids) == len(set(ids)), 'duplicate capability ids'
-assert len(ids) == 23, f'expected 23 catalog entries, got {len(ids)}'
+assert len(ids) == 24, f'expected 24 catalog entries, got {len(ids)}'
 "
 check "generate-capability emits exactly 23 catalog entries with unique ids" "$?"
 

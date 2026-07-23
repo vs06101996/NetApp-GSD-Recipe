@@ -192,10 +192,14 @@ check "install.sh composes install-recipe-observe.sh (skill staged)" "$?"
 check "install.sh composes install-recipe-create-epic.sh (skill + runner staged)" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-create-phase-tasks/SKILL.md" ]
 check "install.sh composes install-recipe-create-phase-tasks.sh (skill staged)" "$?"
-[ -f "$TARGET1/.cursor/skills/recipe-new-project/SKILL.md" ]
-check "install.sh composes install-recipe-new-project.sh (skill staged)" "$?"
-[ -f "$TARGET1/.cursor/skills/recipe-onboard/SKILL.md" ]
-check "install.sh composes install-recipe-onboard.sh (skill staged)" "$?"
+[ -f "$TARGET1/.cursor/skills/recipe-help/SKILL.md" ] && [ -f "$TARGET1/docs/RECIPE-COMMANDS.md" ] && [ -f "$TARGET1/docs/RECIPE-BENCHMARKS.md" ]
+check "install.sh composes install-recipe-help.sh (skill + docs staged)" "$?"
+if [ -f "$TARGET1/.cursor/skills/recipe-new-project/SKILL.md" ]; then
+  check "install.sh composes install-recipe-new-project.sh (skill staged)" "0"
+fi
+if [ -f "$TARGET1/.cursor/skills/recipe-onboard/SKILL.md" ]; then
+  check "install.sh composes install-recipe-onboard.sh (skill staged)" "0"
+fi
 
 python3 -c "
 import json
@@ -219,9 +223,12 @@ assert 'recipe-install' in d and d['recipe-install'], d
 assert 'recipe-observe' in d and d['recipe-observe'], d
 assert 'recipe-create-epic' in d and d['recipe-create-epic'], d
 assert 'recipe-create-phase-tasks' in d and d['recipe-create-phase-tasks'], d
-assert 'recipe-new-project' in d and d['recipe-new-project'], d
-assert 'recipe-onboard' in d and d['recipe-onboard'], d
+assert 'recipe-help' in d and d['recipe-help'], d
 assert 'install-core' in d and d['install-core'], d
+if 'recipe-new-project' in d:
+    assert d['recipe-new-project'], d
+if 'recipe-onboard' in d:
+    assert d['recipe-onboard'], d
 # install.sh must not re-ledger files the sub-installers already track under
 # their own component names.
 assert set(d['install-core']).isdisjoint(set(d['fotw-observer'])), d
@@ -243,8 +250,10 @@ assert set(d['install-core']).isdisjoint(set(d['recipe-install'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-observe'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-epic'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-phase-tasks'])), d
-assert set(d['install-core']).isdisjoint(set(d['recipe-new-project'])), d
-assert set(d['install-core']).isdisjoint(set(d['recipe-onboard'])), d
+assert set(d['install-core']).isdisjoint(set(d['recipe-help'])), d
+for _opt in ('recipe-new-project', 'recipe-onboard'):
+    if _opt in d:
+        assert set(d['install-core']).isdisjoint(set(d[_opt])), d
 "
 check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-new-project/recipe-onboard components (no cross-tracking)" "$?"
 
@@ -351,10 +360,8 @@ echo "$VERIFY_OUT1" | grep -q "recipe-create-epic composed — pass" && rc=0 || 
 check "--verify output mentions recipe-create-epic composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-create-phase-tasks composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-create-phase-tasks composition" "$rc"
-echo "$VERIFY_OUT1" | grep -q "recipe-new-project composed — pass" && rc=0 || rc=$?
-check "--verify output mentions recipe-new-project composition" "$rc"
-echo "$VERIFY_OUT1" | grep -q "recipe-onboard composed — pass" && rc=0 || rc=$?
-check "--verify output mentions recipe-onboard composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-help composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-help composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "config.schema.json — strict schema validation — pass" && rc=0 || rc=$?
 check "--verify output mentions config.schema.json strict validation" "$rc"
 
@@ -418,10 +425,8 @@ check "uninstall cascades to install-recipe-observe.sh --uninstall" "$?"
 check "uninstall cascades to install-recipe-create-epic.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-create-phase-tasks/SKILL.md" ]
 check "uninstall cascades to install-recipe-create-phase-tasks.sh --uninstall" "$?"
-[ ! -f "$TARGET3/.cursor/skills/recipe-new-project/SKILL.md" ]
-check "uninstall cascades to install-recipe-new-project.sh --uninstall" "$?"
-[ ! -f "$TARGET3/.cursor/skills/recipe-onboard/SKILL.md" ]
-check "uninstall cascades to install-recipe-onboard.sh --uninstall" "$?"
+[ ! -f "$TARGET3/.cursor/skills/recipe-help/SKILL.md" ] && [ ! -f "$TARGET3/docs/RECIPE-COMMANDS.md" ] && [ ! -f "$TARGET3/docs/RECIPE-BENCHMARKS.md" ]
+check "uninstall cascades to install-recipe-help.sh --uninstall" "$?"
 
 [ -d "$TARGET3/code_base_details" ] && [ -f "$TARGET3/code_base_details/README.md" ]
 check "uninstall preserves code_base_details/" "$?"

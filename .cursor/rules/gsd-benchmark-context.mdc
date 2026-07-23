@@ -1,19 +1,21 @@
 ---
-description: GSD product findings and benchmark measurement constraints
+description: NetApp GSD Recipe operator context and command reference pointers
 alwaysApply: true
 ---
 
-# GSD benchmark context
+# NetApp GSD Recipe context
 
-Read before changing harness, run workflow, or interpreting results:
+Read before changing the recipe, install workflow, or target-repo behavior:
 
-1. **GSD commands:** [docs/GSD-COMMANDS.md](docs/GSD-COMMANDS.md) — invoke skills in Cursor; standard vs full catalog.
-2. **GSD playbooks:** [docs/GSD-TUTORIAL-PLAYBOOKS.md](docs/GSD-TUTORIAL-PLAYBOOKS.md) — Case 1 greenfield PRD, Case 2 brownfield feature/bug.
-3. **Experiment agenda:** [docs/EXPERIMENT-AGENDA.md](docs/EXPERIMENT-AGENDA.md) — three rungs (baseline / vanilla GSD / recipe), metrics, Feature A/B/C pilot.
-4. **Product findings:** [docs/GSD-PRODUCT-CONTEXT.md](docs/GSD-PRODUCT-CONTEXT.md) — GSD limits and Cursor usage.
-5. **Operator context:** [.planning/CONTEXT.md](.planning/CONTEXT.md) — arms, grader as DoD, scripts.
-6. **Roadmap:** [.planning/ROADMAP.md](.planning/ROADMAP.md) — what to build next.
+1. **Recipe commands:** [docs/RECIPE-COMMANDS.md](docs/RECIPE-COMMANDS.md) — full catalog; invoke **`recipe-help`** in Cursor for a guided tour.
+2. **Native GSD commands:** invoke **`gsd-help`** in Cursor (bundled GSD skills under `.cursor/skills/gsd-*`).
+3. **Recipe policy:** [docs/netapp-recipe/lld/PLANNING-POLICY.md](docs/netapp-recipe/lld/PLANNING-POLICY.md) — mandatory PLAN.md sections and per-phase prerequisites.
+4. **Install LLD:** [docs/netapp-recipe/lld/INSTALL-LLD.md](docs/netapp-recipe/lld/INSTALL-LLD.md) — scaffold, verify, uninstall.
+5. **Backlog:** [docs/netapp-recipe/BACKLOG.md](docs/netapp-recipe/BACKLOG.md) — task status and dependencies.
+6. **Roadmap:** [.planning/ROADMAP.md](.planning/ROADMAP.md) — project phases (when present in target repos).
 
-Do not treat GSD verify-work as passing the benchmark. Grade with `bench/grade/grade.sh` / `finalize-run.sh`. Recipe stamps measure process velocity; grader measures code quality.
+Install into a target repo: `bench/runners/install-recipe-to-target.sh --target /path/to/repo`
 
-**Never invoke GSD skills** (`gsd-new-project`, `gsd-plan-phase`, etc.) on behalf of the user. The user runs GSD manually; tutorial: [docs/GSD-TUTORIAL.md](docs/GSD-TUTORIAL.md).
+Regenerate command docs after catalog changes: `bench/lib/generate-recipe-help.sh`
+
+**Never invoke GSD skills** (`gsd-new-project`, `gsd-plan-phase`, etc.) on behalf of the user unless they explicitly asked you to run a recipe wrapper skill that documents same-turn native calls.

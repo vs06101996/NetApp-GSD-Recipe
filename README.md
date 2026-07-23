@@ -4,6 +4,10 @@ NetApp GSD recipe for Cursor: structured feature delivery from PRD through plann
 
 This repository is the **source of truth** for recipe skills (`.gsd-recipe/`), installers, harness scripts (`bench/`), and integration tests.
 
+**Command reference:** [docs/RECIPE-COMMANDS.md](docs/RECIPE-COMMANDS.md) · In Cursor, invoke **`recipe-help`**
+
+**Benchmarks:** [docs/netapp-recipe/BENCHMARKS.md](docs/netapp-recipe/BENCHMARKS.md) — KB-Evaluations on AgentStudio ([KAN-53](https://netapp.atlassian.net/browse/KAN-53), [PR #465](https://github.com/NetApp-Nemo/AgentStudio/pull/465)): **~3–6 h recipe vs ~2 days ad-hoc** (field benchmark, Jul 2026).
+
 ## Quick start (recipe install)
 
 1. **Install recipe into a target repo:** `./bench/runners/install-recipe-to-target.sh --target /path/to/your/repo --verify`

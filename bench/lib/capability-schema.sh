@@ -499,6 +499,17 @@ CATALOG = [
         "composed_by_install_sh": True,
         "ledger_component": "recipe-onboard",
     },
+    {
+        "id": "recipe-help",
+        "task_id": "TASK-038",
+        "kind": "cursor-skill",
+        "description": "Read-only command reference for the NetApp GSD recipe: recipe skills, native GSD summary, harness CLI, and bench runners. Stages docs/RECIPE-COMMANDS.md plus an invoke-by-name help skill (recipe-help). Never chains or auto-invokes other skills.",
+        "invoke_name": "recipe-help",
+        "staged_path": ".cursor/skills/recipe-help/SKILL.md",
+        "installer": ".gsd-recipe/scripts/install-recipe-help.sh",
+        "composed_by_install_sh": True,
+        "ledger_component": "recipe-help",
+    },
 ]
 
 ledger_path = os.path.join(TARGET, ".gsd-recipe", "ledger.json")

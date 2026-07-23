@@ -1,0 +1,52 @@
+{
+  "id": "kb-evaluations-agentstudio-2026-07",
+  "kind": "field-pilot",
+  "status": "recorded",
+  "feature": "KB-Evaluations",
+  "recorded_at": "2026-07-23",
+  "operator_count": 1,
+  "grader_scored": false,
+  "prd_source": "KB-Evaluations-PRD-2.odt",
+  "target_repo": {
+    "name": "AgentStudio",
+    "url": "https://github.com/NetApp-Nemo/AgentStudio",
+    "mode": "brownfield"
+  },
+  "tracker": {
+    "system": "jira",
+    "issue_key": "KAN-53",
+    "url": "https://netapp.atlassian.net/browse/KAN-53"
+  },
+  "ship_artifact": {
+    "kind": "github_pr",
+    "number": 465,
+    "url": "https://github.com/NetApp-Nemo/AgentStudio/pull/465"
+  },
+  "arms": [
+    {
+      "id": "recipe",
+      "label": "NetApp GSD recipe",
+      "description": "Recipe on AgentStudio: PRD intake, phased plan/execute, verify, ship, Jira traceability",
+      "wall_clock_hours": { "min": 3, "max": 6 }
+    },
+    {
+      "id": "ad-hoc-baseline",
+      "label": "Ad-hoc (vibe coding)",
+      "description": "Same feature scope without recipe structure or gates",
+      "wall_clock_hours": { "min": 16, "max": 16, "note": "~2 calendar days operator-reported" }
+    }
+  ],
+  "outcome": {
+    "metric": "wall_clock_hours",
+    "speedup_ratio_min": 2.7,
+    "speedup_ratio_max": 5.3,
+    "summary": "Recipe path ~3–6 h vs ad-hoc ~2 days on equivalent KB-Evaluations scope"
+  },
+  "caveats": [
+    "Single operator, single feature — not N=5 harness runs",
+    "Same operator for both arms — learning/order effects possible",
+    "Brownfield monorepo — not comparable to greenfield Uber-Eats harness tasks",
+    "Wall-clock includes context switches; not pure coding time",
+    "Quality validated via PR/CI, not bench/grade/grade.sh"
+  ]
+}
