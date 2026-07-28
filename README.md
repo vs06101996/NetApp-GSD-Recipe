@@ -8,10 +8,54 @@ This repository is the **source of truth** for recipe skills (`.gsd-recipe/`), i
 
 **Benchmarks:** [docs/netapp-recipe/BENCHMARKS.md](docs/netapp-recipe/BENCHMARKS.md) — KB-Evaluations on AgentStudio ([KAN-53](https://netapp.atlassian.net/browse/KAN-53), [PR #465](https://github.com/NetApp-Nemo/AgentStudio/pull/465)): **~3–6 h recipe vs ~2 days ad-hoc** (field benchmark, Jul 2026).
 
-## Quick start (recipe install)
+## Quick start (install)
 
-1. **Install recipe into a target repo:** `./bench/runners/install-recipe-to-target.sh --target /path/to/your/repo --verify`
-2. **List / register benchmark tasks (optional):** `./bench/tasks/list.sh` · `./bench/tasks/register.sh --id <name> --path /abs/repo`
+From this repo (or any clone of [NetApp-GSD-Recipe](https://github.com/vs06101996/NetApp-GSD-Recipe.git)):
+
+```bash
+./bench/runners/install-recipe-to-target.sh --target /<path-to-repo> --verify
+```
+
+Already inside the target repo? Omit `--target` — the installer detects the git root automatically:
+
+```bash
+/path/to/gsd-benchmark/bench/runners/install-recipe-to-target.sh --verify
+```
+
+Then open the target repo in Cursor and invoke the **`recipe-*`** commands below by name. You do **not** need the benchmark harness scripts in the next section for normal feature delivery.
+
+## Delivery workflow (Cursor)
+
+Typical path for a new feature (example: KB-Evaluations Feature 2). Invoke each command by name in Cursor Agent; `@file` references a file in the chat.
+
+| Command | One-liner use case |
+|---------|-------------------|
+| `recipe-validate-tokens` | Check GitHub + Jira/Atlassian credentials/scopes before doing recipe work. |
+| `recipe-prd-intake KB-Evaluations-Feature2-PRD.md` | Turn the raw PRD into canonical `docs/PRD.md` (+ bootstrap FOTW observer). |
+| `recipe-onboard @KB-Evaluations-Feature2-PRD.md` | Full onboarding: project planning + Jira epic + phase tasks in one chain (skips intake if `docs/PRD.md` already exists). |
+| `recipe-bootstrap-knowledge` | Build/refresh `.knowledge/` + codebase map + graphify for planning context. |
+| `recipe-plan-phase 1` | Write Phase 1 `PLAN.md` (e.g. TUN architecture & contracts). |
+| `recipe-run-phase 1` | Execute Phase 1 plans (implement kb_tune types/contracts). |
+| `recipe-run-phases 2 5 --full` | Loop phases 2→5: plan → run → verify → review/ship → settle. |
+| `recipe-verify-feature 1` | Verify Phase 1 only (when Phase 1 was planned/run outside the loop above). |
+| `recipe-review-ship 1` | Code review + open PR for Phase 1. |
+| `recipe-settle 1` | PO accept + CI green gate for Phase 1. |
+
+Full chain in one line (after install):
+
+```text
+recipe-validate-tokens → recipe-onboard → recipe-bootstrap-knowledge
+  → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases [<start> <end>] [--full])
+  → recipe-sync
+```
+
+See [docs/RECIPE-COMMANDS.md](docs/RECIPE-COMMANDS.md) for the complete catalog.
+
+## Benchmark harness (optional)
+
+Only needed if you are running controlled baseline / GSD / recipe benchmark arms in **this** repo — not for installing the recipe into AgentStudio or other target repos.
+
+1. **List / register benchmark tasks:** `./bench/tasks/list.sh` · `./bench/tasks/register.sh --id <name> --path /abs/repo`
 2. **Validate grading (no LLM):** `./bench/runners/validate-pipeline.sh`
 3. **Prepare a run:** `./bench/runners/prepare-run.sh runs/baseline/run-01`
 4. **Grade an artifact:** `./bench/grade/grade.sh results/baseline/run-01/artifact`
