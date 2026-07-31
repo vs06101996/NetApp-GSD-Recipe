@@ -21,6 +21,7 @@ CHARCOAL = RGBColor(0x36, 0x45, 0x4F)
 SLATE = RGBColor(0x64, 0x74, 0x8B)
 
 OUT = Path(__file__).resolve().parent / "NetApp-GSD-Recipe-Tech-Talk.pptx"
+VIDEO = Path(__file__).resolve().parent / "assets" / "recipe-demo-post-usage.mp4"
 
 
 def set_slide_bg(slide, rgb: RGBColor) -> None:
@@ -489,26 +490,45 @@ def slide_demo(prs) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     set_slide_bg(slide, NAVY)
     add_textbox(
-        slide, Inches(0.9), Inches(0.7), Inches(11), Inches(0.8),
-        "Live demo (~8 min)", size=36, bold=True, color=WHITE,
+        slide, Inches(0.9), Inches(0.5), Inches(5.8), Inches(0.9),
+        "Post-recipe walkthrough", size=32, bold=True, color=WHITE,
+    )
+    add_textbox(
+        slide, Inches(0.9), Inches(1.35), Inches(5.5), Inches(0.5),
+        "~7 min · Jul 2026 recording", size=16, color=RGBColor(0xAA, 0xCC, 0xDD),
     )
 
-    demo_steps = [
-        "1.  recipe-validate-tokens",
-        "2.  recipe-onboard @Your-PRD.md",
-        "3.  recipe-bootstrap-knowledge",
-        "4.  recipe-plan-phase 1 → recipe-run-phase 1",
-        "5.  Show Jira epic + PLAN.md",
+    bullets = [
+        "What changed after recipe-onboard",
+        "Jira + PLAN.md in the repo",
+        "Shipped output (PR / artifacts)",
+        "Click video ▶ to play in Presenter View",
     ]
-    y = Inches(1.8)
-    for step in demo_steps:
-        add_textbox(slide, Inches(1.2), y, Inches(10), Inches(0.55), step, size=24, color=MINT, font="Consolas")
-        y += Inches(0.75)
+    y = Inches(2.1)
+    for line in bullets:
+        add_textbox(slide, Inches(1.0), y, Inches(5.2), Inches(0.45), line, size=18, color=MINT)
+        y += Inches(0.55)
+
+    if VIDEO.is_file():
+        slide.shapes.add_movie(
+            str(VIDEO),
+            Inches(6.4),
+            Inches(0.9),
+            Inches(6.5),
+            Inches(5.8),
+            mime_type="video/mp4",
+        )
+    else:
+        add_textbox(
+            slide, Inches(6.4), Inches(2.5), Inches(6.2), Inches(2.0),
+            "Place video at:\nassets/recipe-demo-post-usage.mp4\n\nThen re-run generate_tech_talk.py",
+            size=16, color=RGBColor(0xAA, 0xCC, 0xDD),
+        )
 
     add_textbox(
-        slide, Inches(0.9), Inches(5.8), Inches(11), Inches(0.6),
-        "Fallback: screenshots from KAN-53 / PR #465 if MCP is down",
-        size=16, color=RGBColor(0xAA, 0xCC, 0xDD),
+        slide, Inches(0.9), Inches(6.5), Inches(12), Inches(0.5),
+        "Source: GMT20260717 post-usage screen recording (KB-Evaluations / AgentStudio context)",
+        size=12, color=RGBColor(0x88, 0xAA, 0xBB),
     )
 
 
@@ -573,7 +593,7 @@ def build() -> Path:
     add_notes(prs.slides[-1], "Say caveats: N=1 pilot, directional. Harness N=5 still pending.")
 
     slide_demo(prs)
-    add_notes(prs.slides[-1], "Live demo or screenshots. Keep Jira MCP ready. Leave 3-5 min for Q&A.")
+    add_notes(prs.slides[-1], "Play embedded 7-min video (post-usage + changes). Pause to highlight Jira/PR. Leave 5 min Q&A.")
 
     slide_qa(prs)
     add_notes(prs.slides[-1], "Backup: recipe-help vs gsd-help, graphify via bootstrap-knowledge, recipe-review-ship for PR.")
