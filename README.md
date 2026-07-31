@@ -8,6 +8,34 @@ This repository is the **source of truth** for recipe skills (`.gsd-recipe/`), i
 
 **Benchmarks:** [docs/netapp-recipe/BENCHMARKS.md](docs/netapp-recipe/BENCHMARKS.md) — KB-Evaluations on AgentStudio ([KAN-53](https://netapp.atlassian.net/browse/KAN-53), [PR #465](https://github.com/NetApp-Nemo/AgentStudio/pull/465)): **~3–6 h recipe vs ~2 days ad-hoc** (field benchmark, Jul 2026).
 
+## Prerequisites
+
+Before install or delivery, you need the following on the **machine** and in **Cursor**:
+
+| Category | Requirement | Required? | Checked by |
+|----------|-------------|-----------|------------|
+| **Environment** | [Cursor](https://cursor.com) with Agent mode | Yes | You |
+| **Environment** | Target path is a **git repo** | Yes | `install.sh` (fail closed) |
+| **CLI** | `python3` | Yes | `install.sh` preflight |
+| **CLI** | `git` | Yes | `install.sh` preflight |
+| **CLI** | `node` / `npx` (GSD install) | Soft | `install.sh` preflight (warn) |
+| **CLI** | `gh` + `gh auth login` (PR, CI, ship) | Soft | `install.sh` + `recipe-validate-tokens` |
+| **CLI** | **GSD** (`gsd-new-project`, `gsd-plan-phase`, …) | Soft | `install.sh` preflight (warn) |
+| **CLI** | `graphify` (knowledge graph) | Optional | `install.sh` preflight (warn) — fix: `./.gsd-recipe/scripts/install-graphify.sh` |
+| **CLI** | `uv` (only if installing graphify) | Optional | `install-graphify.sh` |
+| **Integrations** | **Atlassian MCP** authenticated in Cursor (Jira epic, sync, phase tasks) | Yes for Jira path | `recipe-validate-tokens` + `install.sh --record-jira-check pass` |
+| **Integrations** | GitHub repo access (push branch, open PR) | Yes for ship path | `gh auth status` |
+
+**Order of operations:**
+
+1. Install CLI tools above (or let `install.sh` attempt auto-fix for `brew`/`npx`/`uv` paths).
+2. Run **`install-recipe-to-target.sh --verify`** (see Quick start).
+3. In Cursor on the target repo: **`recipe-validate-tokens`** — confirms GitHub + Atlassian before recipe work.
+4. If install left Jira as `pending`: `.gsd-recipe/scripts/install.sh --record-jira-check pass --target <repo>` (after MCP works).
+5. Check `.gsd-recipe/install-report.json` → `prereqs` for `python3`, `git`, `gh`, `gsd_core`, `graphify` pass/warn/fail.
+
+Spec detail: [docs/netapp-recipe/lld/INSTALL-LLD.md](docs/netapp-recipe/lld/INSTALL-LLD.md) Steps 0–1.
+
 ## Quick start (install)
 
 From this repo (or any clone of [NetApp-GSD-Recipe](https://github.com/vs06101996/NetApp-GSD-Recipe.git)):
