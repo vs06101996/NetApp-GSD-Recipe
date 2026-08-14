@@ -32,7 +32,7 @@ Read this before implementing or operating the recipe in Cursor.
 |----------|----------|
 | Canonical harness (share bundle) | `docs/netapp-recipe/reference/harness/` |
 | gsd-benchmark implementation | `bench/runners/`, `bench/recipe/` |
-| Target repo after install (spec) | `.gsd-recipe/`, `.templates/` |
+| Target repo after install (spec) | `.gsd-recipe/`, `.templates/` (local-only / gitignored on external targets — see INSTALL-LLD) |
 
 Copy pattern: reference → bench; do not invent paths outside [DATA-CONTRACTS](contracts/DATA-CONTRACTS.md) index.
 

@@ -2,7 +2,8 @@
 
 Use **`gsd-benchmark` itself** as the demo repo. Scrape GSD + operator artifacts first so
 `recipe-install` visibly creates `.templates/`, `.knowledge/`, `code_base_details/`, and all
-`recipe-*` skills in real time.
+`recipe-*` skills in real time (scaffold is local-only / gitignored on external targets; this
+demo uses `gsd-benchmark` itself as the install target, where `.gsd-recipe/` stays tracked).
 
 **Operator rule:** **you** (Alex) invoke every skill in Cursor Agent. This doc is the script.
 

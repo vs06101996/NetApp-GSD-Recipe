@@ -4,7 +4,7 @@ NetApp GSD recipe for Cursor: structured feature delivery from PRD through plann
 
 This repository is the **source of truth** for recipe skills (`.gsd-recipe/`), installers, harness scripts (`bench/`), and integration tests.
 
-**Command reference:** [docs/RECIPE-COMMANDS.md](docs/RECIPE-COMMANDS.md) · In Cursor, invoke **`recipe-help`**
+**Command reference:** [docs/RECIPE-COMMANDS.md](docs/RECIPE-COMMANDS.md) · **Onboarding:** [docs/RECIPE-ONBOARD.md](docs/RECIPE-ONBOARD.md) · In Cursor, invoke **`recipe-help`**
 
 **Benchmarks:** [docs/netapp-recipe/BENCHMARKS.md](docs/netapp-recipe/BENCHMARKS.md) — KB-Evaluations on AgentStudio ([KAN-53](https://netapp.atlassian.net/browse/KAN-53), [PR #465](https://github.com/NetApp-Nemo/AgentStudio/pull/465)): **~3–6 h recipe vs ~2 days ad-hoc** (field benchmark, Jul 2026).
 
@@ -52,6 +52,35 @@ Already inside the target repo? Omit `--target` — the installer detects the gi
 
 Then open the target repo in Cursor and invoke the **`recipe-*`** commands below by name. You do **not** need the benchmark harness scripts in the next section for normal feature delivery.
 
+## Onboarding (`recipe-onboard`)
+
+Single on-ramp for new features: one preview-then-confirm gate, then chains whichever steps are still missing:
+
+```text
+recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-create-phase-tasks
+```
+
+| Step | Skill | Artifact |
+|------|-------|----------|
+| 1 | `recipe-prd-intake` | `docs/PRD.md` |
+| 2 | `recipe-new-project` | `.planning/PROJECT.md`, `ROADMAP.md`, `STATE.md` |
+| 3 | `recipe-create-epic` | Jira Epic + `intake_started` sync |
+| 4 | `recipe-create-phase-tasks` | Jira sub-tasks per ROADMAP phase |
+
+**Prerequisites:** git repo root, GSD skills (`.cursor/skills/gsd-*`), recipe skills staged (full install via `recipe-install` or `install.sh --yes`), Atlassian MCP when Epic/phase-task steps run.
+
+**Invoke in Cursor Agent** (by name, not `/slash`):
+
+```text
+recipe-onboard
+recipe-onboard docs/PRD.md
+recipe-onboard --project KAN
+```
+
+Skips any step whose artifact already exists; stops the whole chain on the first failure. Step-by-step alternative: invoke each skill in the table above separately.
+
+Full install, troubleshooting, and spec links: **[docs/RECIPE-ONBOARD.md](docs/RECIPE-ONBOARD.md)**.
+
 ## Delivery workflow (Cursor)
 
 Typical path for a new feature (example: KB-Evaluations Feature 2). Invoke each command by name in Cursor Agent; `@file` references a file in the chat.
@@ -60,7 +89,8 @@ Typical path for a new feature (example: KB-Evaluations Feature 2). Invoke each 
 |---------|-------------------|
 | `recipe-validate-tokens` | Check GitHub + Jira/Atlassian credentials/scopes before doing recipe work. |
 | `recipe-prd-intake KB-Evaluations-Feature2-PRD.md` | Turn the raw PRD into canonical `docs/PRD.md` (+ bootstrap FOTW observer). |
-| `recipe-onboard @KB-Evaluations-Feature2-PRD.md` | Full onboarding: project planning + Jira epic + phase tasks in one chain (skips intake if `docs/PRD.md` already exists). |
+| `recipe-new-project` | Bootstrap `.planning/*` via native `gsd-new-project` (first-init vs re-init gate; prefers `docs/PRD.md` as input). |
+| `recipe-onboard @KB-Evaluations-Feature2-PRD.md` | Full onboarding chain above in one command — skips steps whose artifacts already exist. |
 | `recipe-bootstrap-knowledge` | Build/refresh `.knowledge/` + `/gsd-map-codebase` + **`/gsd-graphify build`** — run once after onboard, before first `recipe-plan-phase` (see Graphify section below). |
 | `recipe-plan-phase 1` | Write Phase 1 `PLAN.md` (e.g. TUN architecture & contracts). |
 | `recipe-run-phase 1` | Execute Phase 1 plans (implement kb_tune types/contracts). |
@@ -137,6 +167,7 @@ Pinned settings: [config.yaml](config.yaml). Override active task: `BENCH_TASK=<
 
 | Doc | Contents |
 |-----|----------|
+| [docs/RECIPE-ONBOARD.md](docs/RECIPE-ONBOARD.md) | `recipe-onboard` quick start — prerequisites, install, chain behavior, troubleshooting |
 | [docs/GSD-COMMANDS.md](docs/GSD-COMMANDS.md) | Full GSD command list + Cursor usage (standard vs full profile) |
 | [docs/GSD-TUTORIAL.md](docs/GSD-TUTORIAL.md) | Live tutorial playbook (you run all GSD skills) |
 | [docs/GSD-TUTORIAL-PLAYBOOKS.md](docs/GSD-TUTORIAL-PLAYBOOKS.md) | Greenfield PRD vs brownfield feature/bug workflows |

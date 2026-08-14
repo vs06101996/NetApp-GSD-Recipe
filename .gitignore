@@ -8,7 +8,14 @@ tasks/uber-eats/grader/go.mod.bak
 # Reference oracles are local clones (provisioned via register.sh --git); never track them as embedded repos/submodules
 tasks/*/reference/
 
-# FOTW observer runtime data (lld/INSTALL-LLD.md .gitignore additions) — session-local, not committed
+# Local/runtime only in this *source* repo. External target installs get a
+# broader local-only scaffold ignore list from install.sh (see INSTALL-LLD
+# § .gitignore additions): .gsd-recipe/, .knowledge/, .templates/, etc.
+# Never ignore .gsd-recipe/ here — that tree IS the recipe source of truth.
 .learnings/
 .gsd-recipe/install-report.json
 .gsd-codebase/
+.knowledge/
+.templates/
+.planning/
+code_base_details/

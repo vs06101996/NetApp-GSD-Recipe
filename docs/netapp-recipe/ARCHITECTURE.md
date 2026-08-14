@@ -46,7 +46,7 @@ GitHub PR     ← gsd-ship; wave/phase PR comments
 ## p0 install (summary)
 
 1. Validate tokens (GitHub + Jira MCP)
-2. Scaffold `.templates/`, `.knowledge/`, `.gsd-recipe/`, `code_base_details/`
+2. Scaffold `.templates/`, `.knowledge/`, `.gsd-recipe/`, `code_base_details/` (local-only — gitignored on external targets along with `.planning/`; re-run install per clone)
 3. Register `gsd-jira-sync` skill
 4. Verify templates + `/gsd-health`
 

@@ -14,11 +14,11 @@
 #     runs the real check and calls `--record-jira-check <pass|fail>`.
 #   - MCP `mcpServers` fragment and `.planning/config.json`'s `agent_skills`
 #     injection: print-only. Never auto-edits shared Cursor/GSD config.
-#   - `capability.json` / `config.schema.json`: built in TASK-011
-#     (bench/lib/capability-schema.sh) — install() calls generate-capability
-#     after composing every sub-installer; verify() additionally runs a
-#     strict schema check via validate-config. See
-#     bench/report/capability-config-schema-integration-report.md.
+#   - Target-repo scaffold is local-only: install() adds .gsd-recipe/,
+#     .knowledge/, .templates/, .planning/, code_base_details/, skills/, and
+#     recipe-owned docs to the target's .gitignore (see INSTALL-LLD).
+#     Self-install into this source repo skips ignoring .gsd-recipe/ so the
+#     canonical recipe tree stays visible to git.
 #
 # Prerequisite bootstrap (see bench/report/install-scaffold-integration-report.md
 # "Prerequisite bootstrap" section for the full design):
@@ -80,7 +80,7 @@
 #     "recipe-review-ship"/"recipe-settle"/"gsd-jira-sync"/"recipe-sync"/
 #     "recipe-pr-comment"/"recipe-install"/"recipe-observe"/
 #     "recipe-create-epic"/"recipe-create-phase-tasks"/"recipe-help"/
-#     "recipe-onboard", which the sub-installers/skills track under their
+#     "recipe-new-project"/"recipe-onboard", which the sub-installers/skills track under their
 #     own component names.
 set -euo pipefail
 
@@ -160,6 +160,7 @@ RECIPE_OBSERVE_INSTALLER="$SCRIPT_DIR/install-recipe-observe.sh"
 RECIPE_CREATE_EPIC_INSTALLER="$SCRIPT_DIR/install-recipe-create-epic.sh"
 RECIPE_CREATE_PHASE_TASKS_INSTALLER="$SCRIPT_DIR/install-recipe-create-phase-tasks.sh"
 RECIPE_HELP_INSTALLER="$SCRIPT_DIR/install-recipe-help.sh"
+RECIPE_NEW_PROJECT_INSTALLER="$SCRIPT_DIR/install-recipe-new-project.sh"
 RECIPE_ONBOARD_INSTALLER="$SCRIPT_DIR/install-recipe-onboard.sh"
 CAPABILITY_SCHEMA_LIB="$SCRIPT_DIR/../../bench/lib/capability-schema.sh"
 
@@ -639,7 +640,7 @@ install() {
   fi
 
   if [ "$YES" -ne 1 ]; then
-    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-onboard) into $TARGET? [y/N] " reply
+    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-new-project + recipe-onboard) into $TARGET? [y/N] " reply
     case "$reply" in
       [yY]|[yY][eE][sS]) : ;;
       *) echo "install.sh: aborted, no consent given."; exit 0 ;;
@@ -715,9 +716,21 @@ EOF
 
   # Additive-only entries — must stay in sync with bench/tests/test-install.sh
   # and the --verify gitignore check below.
+  #
+  # Policy (INSTALL-LLD § .gitignore additions): on *external* targets the
+  # recipe scaffold is local-only — not committed with product/feature work.
+  # Self-install into this source repo skips `.gsd-recipe/` so we never hide
+  # the canonical recipe tree that install.sh itself lives in.
+  local self_install=0
+  if [ "$(cd "$TARGET" && pwd)" = "$SELF_ROOT" ]; then
+    self_install=1
+  fi
   local gitignore_line
   while IFS= read -r gitignore_line; do
     [ -n "$gitignore_line" ] || continue
+    if [ "$self_install" -eq 1 ] && [ "$gitignore_line" = ".gsd-recipe/" ]; then
+      continue
+    fi
     gitignore_ensure "$gitignore_line"
   done <<'GITIGNORE_LINES'
 /bin/
@@ -729,10 +742,14 @@ EOF
 .env.*
 .learnings/
 .gsd-codebase/
-.gsd-recipe/install-report.json
-.gsd-recipe/phase-tasks-queue.jsonl
-.gsd-recipe/.observer-target.json
-.gsd-recipe/sync-ledger.jsonl
+.gsd-recipe/
+.knowledge/
+.templates/
+.planning/
+code_base_details/
+skills/
+docs/RECIPE-COMMANDS.md
+docs/RECIPE-BENCHMARKS.md
 bench/
 .cursor/get-shit-done/
 .cursor/gsd-install-state.json
@@ -758,7 +775,7 @@ GITIGNORE_LINES
   chmod +x "$GSD_RECIPE_DIR/scripts/install-graphify.sh"
   ledger_record ".gsd-recipe/scripts/install-graphify.sh"
 
-  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-onboard)..."
+  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-new-project, recipe-onboard)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
   "$TRACKER_SYNC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PLANNING_POLICY_INSTALLER" --yes --target "$TARGET"
@@ -779,6 +796,7 @@ GITIGNORE_LINES
   "$RECIPE_CREATE_EPIC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_HELP_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_NEW_PROJECT_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_ONBOARD_INSTALLER" --yes --target "$TARGET"
 
   install_report_write "$gh_result" "$PREREQ_PYTHON3" "$PREREQ_GIT" "$PREREQ_NODE" "$PREREQ_GH" "$PREREQ_GSD_CORE" "$PREREQ_GRAPHIFY" "$GRAPHIFY_CONFIG_ENABLED"
@@ -855,8 +873,15 @@ for k in ('python3', 'git', 'node', 'gh', 'gsd_core', 'graphify'):
   fi
 
   local missing_gitignore=""
+  local self_install=0
+  if [ "$(cd "$TARGET" && pwd)" = "$SELF_ROOT" ]; then
+    self_install=1
+  fi
   while IFS= read -r line; do
     [ -n "$line" ] || continue
+    if [ "$self_install" -eq 1 ] && [ "$line" = ".gsd-recipe/" ]; then
+      continue
+    fi
     if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$line" "$GITIGNORE"; then
       missing_gitignore="$missing_gitignore [$line]"
     fi
@@ -870,9 +895,14 @@ for k in ('python3', 'git', 'node', 'gh', 'gsd_core', 'graphify'):
 .env.*
 .learnings/
 .gsd-codebase/
-.gsd-recipe/install-report.json
-.gsd-recipe/phase-tasks-queue.jsonl
-.gsd-recipe/.observer-target.json
+.gsd-recipe/
+.knowledge/
+.templates/
+.planning/
+code_base_details/
+skills/
+docs/RECIPE-COMMANDS.md
+docs/RECIPE-BENCHMARKS.md
 bench/
 .cursor/get-shit-done/
 .cursor/gsd-install-state.json
@@ -1057,6 +1087,12 @@ if o['enabled']:
     echo "    recipe-help composed — FAIL (recipe-help ledger component absent)"
     ok=0
   fi
+  if ledger_has_component "recipe-new-project"; then
+    echo "    recipe-new-project composed — pass"
+  else
+    echo "    recipe-new-project composed — FAIL (recipe-new-project ledger component absent)"
+    ok=0
+  fi
   if ledger_has_component "recipe-onboard"; then
     echo "    recipe-onboard composed — pass"
   else
@@ -1123,7 +1159,7 @@ uninstall() {
   while IFS= read -r rel; do
     case "$rel" in
       code_base_details/README.md|.knowledge/index.md|.knowledge/log.md|.knowledge/*/.gitkeep)
-        echo "  keeping $rel (human-authored/committed knowledge data — preserved per removal policy, review before delete)"
+        echo "  keeping $rel (human-authored knowledge data — preserved per removal policy, review before delete)"
         continue
         ;;
     esac
@@ -1169,6 +1205,7 @@ PY
   "$RECIPE_CREATE_EPIC_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_HELP_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_NEW_PROJECT_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_ONBOARD_INSTALLER" --uninstall --target "$TARGET"
 
   echo "install.sh: uninstall complete. code_base_details/, .knowledge/, config.json, and .gitignore are left in place (shared/human data this installer doesn't own for deletion)."

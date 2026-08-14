@@ -250,7 +250,7 @@ CATALOG = [
         "id": "install-core",
         "task_id": "TASK-010",
         "kind": "installer",
-        "description": "Umbrella fallback installer: directory scaffold, .templates/, .knowledge/, code_base_details/README.md, .gitignore entries, .gsd-recipe/config.json traceability/observer defaults, install-report.json.",
+        "description": "Umbrella fallback installer: directory scaffold (.templates/, .knowledge/, code_base_details/), local-only .gitignore entries for scaffold + recipe docs, .gsd-recipe/config.json traceability/observer defaults, install-report.json.",
         "invoke_name": None,
         "staged_path": None,
         "installer": ".gsd-recipe/scripts/install.sh",

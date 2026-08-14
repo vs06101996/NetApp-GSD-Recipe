@@ -9,5 +9,8 @@
   ],
   "recipe-onboard": [
     ".cursor/skills/recipe-onboard/SKILL.md"
+  ],
+  "recipe-new-project": [
+    ".cursor/skills/recipe-new-project/SKILL.md"
   ]
 }

@@ -111,9 +111,14 @@ done <<'EOF'
 .env.*
 .learnings/
 .gsd-codebase/
-.gsd-recipe/install-report.json
-.gsd-recipe/phase-tasks-queue.jsonl
-.gsd-recipe/.observer-target.json
+.gsd-recipe/
+.knowledge/
+.templates/
+.planning/
+code_base_details/
+skills/
+docs/RECIPE-COMMANDS.md
+docs/RECIPE-BENCHMARKS.md
 bench/
 .cursor/get-shit-done/
 .cursor/gsd-install-state.json

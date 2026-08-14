@@ -12,6 +12,7 @@
 | Orchestrator | One per repo — **not** recipe + ic-* |
 | GSD role | Orchestrator; recipe wraps, does not replace |
 | Tier-1 DAG (`dag-build.sh`, TASK-009) | **Not required for v1** — parked as future enhancement (see [BACKLOG.md](BACKLOG.md)); dependent tasks (e.g. TASK-017 `recipe-plan-phase`, TASK-024 `recipe-run-phase`) are narrowed to skip DAG pre-req/post-op gating rather than blocking on it |
+| Target-repo scaffold in git | **Gitignored by default** on external targets (`.gsd-recipe/`, `.knowledge/`, `.templates/`, `.planning/`, `code_base_details/`, `skills/`, recipe-owned docs). Re-run `install-recipe-to-target.sh` per clone. Source repo (`gsd-benchmark`) keeps `.gsd-recipe/` tracked. |
 
 ---
 

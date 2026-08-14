@@ -24,7 +24,7 @@ Brownfield runs copy the repo into `runs/<arm>/run-NN/workspace/` (default). Wor
 
 ## Cursor only (no Claude Code CLI)
 
-Experiment design: [docs/EXPERIMENT-AGENDA.md](docs/EXPERIMENT-AGENDA.md). GSD commands: [docs/GSD-COMMANDS.md](docs/GSD-COMMANDS.md). Live tutorial: [docs/GSD-TUTORIAL.md](docs/GSD-TUTORIAL.md). Workflows (PRD greenfield / brownfield): [docs/GSD-TUTORIAL-PLAYBOOKS.md](docs/GSD-TUTORIAL-PLAYBOOKS.md). GSD install for **Cursor** (`~/.cursor/skills/gsd-*` and `.cursor/skills/gsd-*`). Limits: [docs/GSD-PRODUCT-CONTEXT.md](docs/GSD-PRODUCT-CONTEXT.md).
+Experiment design: [docs/EXPERIMENT-AGENDA.md](docs/EXPERIMENT-AGENDA.md). GSD commands: [docs/GSD-COMMANDS.md](docs/GSD-COMMANDS.md). Live tutorial: [docs/GSD-TUTORIAL.md](docs/GSD-TUTORIAL.md). Workflows (PRD greenfield / brownfield): [docs/GSD-TUTORIAL-PLAYBOOKS.md](docs/GSD-TUTORIAL-PLAYBOOKS.md). **Recipe onboarding:** [docs/RECIPE-ONBOARD.md](docs/RECIPE-ONBOARD.md). GSD install for **Cursor** (`~/.cursor/skills/gsd-*` and `.cursor/skills/gsd-*`). Limits: [docs/GSD-PRODUCT-CONTEXT.md](docs/GSD-PRODUCT-CONTEXT.md).
 
 **Metrics (baseline / gsd — hand log after run):**
 
