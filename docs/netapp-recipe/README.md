@@ -55,6 +55,7 @@ A **wrapper on GSD** — codebase-agnostic SDLC scaffolding plus Jira/GitHub tra
 | `recipe-help --next` (TASK-038) | **Built** — same resolver as `recipe-start`; default `recipe-help` stays the catalog. Optional `--stuck` FAQ. |
 | Install front door (TASK-040) | **Built** — root [README Quick start](../../README.md#quick-start-install-into-any-repo) is the canonical decision tree: first install uses `install-recipe-to-target.sh` from the recipe source clone; `recipe-install` is re-run/restage-only after skills exist; next command is `recipe-start`. |
 | Clone / reinstall playbook (TASK-041) | **Built** — [CLONE.md](CLONE.md) |
+| Install doctor (TASK-044) | **Built** — extends `recipe-install-verify` and `install.sh --verify`: paste snippets list only real staged skills and include restart/confirmation steps; external reinstall refreshes `recipe_source` from the active recipe clone; a live Jira MCP pass is recorded and consumed by a same-turn verify rerun so `INSTALL-VERIFIED.json` needs no separate operator command. `--record-jira-check` remains available for scripts/CI. |
 | `recipe-new-project` skill (TASK-036) | **Planned** — repo-bootstrap wrapper around native `gsd-new-project`/`gsd-import`; catalogued (`bench/lib/capability-schema.sh`) and referenced by `recipe-onboard`'s own fallback path, but not yet built — no `.gsd-recipe/templates/recipe-new-project-SKILL.md`/installer exists in this repo yet. |
 | `dag-build.sh` | **Parked** — future enhancement, not required for the current build sequence; see [BACKLOG.md](BACKLOG.md) |
 

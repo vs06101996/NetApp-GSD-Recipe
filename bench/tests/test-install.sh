@@ -78,7 +78,7 @@ check "refuses to install into a non-git directory" "$?"
 
 # 2. Fresh install stages the full directory tree
 TARGET1="$(new_repo)"
-"$INSTALLER" --yes --target "$TARGET1" >/dev/null
+INSTALL_OUT1="$("$INSTALLER" --yes --target "$TARGET1")"
 
 for f in PRD.template.md SPEC.template.md TDD.template.md bare_metal.template.md jira-comment.template.md github-pr-comment.template.md; do
   [ -f "$TARGET1/.templates/$f" ]
@@ -143,6 +143,19 @@ assert d['github_check'] in ('pass', 'fail', 'skipped'), d
 assert d['jira_check'] == 'pending', d
 "
 check "fresh install writes install-report.json with jira_check: pending" "$?"
+
+# Printed paste snippets must name only staged paths and include enough
+# operator guidance to make the print-only setup verifiable after restart.
+printf '%s' "$INSTALL_OUT1" | grep -q '"gsd-planner": \["skills/recipe-planning-policy"\]' && rc=0 || rc=$?
+check "agent_skills snippet contains the real staged recipe-planning-policy path" "$rc"
+if printf '%s' "$INSTALL_OUT1" | grep -qE 'skills/recipe-repo-conventions|skills/recipe-acceptance-criteria'; then rc=1; else rc=0; fi
+check "agent_skills snippet contains no phantom skill paths" "$rc"
+printf '%s' "$INSTALL_OUT1" | grep -q "Paste checklist:" && \
+  printf '%s' "$INSTALL_OUT1" | grep -q "restart the Cursor Agent" && \
+  printf '%s' "$INSTALL_OUT1" | grep -q "list MCP tools" && rc=0 || rc=$?
+check "MCP paste snippet says where to paste, restart Agent, and confirm listed tools" "$rc"
+printf '%s' "$INSTALL_OUT1" | grep -q "Run gsd-surface status" && rc=0 || rc=$?
+check "agent_skills paste snippet explains how to confirm the injected skill" "$rc"
 
 # recipe_source / recipe-paths.sh — permanent fix for "script missing on
 # external --target" (see bench/tests/test-recipe-paths.sh for the fuller
@@ -320,6 +333,27 @@ assert d.get('traceability', {}).get('enabled') is True, d
 assert d.get('observer', {}).get('enabled') is False, d
 "
 check "config.json merge preserves pre-existing tracker + unrelated keys while adding traceability/observer" "$?"
+
+# A reinstall from another recipe clone must repair a stale recipe_source.
+# This uses a complete scratch copy because every composed installer resolves
+# its canonical templates relative to the clone that is actually running.
+ALT_SOURCE="$(mktemp -d)/gsd-benchmark-alt-source"
+cp -R "$REPO_ROOT" "$ALT_SOURCE"
+"$ALT_SOURCE/.gsd-recipe/scripts/install.sh" --yes --target "$TARGET2" >/dev/null
+python3 -c "
+import json, os
+d = json.load(open('$TARGET2/.gsd-recipe/config.json'))
+assert os.path.realpath(d.get('recipe_source', '')) == os.path.realpath('$ALT_SOURCE'), d
+"
+check "reinstall from a different recipe clone refreshes recipe_source" "$?"
+python3 -c "
+import json
+d = json.load(open('$TARGET2/.gsd-recipe/config.json'))
+assert d.get('tracker') == 'github', d
+assert d.get('some_other_key') == 'keep-me', d
+"
+check "recipe_source refresh preserves unrelated config keys" "$?"
+rm -rf "$(dirname "$ALT_SOURCE")"
 
 # 6. --verify blocks INSTALL-VERIFIED.json while jira_check is pending
 "$INSTALLER" --verify --target "$TARGET1" >/dev/null 2>&1 && rc=0 || rc=$?
@@ -500,6 +534,7 @@ rm -rf "$FAKEBIN"
 # PATH state — this makes the exclusion robust, not an accident of it.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
+(cd "$COPY" && rm -f .git && git init -q && git add -A && git commit -qm init)
 FAKEBIN11="$(make_scratch_path_excluding "graphify uv")"
 (cd "$COPY" && PATH="$FAKEBIN11" ./.gsd-recipe/scripts/install.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"

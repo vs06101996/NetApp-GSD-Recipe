@@ -86,6 +86,20 @@ grep -q "gh auth status" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the minimal gh auth status fallback (item 4)" "$rc"
 grep -qi "MCP" "$STAGED" && rc=0 || rc=$?
 check "staged skill references MCP tool listing (item 8)" "$rc"
+grep -q "getAccessibleAtlassianResources" "$STAGED" && rc=0 || rc=$?
+check "staged skill requires a live read-only Atlassian probe before Jira pass" "$rc"
+grep -q -- '\$INSTALL_SH --record-jira-check pass --target <target>' "$STAGED" && rc=0 || rc=$?
+check "staged skill records a live Jira pass through the script escape hatch" "$rc"
+python3 - "$STAGED" <<'PY'
+import sys
+text = open(sys.argv[1]).read()
+record = text.index("$INSTALL_SH --record-jira-check pass --target <target>")
+rerun = text.index("$INSTALL_SH --verify --target <target>", record)
+assert record < rerun
+PY
+check "staged skill reruns --verify after recording Jira pass in the same turn" "$?"
+grep -q "INSTALL-VERIFIED.json.*one Agent turn\|one Agent turn.*INSTALL-VERIFIED.json" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents one-turn INSTALL-VERIFIED completion" "$rc"
 grep -q "observer-config.json" "$STAGED" && rc=0 || rc=$?
 check "staged skill references observer-config.json (item 9)" "$rc"
 grep -q "bare_metal.template.md" "$STAGED" && rc=0 || rc=$?
@@ -128,6 +142,7 @@ check "uninstall cleans up the now-empty skill directory" "$?"
 # and preserves canonical source on uninstall.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
+(cd "$COPY" && rm -f .git && git init -q && git add -A && git commit -qm init)
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-install-verify.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-install-verify.sh --uninstall >/dev/null 2>&1) && rc=0 || rc=$?

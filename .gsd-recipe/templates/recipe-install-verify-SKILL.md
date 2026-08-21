@@ -1,6 +1,6 @@
 ---
 name: recipe-install-verify
-description: "Recipe: post-install verification checklist for the NetApp GSD recipe (TASK-023). Runs `install.sh --verify` as the bash-checkable foundation (items 5-7: templates/OKF-index/gitignore, plus config.json), runs items 1-3 (`/gsd-health`, `/gsd-health --context`, `/gsd-surface status`) directly via native GSD commands in the same turn, delegates item 4 (token validity) to `recipe-validate-tokens` if staged or a minimal inline `gh auth status` fallback otherwise, checks item 8 (MCP tool listing) and item 9 (observer loop scheduled) read-only, traces item 10 (bare_metal Gate A) only when the template is genuinely filled in (never fabricates repo-specific commands), and records pass/warn/fail per item into `.gsd-recipe/install-report.json`'s `install_verified` marker — never hard-blocking the operator."
+description: "Recipe: post-install verification and install doctor for the NetApp GSD recipe (TASK-023, extended by TASK-044). Runs `install.sh --verify` as the bash-checkable foundation, runs native GSD health checks in the same turn, delegates token validation, performs a live read-only tracker MCP probe, and when Jira passes records it through `install.sh --record-jira-check pass` before rerunning `install.sh --verify` so `.gsd-recipe/INSTALL-VERIFIED.json` is reachable in one Agent turn. Also reports observer and bare-metal checks without fabricating results."
 ---
 
 <cursor_skill_adapter>
@@ -23,8 +23,10 @@ Examples:
   whatever checks remain possible (native GSD checks, observer-config presence, MCP listing) rather
   than stopping outright; item 5/6/7's bash foundation will simply report against an empty/default
   state.
-- No other prerequisite — this skill is entirely read-only/reporting, it makes no assumption about
-  what phase of the recipe lifecycle the operator is in.
+- No other prerequisite. The checks are read-only except for the existing verification artifacts:
+  report entries written through `$REPORT_LIB`, `jira_check=pass` written through
+  `install.sh --record-jira-check pass` after a real live Jira probe, and
+  `.gsd-recipe/INSTALL-VERIFIED.json` written by the final `install.sh --verify`.
 
 ## C. Tool Usage
 
@@ -38,7 +40,7 @@ INSTALL_SH="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve .gsd-recipe/s
 REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/install-verify-report.sh --target <target>)"
 ```
 
-1. **Run the bash-checkable foundation.** `Shell`: run
+1. **Run the bash-checkable foundation (initial pass).** `Shell`: run
    `$INSTALL_SH --verify --target <target>` (absolute paths, no reliance
    on a prior `cd`). This is the delegation boundary decision for this skill (see "Delegation
    boundary" below): `install.sh --verify` already implements items **5** (Templates present), **6**
@@ -54,8 +56,8 @@ REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/ins
    --report <target>/.gsd-recipe/install-report.json`.
    - `install.sh --verify` exits non-zero whenever anything it checks is failing/pending (including
      its own `jira_check: pending` gate) — a non-zero exit here does **not** mean this skill stops.
-     It means "carry those particular item statuses through as fail/warn"; every other item in this
-     checklist still runs.
+     Preserve the output, continue every agent-mediated check, and defer the final items 5-7/config
+     verdicts until step 6 has had a chance to record a live Jira pass and rerun this command.
 
 2. **Item 1 — GSD integrity.** Call native `/gsd-health` directly, in this same turn. Per the
    approved Option-B precedent (see "Why this skill may call native GSD commands directly" below),
@@ -94,21 +96,36 @@ REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/ins
    - Never implement a fuller token/scope probe than the minimal fallback above inside this skill,
      even temporarily — that duplicates `recipe-validate-tokens`'s (TASK-021) entire scope. See
      "Item 4 delegation relationship" below.
+   - If the delegated skill reports that its live Jira/Atlassian
+     `getAccessibleAtlassianResources` call passed, retain that exact result for step 6. Do not call
+     the same live probe twice in one verification turn.
 
-6. **Item 8 — MCP reachable (optional, read-only).** Resolve the configured tracker via
+6. **Item 8 — MCP reachable, then collapse the Jira gate.** Resolve the configured tracker via
    `bench/lib/tracker-sync-config.sh` (also not duplicated into every target — resolve it the same
    `recipe-paths.sh` way as `$INSTALL_SH`/`$REPORT_LIB` above):
    ```
    TRACKER_CFG="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/tracker-sync-config.sh --target <target>)"
    "$TRACKER_CFG" get-tracker --config <target>/.gsd-recipe/config.json
    ```
-   (default `jira` if unset/missing). Use `GetMcpTools` to list tools on the tracker's MCP server
-   (e.g. the Atlassian MCP server for `jira`) — a smoke check only, listing tool schemas, never
-   invoking a tool. Reachable and returns a non-empty tool list → `pass`. Server not configured/not
-   connected in this environment → `warn` (this item is explicitly optional per the checklist — a
-   repo with no `{TRACKER}-mcp` server wired up yet is a valid, common state, not a failure). Record
-   with `$REPORT_LIB record 8 "MCP reachable" <pass|warn> --detail "<tracker>-mcp: <n> tools
-   listed"` (or `--detail "not configured/reachable in this environment"`).
+   (default `jira` if unset/missing). Use `GetMcpTools` to list tools on the tracker's MCP server.
+   For Jira, discover the Atlassian server/tool schema first, then make one non-mutating live
+   `CallMcpTool` call to `getAccessibleAtlassianResources`, unless step 5 already produced that exact
+   live result. A non-empty successful response proves both reachability and authentication; record
+   item 8 `pass`. Merely listing schemas does **not** prove the Jira check passed.
+   - After that live Jira pass, immediately run:
+     ```
+     $INSTALL_SH --record-jira-check pass --target <target>
+     $INSTALL_SH --verify --target <target>
+     ```
+     This is one uninterrupted `recipe-install-verify` turn. The first command uses the existing
+     script/CI escape hatch; the second consumes the newly recorded pass and writes
+     `.gsd-recipe/INSTALL-VERIFIED.json` when all local checks pass. Parse items 5-7 and the bonus
+     config verdict from this final rerun, superseding the initial pending output from step 1.
+   - If the live Jira call is unavailable, unauthenticated, or fails, record item 8 `warn`, leave
+     `jira_check` as `pending`, and report that `INSTALL-VERIFIED.json` remains blocked. Never record
+     a pass from tool discovery alone and never fabricate a live response.
+   - For a configured non-Jira tracker, perform its safest available read-only live probe for item
+     8, but do not mutate the Jira-named `jira_check` field.
 
 7. **Item 9 — Observer loop scheduled (optional v1, read-only).** `Glob`/`Read`
    `<target>/.gsd-recipe/observer-config.json`.
@@ -146,7 +163,8 @@ REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/ins
    check from step 1) and a single explicit closing line stating whether `install_verified` is
    `true` or `false`, and — per the checklist's own failure-handling rule — that **items 1-7 must
    ALL be `pass` for `install_verified` to be true; items 8-10 are warn-only and never affect this
-   marker either way, even on `fail`.**
+   marker either way, even on `fail`. Also state whether the final `install.sh --verify` wrote
+   `.gsd-recipe/INSTALL-VERIFIED.json`; do not conflate that artifact with the report marker.
 
 ## D. Do NOT
 
@@ -166,8 +184,9 @@ REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/ins
   pass/warn/fail; this skill never raises an error that stops the turn or refuses to produce a
   summary. The `install_verified` marker communicates blocking status to future tooling/operators;
   this skill's own execution never blocks on it.
-- Do not write a second, competing `INSTALL-VERIFIED` artifact alongside `install.sh --verify`'s own
-  `.gsd-recipe/INSTALL-VERIFIED.json` file. This skill's marker lives inside
+- Do not write a second, competing `INSTALL-VERIFIED` artifact or write
+  `.gsd-recipe/INSTALL-VERIFIED.json` directly. This skill reruns `install.sh --verify`, which
+  remains the sole writer of that file. This skill's checklist marker lives inside
   `.gsd-recipe/install-report.json` (the file `install.sh` already writes and the file the LLD's own
   Step 5 table literally names) as the `install_verified` key — a different file, a different
   scope, no collision, both left standing.
@@ -205,8 +224,8 @@ shared-file constraint it was built under.
 4. Call native `/gsd-surface status` (or `gsd capability list --json`) directly (item 3), same turn.
 5. Item 4: delegate to `recipe-validate-tokens` if staged (skill-to-skill invocation, its verdict
    used verbatim); otherwise run a minimal `gh auth status` fallback only.
-6. Item 8: list tools on the tracker's MCP server via `GetMcpTools` (read-only smoke check,
-   warn-only).
+6. Item 8: make a read-only live tracker MCP probe. On a live Jira pass, record it through
+   `install.sh --record-jira-check pass` and rerun `install.sh --verify` in the same turn.
 7. Item 9: check `.gsd-recipe/observer-config.json` presence and `enabled` field (read-only,
    warn-only, absence expected for v1 per OBSERVER-LLD.md).
 8. Item 10: if `bare_metal.template.md` is still generic, warn and skip (never fabricate); if
@@ -229,7 +248,7 @@ shared-file constraint it was built under.
 | 5. Templates present | **Yes**, fully (`[C] 5.` line) | This skill parses and reuses that line verbatim |
 | 6. OKF index | **Yes**, fully (`[C] 6.` line) | Parses and reuses |
 | 7. Gitignore | **Yes**, fully (`[C] 7.` line) | Parses and reuses |
-| 8. MCP reachable | No — install-time only prints a registration snippet, never smoke-tests reachability | This skill lists tools via `GetMcpTools` (agent-mediated) |
+| 8. MCP reachable | No — install-time only prints a registration snippet | This skill discovers tools, performs a read-only live tracker probe, and on Jira pass records it before rerunning shell verification |
 | 9. Observer loop scheduled | Partially — `install.sh --verify` checks the `fotw-observer` **ledger component is composed** (i.e. the installer ran), not whether the loop is actually `enabled`/scheduled | This skill checks `.gsd-recipe/observer-config.json`'s `enabled` field directly — a different, complementary check |
 | 10. Bare metal Gate A | No — mentions it only as a "run manually" echo line | This skill actually runs the declared bootstrap commands, gated on the template being genuinely filled in |
 
