@@ -10,8 +10,9 @@
 #   - GitHub check: real (`gh auth status` / `gh api user`), warn-only — a
 #     missing/unauthenticated `gh` never fails the install closed.
 #   - Jira check: architecturally can't be scripted (only an agent turn can
-#     call the Atlassian MCP). Recorded "pending" here; the invoking agent
-#     runs the real check and calls `--record-jira-check <pass|fail>`.
+#     call the Atlassian MCP). Recorded "pending" here; recipe-install-verify
+#     runs the live check, records a pass, and reruns --verify in one turn.
+#     `--record-jira-check <pass|fail>` remains available for scripts/CI.
 #   - MCP `mcpServers` fragment and `.planning/config.json`'s `agent_skills`
 #     injection: print-only. Never auto-edits shared Cursor/GSD config.
 #   - Target-repo scaffold is local-only: install() adds .gsd-recipe/,
@@ -456,15 +457,16 @@ if "traceability" not in data:
 if "observer" not in data:
     data["observer"] = {"enabled": False, "interval_minutes": 10}
 
-# recipe_source: absolute path to the recipe's own source repo, written only
+# recipe_source: absolute path to the recipe's own source repo, written
 # when TARGET is a *different* repo than the one install.sh itself lives in
 # (an external --target install). Every recipe-*/gsd-jira-sync skill and
 # recipe-paths.sh (the one small resolver script staged into every target,
 # see below) read this to locate harness code that isn't duplicated into
-# every target by design. Never written/overwritten for a self-install —
-# everything is already local there. Never overwritten once set either
-# (re-running install.sh against the same target shouldn't move this).
-if os.path.realpath(target) != os.path.realpath(self_root) and "recipe_source" not in data:
+# every target by design. Never written for a self-install — everything is
+# already local there. On every external reinstall, refresh it from the
+# installer clone actually running now; this repairs stale paths left by a
+# moved/deleted clone or by carrying local config between machines.
+if os.path.realpath(target) != os.path.realpath(self_root):
     data["recipe_source"] = self_root
 
 with open(path, "w") as f:
@@ -541,6 +543,13 @@ Per docs/netapp-recipe/lld/INSTALL-LLD.md § "MCP extensions [E]":
 install.sh never auto-edits mcp.json — this is Cursor's own shared config.
 Add "gsd-browser" and your {TRACKER}-mcp server (e.g. Atlassian) alongside it
 as needed; both are per-repo/per-operator choices, not scripted here.
+
+Paste checklist:
+  1. Open Cursor Settings > Tools & MCP, then open mcp.json.
+  2. Merge the mcpServers entry above; preserve existing servers and JSON keys.
+  3. Save mcp.json and restart the Cursor Agent (start a new Agent chat).
+  4. Ask the restarted Agent to list MCP tools and confirm the configured
+     server and its tools appear before relying on them.
 EOF
 }
 
@@ -551,13 +560,18 @@ print_agent_skills_snippet() {
 Per docs/netapp-recipe/lld/INSTALL-LLD.md § "agent_skills injection [C]":
 {
   "agent_skills": {
-    "gsd-planner": ["skills/recipe-planning-policy"],
-    "gsd-executor": ["skills/recipe-repo-conventions"],
-    "gsd-verifier": ["skills/recipe-acceptance-criteria"]
+    "gsd-planner": ["skills/recipe-planning-policy"]
   }
 }
 install.sh never auto-edits .planning/config.json — it's GSD's own config
 file, and blind-merging JSON into it risks clobbering unrelated settings.
+
+Paste checklist:
+  1. Open this target repo's .planning/config.json.
+  2. Merge the agent_skills entry above; preserve all existing JSON keys.
+  3. Save the file and restart the Cursor Agent (start a new Agent chat).
+  4. Run gsd-surface status and confirm the planner lists
+     skills/recipe-planning-policy before relying on the injection.
 EOF
 }
 
@@ -816,10 +830,11 @@ GITIGNORE_LINES
   echo "install.sh: staged. install-core files tracked in $LEDGER:"
   ledger_files | sed 's/^/  - /'
   echo
-  echo "Jira check is recorded as 'pending' in $INSTALL_REPORT — an agent with"
-  echo "live Atlassian MCP access must run the real check and then call:"
+  echo "Jira check is recorded as 'pending' in $INSTALL_REPORT."
+  echo "In Cursor Agent, invoke recipe-install-verify: it performs the live"
+  echo "Atlassian MCP check, records a pass, and reruns --verify in one turn."
+  echo "Scripts/CI may still use:"
   echo "  $0 --record-jira-check <pass|fail> --target $TARGET"
-  echo "Run '$0 --verify --target $TARGET' once that's done."
   echo "Next in Cursor Agent:  recipe-start"
   echo "Status anytime:        recipe-status"
   echo "Stuck later:           recipe-help --next"

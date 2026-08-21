@@ -143,6 +143,12 @@ Idempotent shell installer:
 
 Writes the same directory tree; records installed files in `.gsd-recipe/ledger.json` for clean removal.
 
+For an external target, each install/reinstall writes the absolute source
+clone currently running the installer to `.gsd-recipe/config.json` as
+`recipe_source`. It is deliberately refreshed rather than write-once: rerunning
+from a moved or newly cloned recipe source repairs stale machine-local paths.
+Self-installs omit the key because all recipe files are already local.
+
 ### Directory tree (created or updated)
 
 Machine-readable schema/examples for these paths live in [DATA-CONTRACTS.md](../contracts/DATA-CONTRACTS.md).
@@ -266,6 +272,11 @@ Config shape (example):
 }
 ```
 
+The fallback installer prints this fragment only; it never edits Cursor's
+shared `mcp.json`. Its paste checklist tells the operator to open Cursor
+Settings > Tools & MCP, merge the fragment without replacing existing servers,
+restart the Agent in a new chat, and confirm the server's tools are listed.
+
 ### Populate `.knowledge/` from GSD [N]
 
 After install, operator or agent runs (once per repo, refresh on major change):
@@ -347,6 +358,14 @@ Run after install; all must pass before declaring p0 complete.
 | **Failure handling** | Block p1 usage until checks 1–7 pass; 8–10 may warn-only |
 | **Stamps** | Optional: `started` @ `intake` when linked to tracker epic at project kickoff |
 
+`recipe-install-verify` is the agent-mediated install doctor. When the
+configured tracker is Jira, it performs a live, non-mutating Atlassian MCP
+probe. On success it runs `install.sh --record-jira-check pass` and immediately
+reruns `install.sh --verify` in the same Agent turn, allowing that script to
+write `.gsd-recipe/INSTALL-VERIFIED.json`. If MCP is unavailable, `jira_check`
+stays `pending` and shell verification remains fail-closed. The
+`--record-jira-check` mode remains available for scripts and CI.
+
 ---
 
 ## `agent_skills` injection [C]
@@ -356,14 +375,16 @@ Add to `.planning/config.json` (or workstream config):
 ```json
 {
   "agent_skills": {
-    "gsd-planner": ["skills/recipe-planning-policy"],
-    "gsd-executor": ["skills/recipe-repo-conventions"],
-    "gsd-verifier": ["skills/recipe-acceptance-criteria"]
+    "gsd-planner": ["skills/recipe-planning-policy"]
   }
 }
 ```
 
-Each path is a directory with `SKILL.md`. Ships inside the capability package — repo-agnostic content, repo-specific overrides in `code_base_details/`.
+Every listed path must be a directory actually staged with a `SKILL.md`; the
+current bundle stages only `skills/recipe-planning-policy` for this mechanism.
+The installer prints but never auto-edits this GSD-owned config. Merge the
+snippet into `.planning/config.json`, preserve existing keys, restart the
+Agent, then run `gsd-surface status` and confirm the planner lists the policy.
 
 ---
 

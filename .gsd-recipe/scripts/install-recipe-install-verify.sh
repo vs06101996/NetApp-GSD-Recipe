@@ -145,10 +145,12 @@ install() {
   echo "bash-checkable foundation (items 5-7), native /gsd-health,"
   echo "/gsd-health --context, /gsd-surface status (items 1-3), a"
   echo "recipe-validate-tokens delegation or gh-auth-status fallback (item 4),"
-  echo "an MCP tool-listing smoke check (item 8), an observer-config.json"
+  echo "a live read-only tracker MCP probe (item 8), an observer-config.json"
   echo "presence/enabled check (item 9), and a gated bare_metal.template.md"
-  echo "Gate A run (item 10) — recording pass/warn/fail per item plus the"
-  echo "install_verified marker into .gsd-recipe/install-report.json."
+  echo "Gate A run (item 10). On a live Jira pass it records jira_check and"
+  echo "reruns install.sh --verify in the same turn so INSTALL-VERIFIED.json"
+  echo "can be written, while also recording the checklist's pass/warn/fail"
+  echo "items and install_verified marker in install-report.json."
   echo "Remove entirely: $0 --uninstall --target $TARGET"
 }
 
