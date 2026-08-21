@@ -1,6 +1,6 @@
 ---
 name: gsd-jira-sync
-description: "Recipe: post GSD lifecycle updates as Jira comments (and optional transitions) via Atlassian MCP; emit matching stamps."
+description: "Recipe: post GSD lifecycle updates as Jira comments AND required status transitions via Atlassian MCP; emit matching stamps. Do not comment-only when jira-events.json names a status."
 ---
 
 <cursor_skill_adapter>
@@ -10,6 +10,8 @@ Invoke when the user says `gsd-jira-sync` or after a GSD milestone should be mir
 **Single-event mode** (manual, one milestone at a time):
 
 Arguments: `{{GSD_ARGS}}` = `<event_id> <issue_key> [--phase N] [--arm recipe] [--run run-01] [--transition "Name"]`
+
+`--transition` overrides the **required** status in `jira-events.json` for that event. If omitted, use the catalog name (via `bench/lib/jira-transition-name.sh`). Do not skip the transition when the catalog names one — comments alone are not enough.
 
 Examples:
 - `gsd-jira-sync plan_complete INS-12345 --phase 1`
@@ -37,7 +39,8 @@ Invoke this when `sync-reconcile.sh` (TASK-003) has been run and left rows in
    RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/draft-jira-comment.sh)"
    "$RESOLVED" <event> <issue> [--phase N] ...
    ```
-3. `CallMcpTool` server `plugin-atlassian-atlassian` to post comment (and transition if requested)
+3. `CallMcpTool` server `plugin-atlassian-atlassian` to post the comment, then to **transition**
+   when the catalog or `--transition` names a status (see workflow step 5).
 4. **Emit stamp.** Same resolution as step 2, for `bench/runners/emit-stamp.sh`. `Shell`:
    ```
    RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/emit-stamp.sh)"
@@ -47,14 +50,15 @@ Invoke this when `sync-reconcile.sh` (TASK-003) has been run and left rows in
 ## D. Do NOT
 - Skip Jira comment when recipe arm is active and issue key is known
 - Post empty comments — enrich draft with paths/summaries from `.planning/` artifacts
-- Transition without confirming transition name via `getTransitionsForJiraIssue` when unsure
+- Skip the catalog transition (comment-only) when `jira-events.json` names a status
+- Transition without matching a real transition id via `getTransitionsForJiraIssue`
 - **Drain mode:** call `mark-done` before the `addCommentToJiraIssue` call actually succeeds
 - **Drain mode:** skip `mark-failed` on error — an un-marked failure stays stuck as `queued` forever instead of being retried on the next drain
 </cursor_skill_adapter>
 
-# gsd-jira-sync — GSD recipe: Jira comment mirror
+# gsd-jira-sync — GSD recipe: Jira comment + status mirror
 
-Post **every GSD lifecycle milestone** to the linked Jira issue. This is the **recipe arm** tracker bridge on top of vanilla GSD — GSD still owns `.planning/`; this skill owns **Jira audit trail + stamps**.
+Post **every GSD lifecycle milestone** to the linked Jira issue as a **comment and a status change** when the event catalog names one. This is the **recipe arm** tracker bridge on top of vanilla GSD — GSD still owns `.planning/`; this skill owns **Jira audit trail + stamps + board status**.
 
 **Spec:** `docs/netapp-recipe/lld/TRACEABILITY-LLD.md` · **Run:** `docs/netapp-recipe/README.md`  
 **Events:** `bench/recipe/trackers/jira-events.json` (bundled mirror: `docs/netapp-recipe/reference/harness/recipe/trackers/jira-events.json`)
@@ -68,7 +72,13 @@ Post **every GSD lifecycle milestone** to the linked Jira issue. This is the **r
    implementation of the script; not duplicated into every target by design); enrich placeholders
    from `.planning/` artifacts.
 4. **Post to Jira** — Atlassian MCP `addCommentToJiraIssue` with `cloudId` + `issueKey` + comment body (markdown/wiki as supported).
-5. **Optional transition** — if `--transition` or event config says so, call `getTransitionsForJiraIssue` then `transitionJiraIssue`.
+5. **Required transition** — resolve the status name: `--transition` if passed, else
+   ```
+   RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/jira-transition-name.sh)"
+   "$RESOLVED" <event_id>
+   ```
+   If the helper prints a name: `getJiraIssue` — if current status already matches (case-insensitive), skip. Else `getTransitionsForJiraIssue`, pick the transition whose **name or to-status** matches (aliases below), then `transitionJiraIssue` with that **id**. No matching transition → **warn and continue** (comment still posted; some boards use different names). Empty helper output → skip (event has `transition: null`).
+   Aliases: `To Do` ≈ Backlog / Open / New; `In Progress` ≈ Doing / In-Progress; `In Review` ≈ Review / Code Review; `Done` ≈ Closed / Resolved / Complete.
 6. **Emit stamp** — run `emit-stamp.sh` line printed by draft script (immutable KPI record).
 
 <a id="drain-mode-task-005"></a>
@@ -90,8 +100,12 @@ every target by design) for everything around the actual post:
    for whatever's genuinely still pending. Returns a JSON `work` array of
    `{key, event_id, issue_key, phase_id, target, body}`.
 2. **For each work item** — read MCP tool schemas (`addCommentToJiraIssue`,
-   `transitionJiraIssue`) and call `addCommentToJiraIssue` with `issueKey` +
-   `body` from the work item.
+   `transitionJiraIssue`, `getTransitionsForJiraIssue`, `getJiraIssue`) and call
+   `addCommentToJiraIssue` with `issueKey` + `body` from the work item. Then apply the
+   **required** catalog transition for that row's `event_id` (same rules as single-event
+   step 5 — `jira-transition-name.sh`, match id, warn-and-continue if the board has no match).
+   Do not mark the row done after a comment if you skipped a named transition without trying
+   `getTransitionsForJiraIssue`.
 3. **On success** — `sync-drain-queue.sh mark-done <key> --external-id <comment_id> --run <run_id>`.
    This appends `posted` to `sync-ledger.jsonl`, flips the queue row to `done`,
    and emits the KPI stamp configured for that `event_id` in `jira-events.json`

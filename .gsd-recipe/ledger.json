@@ -5,12 +5,21 @@
   ],
   "recipe-help": [
     ".cursor/skills/recipe-help/SKILL.md",
-    "docs/RECIPE-COMMANDS.md"
+    "docs/RECIPE-COMMANDS.md",
+    "docs/RECIPE-BENCHMARKS.md"
   ],
   "recipe-onboard": [
     ".cursor/skills/recipe-onboard/SKILL.md"
   ],
   "recipe-new-project": [
     ".cursor/skills/recipe-new-project/SKILL.md"
+  ],
+  "recipe-status": [
+    ".cursor/skills/recipe-status/SKILL.md",
+    ".gsd-recipe/scripts/recipe-status.sh"
+  ],
+  "recipe-start": [
+    ".cursor/skills/recipe-start/SKILL.md",
+    ".gsd-recipe/scripts/recipe-next.sh"
   ]
 }

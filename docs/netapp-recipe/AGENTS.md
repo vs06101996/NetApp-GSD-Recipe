@@ -16,7 +16,9 @@ Read this before implementing or operating the recipe in Cursor.
 
 1. [README.md](README.md) — built vs spec, run smoke test, commands
 2. [BENCHMARKS.md](BENCHMARKS.md) — field benchmarks (recipe vs ad-hoc) and harness status
-3. [BACKLOG.md](BACKLOG.md) — pick `TASK-00N` if implementing
+3. [BACKLOG.md](BACKLOG.md) — pick `TASK-00N` if implementing (priority-ranked; post-v1 order from [CONTROL-GROUP.md](CONTROL-GROUP.md))
+3b. Pickup/tester target: [SANDBOX.md](SANDBOX.md) (`~/Projects/recipe-sandbox`) — not AgentStudio
+3c. Fresh clone / lost skills: [CLONE.md](CLONE.md) (bash `install-recipe-to-target.sh` first) — **then** type **`recipe-start`**
 4. [DATA-CONTRACTS.md](contracts/DATA-CONTRACTS.md) — required for STATE, ledger, config work
 5. **One LLD** for the task:
    - Install → [lld/INSTALL-LLD.md](lld/INSTALL-LLD.md)

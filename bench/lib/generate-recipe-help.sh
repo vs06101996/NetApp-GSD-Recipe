@@ -60,7 +60,7 @@ def installer_exists(entry):
     return os.path.isfile(os.path.join(repo, _rel(inst)))
 
 def status_for(entry):
-    if entry.get("invoke_name") in ("recipe-new-project", "recipe-onboard"):
+    if entry.get("invoke_name") in ("recipe-new-project", "recipe-onboard", "recipe-start", "recipe-status"):
         if not installer_exists(entry):
             return "planned"
     inst = entry.get("installer")
@@ -70,7 +70,7 @@ def status_for(entry):
 
 WORKFLOW_GROUPS = [
     ("Install and verify", [
-        "recipe-install", "recipe-validate-tokens", "recipe-install-verify",
+        "recipe-start", "recipe-status", "recipe-install", "recipe-validate-tokens", "recipe-install-verify",
     ]),
     ("Onboard", [
         "recipe-onboard", "recipe-prd-intake", "recipe-new-project",
@@ -162,7 +162,8 @@ lines.append("")
 lines.append("## Quick start (delivery workflow)")
 lines.append("")
 lines.append("```text")
-lines.append("recipe-install → recipe-onboard (or step-by-step intake/epic/tasks)")
+lines.append("After bash install:  recipe-start     (or recipe-status / recipe-help --next)")
+lines.append("recipe-onboard (or step-by-step intake/epic/tasks)")
 lines.append("  → recipe-bootstrap-knowledge")
 lines.append("  → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)")
 lines.append("  → recipe-verify-feature N → recipe-review-ship N → recipe-settle")
@@ -170,6 +171,16 @@ lines.append("  → recipe-sync / tracker-sync as needed")
 lines.append("```")
 lines.append("")
 lines.append("Enable planning policy: add `\"agent_skills\": {\"gsd-planner\": [\"skills/recipe-planning-policy\"]}` to `.planning/config.json` (print-only during install).")
+lines.append("")
+lines.append("## Jira tickets (assign + status)")
+lines.append("")
+lines.append("Creating an Epic or phase tasks **assigns a person** and moves the new issue to **To Do** (or Backlog / Open / New).")
+lines.append("")
+lines.append("- Pass `--assignee \"Display Name or email\"` on `recipe-onboard`, `recipe-create-epic`, or `recipe-create-phase-tasks`.")
+lines.append("- Or set `\"assignee\": \"...\"` in `.gsd-recipe/config.json`.")
+lines.append("- Else the skill uses `git config user.name`, then asks.")
+lines.append("")
+lines.append("`gsd-jira-sync` posts a **comment and a status change** when `jira-events.json` names one (not comment-only): plan/execute → **In Progress**; verify/review → **In Review**; settle → **Done**. If the board has no matching transition, it warns and still posts the comment. Override with `--transition \"Name\"`.")
 lines.append("")
 
 # Field benchmarks (from docs/netapp-recipe/benchmarks/*.json)

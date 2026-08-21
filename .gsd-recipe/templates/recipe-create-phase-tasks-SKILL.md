@@ -9,6 +9,9 @@ description: "Recipe: closes TASK-007's documented detect+draft+queue-only gap f
 Invoke by name (`recipe-create-phase-tasks`) with:
 - `--issue-type NAME` — optional. Skip auto-resolution (step 4) and use this Jira issue type for
   the whole batch.
+- `--assignee NAME` — optional. Same resolution as `recipe-create-epic` (`--assignee`, then
+  config `assignee`, then `git config user.name`, then a live question). Applied to every
+  created phase task via `lookupJiraAccountId` → `assignee_account_id`.
 - `--dry-run` — optional. Passed straight through to `create-phase-tasks.sh detect`'s own
   `--dry-run` (drafts nothing to disk); still useful to preview what `detect` would queue, but a
   `--dry-run` invocation never reaches the MCP-calling steps below (there is nothing in `list`'s
@@ -18,6 +21,7 @@ Invoke by name (`recipe-create-phase-tasks`) with:
 
 Examples:
 - `recipe-create-phase-tasks`
+- `recipe-create-phase-tasks --assignee "Ada Lovelace"`
 - `recipe-create-phase-tasks --issue-type "Sub-task"`
 - `recipe-create-phase-tasks --dry-run`
 
@@ -50,11 +54,14 @@ RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/create-pha
    and **stop cleanly** — no further steps, no MCP calls.
 4. `GetMcpTools` server `plugin-atlassian-atlassian` tool `getJiraProjectIssueTypesMetadata` —
    read once, for the whole batch, for the project derived from the linked epic's key prefix.
-5. Soft confirm gate — print the full batch and the resolved issue type; ask yes/no.
-6. `GetMcpTools` tool `createJiraIssue` — read its schema once, for the whole batch (not per row).
-7. For each work item, ascending `phase_id` order: `CallMcpTool createJiraIssue`, then link it to
+   Then `lookupJiraAccountId` for the assignee (see `--assignee` / config / git user.name).
+5. Soft confirm gate — print the full batch, the resolved issue type, and the **assignee**; ask yes/no.
+6. `GetMcpTools` tools `createJiraIssue`, `getTransitionsForJiraIssue`, `transitionJiraIssue`.
+7. For each work item, ascending `phase_id` order: `CallMcpTool createJiraIssue` including
+   `assignee_account_id`, then link it to
    the epic — either a `parent` field in the same call (Sub-task) or, if unsure which link type to
    use, `GetMcpTools`/`CallMcpTool getIssueLinkTypes` first, then `CallMcpTool createIssueLink`.
+   Then transition the new issue to **To Do** (Backlog / Open / New aliases) unless already there.
 8. `Shell`: `<resolved> mark-done <phase_id> <issue_key> [--state PATH]
    [--queue PATH]` on success, or `<resolved> mark-failed <phase_id> --error "<reason>" [--queue PATH]` on
    failure — every single row, no exceptions.
@@ -68,9 +75,8 @@ RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/create-pha
 - Never re-run `detect` mid-batch — it runs exactly once, up front (step 1). If the operator wants
   to pick up newly-added `ROADMAP.md` phases mid-session, that is a fresh, separate invocation of
   this skill, not a re-run inside the current one.
-- Never call `addCommentToJiraIssue`/post any Jira comment from this skill — unrelated concern,
-  exclusively `gsd-jira-sync`'s job. This skill only ever *creates* phase-task issues; lifecycle
-  comments on them are a separate, later concern.
+- Never call `addCommentToJiraIssue`/post any Jira **comment** from this skill — that stays
+  `gsd-jira-sync`. Creating **does** set assignee and transition to **To Do**.
 - Never fabricate an issue type or link type without checking what the target Jira instance
   actually offers (`getJiraProjectIssueTypesMetadata` / `getIssueLinkTypes`) — if neither "Task"
   nor "Sub-task" exists on the resolved project, list what IS available and ask the operator to
@@ -138,8 +144,12 @@ concurrently).
    available and ask the operator to pick, live — never guess or fabricate an issue-type name that
    isn't actually on the target instance.
 
-5. **Soft confirm gate.** Print the full batch (every work item's `phase_id` + `phase_title`) and
-   the resolved issue type; ask a plain yes/no question before creating anything remote. Decline →
+4b. **Resolve assignee (once for the batch).** Same order as `recipe-create-epic`: `--assignee`,
+    `.gsd-recipe/config.json` `assignee`, `git config user.name`, else a live question. Then
+    `lookupJiraAccountId`. Do not create unassigned phase tasks.
+
+5. **Soft confirm gate.** Print the full batch (every work item's `phase_id` + `phase_title`), the
+   resolved issue type, and the assignee; ask a plain yes/no question before creating anything remote. Decline →
    stop cleanly — nothing created, nothing marked, no further steps.
 
 6. **Read `createJiraIssue`'s schema once.** `GetMcpTools` server `plugin-atlassian-atlassian`
@@ -147,12 +157,14 @@ concurrently).
 
 7. **For each work item, ascending `phase_id` order:**
    - `CallMcpTool createJiraIssue` with the resolved issue type (step 4) + that row's
-     `drafted_summary`/`drafted_description` as `summary`/`description`.
+     `drafted_summary`/`drafted_description` as `summary`/`description` + `assignee_account_id`.
    - **Link it to the epic.** If the resolved issue type is literally `"Sub-task"`, prefer setting
      a `parent` field directly in the same `createJiraIssue` call's `fields` (the standard Jira
      sub-task pattern) over a separate link call. Otherwise, `GetMcpTools`/`CallMcpTool
      createIssueLink` — if unsure which link type/direction to use, check `getIssueLinkTypes`
      first rather than guessing a link-type name that may not exist on the target instance.
+   - **Status:** `getTransitionsForJiraIssue` then `transitionJiraIssue` to **To Do** (or Backlog /
+     Open / New). Already there → skip. No match → warn, still `mark-done` if create+link succeeded.
    - **On success:** `create-phase-tasks.sh mark-done <phase_id> <issue_key> [--state PATH]
      [--queue PATH]` — only once both the create AND the link call have actually succeeded.
    - **On failure (create or link call):** `create-phase-tasks.sh mark-failed <phase_id> --error

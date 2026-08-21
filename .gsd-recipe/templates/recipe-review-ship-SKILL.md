@@ -1,6 +1,6 @@
 ---
 name: recipe-review-ship
-description: "Recipe: gated single-phase review-and-ship wrapper for the NetApp GSD recipe (TASK-026). Calls native gsd-code-review N directly, resolves the phase's tracker issue key via parse-state.sh and emits review_complete by invoking the gsd-jira-sync skill (idempotent via sync-ledger.sh, with the event's optional 'In Review' transition), then calls native gsd-ship N [--draft] directly and surfaces the resulting PR link — printing gsd-review/gsd-ui-review N as informational-only suggestions, never auto-invoking either."
+description: "Recipe: gated single-phase review-and-ship wrapper for the NetApp GSD recipe (TASK-026). Calls native gsd-code-review N directly, syncs review_complete via gsd-jira-sync (required In Review transition), then calls native gsd-ship N [--draft] and surfaces the resulting PR link — printing gsd-review/gsd-ui-review N as informational-only suggestions, never auto-invoking either."
 ---
 
 <cursor_skill_adapter>
@@ -53,10 +53,9 @@ Examples:
    (`gsd-jira-sync review_complete <issue_key> --phase N`) — do not inline
    `draft-jira-comment.sh`'s draft/post/stamp steps here. That skill owns drafting the comment
    body, the `addCommentToJiraIssue` MCP call, and running `emit-stamp.sh`; this skill only decides
-   *whether* to call it and *what* to pass. `jira-events.json`'s `review_complete` entry marks its
-   transition as `"optional: In Review"` — pass `--transition "In Review"` when invoking
-   `gsd-jira-sync` so that skill's own step 5 (`getTransitionsForJiraIssue` confirmation before
-   `transitionJiraIssue`) can decide whether the transition actually applies; never transition
+   *whether* to call it and *what* to pass.    `jira-events.json`'s `review_complete` entry requires transition **In Review**. Invoke
+   `gsd-jira-sync review_complete <issue_key> --phase N` (add `--transition "In Review"` only to
+   override). That skill comments **and** transitions. Never transition
    directly from this skill.
 
 4. **Call native `gsd-ship N [--draft]` directly**, in this same turn. This skill never re-verifies

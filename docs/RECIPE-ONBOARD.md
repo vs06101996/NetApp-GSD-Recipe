@@ -3,7 +3,7 @@
 Single Cursor skill that runs the full NetApp GSD onboarding chain in one invocation: PRD intake →
 project bootstrap → Jira Epic → phase tasks. Skips any step whose artifact already exists.
 
-For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMANDS.md](RECIPE-COMMANDS.md).
+For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMANDS.md](RECIPE-COMMANDS.md). After a first install, type **`recipe-start`** (or **`recipe-help --next`**) to see the next command in plain language.
 
 ## Prerequisites
 
@@ -91,6 +91,26 @@ recipe-run-phase 1
 ```
 
 Or loop multiple phases: `recipe-run-phases` (optionally `--full` for verify/review/settle).
+
+### Second PRD / new initiative in the same repo
+
+Today `recipe-onboard` **silently skips** when `docs/PRD.md`, `.planning/ROADMAP.md`, Epic, or phase-task keys already exist — so a second feature PRD cannot become the active cycle via onboard alone.
+
+**Planned (TASK-054 / [OD-17](netapp-recipe/DECISIONS.md)):** same command, with a warn + Yes/No gate when planning already exists and you pass a new PRD source:
+
+```text
+recipe-onboard docs/PRD-kb-compare-metrics-backend.md
+```
+
+- **Yes** → overwrite PRD + re-init `.planning/` + force-relink Epic/phase tasks  
+- **No** → keep current planning; agent suggests continuing on the existing ROADMAP (`recipe-bootstrap-knowledge` → `recipe-plan-phase N` …) or settling the current Epic first  
+
+**Until TASK-054 ships**, do it manually:
+
+1. Promote the new PRD into `docs/PRD.md` (`recipe-prd-intake <path>` — confirm overwrite).
+2. `recipe-new-project docs/PRD.md` — confirm **re-init**.
+3. `recipe-create-epic --force` then `recipe-create-phase-tasks`.
+4. Continue with bootstrap → plan → run as usual.
 
 ## Step-by-step alternative
 

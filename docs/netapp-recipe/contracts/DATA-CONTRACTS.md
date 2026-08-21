@@ -103,6 +103,7 @@ Validation implementation target: TASK-008 in [BACKLOG.md](../BACKLOG.md) · [IN
 | `traceability.reason` | string | yes when disabled | operator reason for disabling traceability |
 | `observer.enabled` | boolean | yes | enable/disable p2 observer flow |
 | `observer.interval_minutes` | integer | yes when observer enabled | loop interval recommendation |
+| `assignee` | string | no | default Jira display name or email for new Epics and phase tasks (`lookupJiraAccountId`) |
 
 ### Example
 

@@ -205,6 +205,16 @@ fi
 if [ -f "$TARGET1/.cursor/skills/recipe-onboard/SKILL.md" ]; then
   check "install.sh composes install-recipe-onboard.sh (skill staged)" "0"
 fi
+if [ -f "$TARGET1/.cursor/skills/recipe-start/SKILL.md" ]; then
+  check "install.sh composes install-recipe-start.sh (skill staged)" "0"
+fi
+if [ -f "$TARGET1/.cursor/skills/recipe-status/SKILL.md" ]; then
+  check "install.sh composes install-recipe-status.sh (skill staged)" "0"
+fi
+[ -f "$TARGET1/.gsd-recipe/scripts/recipe-next.sh" ]
+check "install.sh stages recipe-next.sh with recipe-start" "$?"
+[ -f "$TARGET1/.gsd-recipe/scripts/recipe-status.sh" ]
+check "install.sh stages recipe-status.sh with recipe-status" "$?"
 
 python3 -c "
 import json
@@ -234,6 +244,10 @@ if 'recipe-new-project' in d:
     assert d['recipe-new-project'], d
 if 'recipe-onboard' in d:
     assert d['recipe-onboard'], d
+if 'recipe-start' in d:
+    assert d['recipe-start'], d
+if 'recipe-status' in d:
+    assert d['recipe-status'], d
 # install.sh must not re-ledger files the sub-installers already track under
 # their own component names.
 assert set(d['install-core']).isdisjoint(set(d['fotw-observer'])), d
@@ -256,11 +270,11 @@ assert set(d['install-core']).isdisjoint(set(d['recipe-observe'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-epic'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-phase-tasks'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-help'])), d
-for _opt in ('recipe-new-project', 'recipe-onboard'):
+for _opt in ('recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status'):
     if _opt in d:
         assert set(d['install-core']).isdisjoint(set(d[_opt])), d
 "
-check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-new-project/recipe-onboard components (no cross-tracking)" "$?"
+check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-new-project/recipe-onboard/recipe-start/recipe-status components (no cross-tracking)" "$?"
 
 # capability.json is generated once install() has composed every sub-installer,
 # and validates against the new capability.schema.json (TASK-011).
@@ -367,6 +381,12 @@ echo "$VERIFY_OUT1" | grep -q "recipe-create-phase-tasks composed — pass" && r
 check "--verify output mentions recipe-create-phase-tasks composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-help composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-help composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-onboard composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-onboard composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-start composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-start composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-status composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-status composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "config.schema.json — strict schema validation — pass" && rc=0 || rc=$?
 check "--verify output mentions config.schema.json strict validation" "$rc"
 
@@ -683,7 +703,7 @@ EOF
 
 # 12. GSD-absent case: fake npx creates the signal file when asked to install
 # GSD — reverify then finds it and records gsd_core: auto_installed.
-FAKEBIN12="$(make_scratch_path_excluding "")"
+FAKEBIN12="$(make_scratch_path_excluding "npx")"
 SIGNAL12="$(fake_gsd_signal_path)"
 cat > "$FAKEBIN12/npx" <<'EOF'
 #!/usr/bin/env bash
@@ -707,7 +727,7 @@ rm -rf "$FAKEBIN12" "$(dirname "$(dirname "$SIGNAL12")")"
 
 # 13. GSD-absent-and-npx-doesn't-fix-it case: fallback fires and, under
 # --yes, warn-only-continues rather than hanging (no stdin available).
-FAKEBIN13="$(make_scratch_path_excluding "")"
+FAKEBIN13="$(make_scratch_path_excluding "npx")"
 SIGNAL13="$(fake_gsd_signal_path)"
 cat > "$FAKEBIN13/npx" <<'EOF'
 #!/usr/bin/env bash

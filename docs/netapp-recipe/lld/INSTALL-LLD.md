@@ -71,6 +71,14 @@ flowchart TB
 | **Failure handling** | Fail if clone/auth fails; do not scaffold into a non-git directory |
 | **Stamps** | None |
 
+After a successful interactive fallback install,
+`install-recipe-to-target.sh` opens the official Cursor prompt deeplink
+`cursor://anysphere.cursor-deeplink/prompt?text=recipe-start`. Cursor pre-fills
+the focused chat but never executes the prompt; the operator reviews it and
+presses Enter. The deeplink cannot guarantee a separate new Agent chat or bind
+another workspace. Non-interactive installs skip it by default; flags:
+`--open-start` / `--no-open-start`.
+
 ---
 
 ## Step 0: Credentials
@@ -363,7 +371,7 @@ Each path is a directory with `SKILL.md`. Ships inside the capability package â€
 
 | Action | Mechanism |
 |--------|-----------|
-| Upgrade recipe | `gsd capability update gsd-recipe` or re-run fallback installer |
+| Upgrade recipe | **`recipe-update`** (TASK-058, planned) â€” restage from `recipe_source` without uninstall; until then: re-run `install-recipe-to-target.sh` / `install.sh` (idempotent restage) or `gsd capability update gsd-recipe` when capability install exists |
 | Remove recipe | `gsd capability remove gsd-recipe --purge-data` or `install.sh --uninstall` via ledger |
 | Preserve human data | `code_base_details/`, `.knowledge/` (review before delete) |
 

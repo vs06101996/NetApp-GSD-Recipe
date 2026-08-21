@@ -10,16 +10,19 @@ Invoke by name (`recipe-create-epic`) with:
 - `--project KEY` — optional. Skips the live `getVisibleJiraProjects` question in step 3 if provided.
 - `--issue-type NAME` — optional. Skips the `getJiraProjectIssueTypesMetadata` lookup in step 4 if
   provided.
-- `--force` — optional. Forwarded to step 8's `parse-state.sh init-tracker --force` call — only
+- `--assignee NAME` — optional. Jira display name, email, or account id. Assigned on create.
+  Resolution order if omitted: `.gsd-recipe/config.json` key `assignee` (string), else
+  `git config user.name`, else a live question. Look up with `lookupJiraAccountId`.
+- `--force` — optional. Forwarded to step 9's `parse-state.sh init-tracker --force` call — only
   needed when `.planning/STATE.md` already has a `## Tracker` section linked to a *different* epic
   than the one this invocation is about to create (step 2).
-- `--run-id ID` / `--arm ARM` — optional. Override the low-friction defaults step 8 otherwise
+- `--run-id ID` / `--arm ARM` — optional. Override the low-friction defaults step 9 otherwise
   proposes (a date-based run-id slug, `arm: recipe`) in the same confirm turn as step 6.
 
 Examples:
 - `recipe-create-epic`
 - `recipe-create-epic --project PROJ`
-- `recipe-create-epic --project PROJ --issue-type Epic --run-id pilot-02`
+- `recipe-create-epic --project PROJ --assignee "Ada Lovelace"`
 - `recipe-create-epic --force` (after confirming with the operator that relinking is intentional)
 
 ## B. Prerequisites
@@ -29,7 +32,7 @@ Examples:
 - Atlassian MCP enabled and authenticated, with permission to create issues in the resolved
   project.
 - `.planning/STATE.md` may or may not exist, and may or may not already have a `## Tracker`
-  section — both are valid starting states (see step 2 and step 8's `init-tracker` semantics).
+  section — both are valid starting states (see step 2 and step 9's `init-tracker` semantics).
 
 ## C. Tool Usage
 
@@ -52,11 +55,11 @@ Examples:
    - Succeeds with a non-empty `epic` field → this is a potential relink. Surface it plainly to the
      operator now, *before* doing anything remote: "`.planning/STATE.md` is already linked to epic
      `<EXISTING_EPIC>`. This invocation will create a *new* Jira Epic and, unless you pass
-     `--force`, `init-tracker` will refuse to overwrite that link in step 8." If `--force` was not
+     `--force`, `init-tracker` will refuse to overwrite that link in step 9." If `--force` was not
      passed on this invocation, ask the operator here whether they meant to pass it — do not
-     silently proceed only to have step 8 fail after an issue has already been created remotely.
+     silently proceed only to have step 9 fail after an issue has already been created remotely.
      Continue to step 3 either way (this is a surface-early warning, not a hard block by itself —
-     the actual enforcement is `init-tracker`'s own conflict check in step 8).
+     the actual enforcement is `init-tracker`'s own conflict check in step 9).
 
 3. **Resolve the Jira project.**
    - `--project KEY` passed → use it directly, skip the live question.
@@ -86,22 +89,35 @@ Examples:
    (the project resolved in step 3). Returns `{"summary": "...", "description": "..."}` — a real,
    standalone, testable script; do not re-derive this from `docs/PRD.md` inline.
 
-6. **Soft confirm gate — non-skippable but declinable.** Print, in this conversation: the resolved
-   project, the resolved issue type, the drafted `summary`, and a truncated preview of the drafted
+6. **Resolve the assignee (required).** Search string:
+   - `--assignee NAME` if passed
+   - else `.gsd-recipe/config.json` `"assignee"` if that key is a non-empty string
+   - else `git config user.name`
+   - else ask the operator, live, for a Jira display name or email — do not create unassigned.
+   `GetMcpTools` then `CallMcpTool lookupJiraAccountId` (`cloudId` + `searchString`). One match →
+   use that `accountId`. Several → ask which person. None → ask for a different name; do not
+   skip assignment. Show the chosen display name on the confirm gate.
+
+7. **Soft confirm gate — non-skippable but declinable.** Print, in this conversation: the resolved
+   project, the resolved issue type, the **assignee**, the drafted `summary`, and a truncated preview of the drafted
    `description` (a few lines is enough — the operator can ask to see the full body if they want
    it). In the same turn, also present the low-friction defaults for `run_id` (a date-based slug,
-   e.g. `epic-YYYY-MM-DD`) and `arm` (`recipe`) that step 8 will use unless overridden via
+   e.g. `epic-YYYY-MM-DD`) and `arm` (`recipe`) that step 9 will use unless overridden via
    `--run-id`/`--arm`. Ask a plain yes/no: "Create this Jira Epic?"
    - Decline → stop cleanly here. Nothing created, nothing written to `.planning/STATE.md`. Report
      "declined — no Epic created" in the final summary.
-   - Affirm → continue to step 7.
+   - Affirm → continue to step 8.
 
-7. **Create the Epic.** `GetMcpTools` server `plugin-atlassian-atlassian` tool `createJiraIssue`,
-   then `CallMcpTool` it with the resolved project key, the resolved issue type, and the drafted
-   `summary`/`description` from step 5. Always read the tool's schema first — never assume its
+8. **Create the Epic.** `GetMcpTools` server `plugin-atlassian-atlassian` tool `createJiraIssue`,
+   then `CallMcpTool` it with the resolved project key, the resolved issue type, the drafted
+   `summary`/`description` from step 5, and `assignee_account_id` from step 6. Always read the tool's schema first — never assume its
    field names from memory.
 
-8. **Link the result into `.planning/STATE.md`.** Derive the created issue's key from
+   Then move the new issue to **To Do** (aliases: Backlog / Open / New): `getTransitionsForJiraIssue`
+   → `transitionJiraIssue` by transition **id**. Already To Do → skip. No matching transition →
+   warn-and-continue (the issue still exists). Lifecycle comments stay `gsd-jira-sync` (step 10).
+
+9. **Link the result into `.planning/STATE.md`.** Derive the created issue's key from
    `createJiraIssue`'s response. Derive a browsable URL as `https://<site>/browse/<KEY>`, where
    `<site>` comes from whatever Atlassian resource/cloud metadata step 3's `getVisibleJiraProjects`
    call (or, if `--project` skipped that call, a fresh `getAccessibleAtlassianResources` call made
@@ -118,30 +134,32 @@ Examples:
    overwrote) verbatim in the final summary — never paraphrase away a conflict-refusal into a
    silent success.
 
-9. **Sync `intake_started`.** Invoke the `gsd-jira-sync` skill by name —
+10. **Sync `intake_started`.** Invoke the `gsd-jira-sync` skill by name —
    `gsd-jira-sync intake_started <EPIC_KEY>` — exactly the "`gsd-new-project` / link ticket ->
    `intake_started`" row `gsd-jira-sync-SKILL.md`'s own operator checklist already documents.
-   Do **not** call `addCommentToJiraIssue`/`transitionJiraIssue` directly here — drafting, posting,
+   Do **not** call `addCommentToJiraIssue` directly here — drafting, posting,
    and stamping are exclusively `gsd-jira-sync`'s job (Option B, same split every other `recipe-*`
-   sync call in this repo already uses).
+   sync call in this repo already uses). That skill also applies the catalog **To Do** transition
+   if the issue is not already there.
 
-10. **Summarize**, in one final block to the operator: the created Epic's key and URL, the
-    resolved project/issue type, whether `.planning/STATE.md` was created fresh / had a `## Tracker`
+11. **Summarize**, in one final block to the operator: the created Epic's key and URL, the
+    assignee, the resolved project/issue type, whether `.planning/STATE.md` was created fresh / had a `## Tracker`
     section inserted / was a no-op / was overwritten via `--force`, and the `gsd-jira-sync` sync
     result (posted / duplicate_skipped / whatever that skill itself reports).
 
 ## D. Do NOT
 
 - Never call any MCP tool without first reading its schema (`GetMcpTools` before every
-  `CallMcpTool`) — `getVisibleJiraProjects`, `getJiraProjectIssueTypesMetadata`, `createJiraIssue`,
+  `CallMcpTool`) — `getVisibleJiraProjects`, `getJiraProjectIssueTypesMetadata`, `lookupJiraAccountId`, `createJiraIssue`,
+  `getTransitionsForJiraIssue`, `transitionJiraIssue`,
   and (if needed) `getAccessibleAtlassianResources` all apply.
 - Never fabricate a project key, issue type, Epic key, or Jira instance URL when a live/resolvable
   value exists instead. If `getVisibleJiraProjects`/`getJiraProjectIssueTypesMetadata` can answer
   the question, use them — never guess, and never silently default to "the first one returned".
-- Never call `addCommentToJiraIssue` or `transitionJiraIssue` directly from this skill — that is
-  exclusively `gsd-jira-sync`'s job (step 9). This skill's only direct Jira-API call is
-  `createJiraIssue`.
-- Never proceed past the step-6 confirm gate on a decline — no `createJiraIssue` call, no
+- Never call `addCommentToJiraIssue` directly from this skill — that is
+  exclusively `gsd-jira-sync`'s job (step 10). This skill's Jira-API calls are
+  `createJiraIssue` (with `assignee_account_id`) plus the initial **To Do** transition after create.
+- Never proceed past the step-7 confirm gate on a decline — no `createJiraIssue` call, no
   `init-tracker` write, no `gsd-jira-sync` invocation.
 - Never overwrite a different already-linked epic in `.planning/STATE.md` without an explicit
   `--force` that the operator affirmatively provided or confirmed in step 2 — `init-tracker` itself
@@ -184,11 +202,12 @@ sibling tasks editing `install.sh` concurrently).
 4. Resolve the Epic issue type — `--issue-type`, or `getJiraProjectIssueTypesMetadata` with a
    safe case-insensitive "Epic" default, falling back to a live question only if genuinely absent.
 5. Draft the summary/description from `docs/PRD.md` via `bench/runners/draft-jira-epic.sh`.
-6. Soft confirm gate: preview project/issue-type/summary/description, ask yes/no.
-7. Create the Epic via `createJiraIssue` (Atlassian MCP).
-8. Link the result into `.planning/STATE.md` via `bench/lib/parse-state.sh init-tracker`.
-9. Sync `intake_started` by invoking `gsd-jira-sync` by name.
-10. Summarize.
+6. Resolve assignee (`lookupJiraAccountId`); do not create unassigned.
+7. Soft confirm gate: preview project/issue-type/assignee/summary/description, ask yes/no.
+8. Create the Epic via `createJiraIssue` with `assignee_account_id`, then transition to **To Do**.
+9. Link the result into `.planning/STATE.md` via `bench/lib/parse-state.sh init-tracker`.
+10. Sync `intake_started` by invoking `gsd-jira-sync` by name.
+11. Summarize.
 
 ## Why Option B (script drafts, agent posts) for the Epic body
 
@@ -237,12 +256,12 @@ outcome visible earlier.
 - **Does not create phase sub-tasks.** That's `create-phase-tasks.sh` / `bench/runners/create-phase-tasks.sh`
   (TASK-007)'s job, run separately once phases exist in `ROADMAP.md` — this skill only ever creates
   the top-level Epic and the `## Tracker` linkage.
-- **Does not post or transition Jira issues directly.** `intake_started` is emitted by invoking
-  `gsd-jira-sync`'s own documented workflow (step 9) — this skill's only direct Jira-API call is
-  `createJiraIssue` (step 7).
+- **Does not post Jira comments.** `intake_started` is emitted by `gsd-jira-sync` (step 10). This
+  skill's direct Jira calls are `createJiraIssue` with `assignee_account_id` and the initial
+  **To Do** `transitionJiraIssue` after create.
 - **Does not fabricate a PRD, a project, an issue type, an Epic key, or a Jira URL** under any
   circumstance — every one of those either comes from a real file on disk, a live MCP response, or
   an explicit operator answer.
-- **Does not skip the step-6 confirm gate** under any flag — unlike `install.sh`'s `--yes`, there is
+- **Does not skip the step-7 confirm gate** under any flag — unlike `install.sh`'s `--yes`, there is
   no non-interactive mode for "create this Epic without asking," matching `recipe-settle`'s own
   PO-accept-gate precedent for irreversible remote actions.

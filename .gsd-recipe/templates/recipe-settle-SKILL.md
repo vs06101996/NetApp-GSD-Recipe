@@ -18,9 +18,9 @@ Invoke by name (`recipe-settle`) with:
 - `--ref REF` — optional. A PR number, branch name, or commit SHA to check CI against. Default:
   the open PR for the current branch if one exists (`gh pr view --json number -q .number`), else
   the current branch name itself (`git rev-parse --abbrev-ref HEAD`).
-- `--transition "Name"` — optional, forwarded verbatim to
-  `gsd-jira-sync settled <issue_key> --transition "Name"` (e.g. `"Done"`, matching
-  `jira-events.json`'s `settled` event's own `"optional: Done"` transition).
+- `--transition "Name"` — optional override forwarded to
+  `gsd-jira-sync settled <issue_key> --transition "Name"`. Default catalog status for `settled`
+  is **Done**.
 
 Examples:
 - `recipe-settle 5`
