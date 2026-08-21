@@ -1,6 +1,6 @@
 ---
 name: recipe-install
-description: "Recipe: thin, invoke-by-name end-to-end install orchestrator for the NetApp GSD recipe (TASK-031), the last remaining unbuilt named recipe-* skill. Chains three already-separately-invokable pieces into one command: Step A invokes recipe-validate-tokens by name (informational, never blocks); Step B asks a genuine, non-skippable, live human consent question in the operator's own conversation previewing what will be staged (distinct from install.sh's own --yes-skippable prompt, since this is the one place in the recipe that writes new scaffolding into a possibly-unfamiliar target repo for the first time); Step C runs .gsd-recipe/scripts/install.sh --yes --target <repo> directly (INSTALL-LLD.md Steps 2-4, already composing every sub-installer this repo has built); Step D invokes recipe-install-verify by name (Step 5's checklist); Step E reports one combined summary, never fabricating any sub-result. --uninstall delegates to install.sh --uninstall --yes --target <repo>, behind its own equally-explicit live-conversation confirm gate. Never calls install.sh --record-jira-check, and never re-implements any check recipe-validate-tokens/install.sh --verify/recipe-install-verify already own."
+description: "Recipe: thin, invoke-by-name re-run/restage orchestrator for the NetApp GSD recipe (TASK-031). This is not the first-install entry point: on a target with no recipe skills, run bench/runners/install-recipe-to-target.sh from a recipe source clone first. Once staged, this skill chains recipe-validate-tokens, a live consent gate, install.sh --yes --target <repo>, recipe-install-verify, and a combined summary. --uninstall delegates to install.sh --uninstall --yes --target <repo> behind its own live confirmation gate. Never calls install.sh --record-jira-check or re-implements checks owned by the delegated pieces."
 ---
 
 <cursor_skill_adapter>
@@ -15,17 +15,34 @@ Invoke by name (`recipe-install`) with:
   Steps A-E; when passed, none of Steps A/C/D run at all.
 
 Examples:
-- `recipe-install` — full end-to-end install into the current repo root.
-- `recipe-install --target /path/to/other-repo` — full end-to-end install into a different repo.
+- `recipe-install` — re-run/restage the recipe in the current repo.
+- `recipe-install --target /path/to/other-repo` — restage a target where recipe skills already exist.
 - `recipe-install --uninstall` — delegate to `install.sh --uninstall` for the current repo root.
 - `recipe-install --uninstall --target /path/to/other-repo`
 
+### First-install boundary
+
+`recipe-install` cannot be the first command on a fresh target because the
+`recipe-install` skill does not exist there yet. **Do not type `recipe-install` before recipe skills exist.**
+From a recipe source clone, use:
+
+```bash
+./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes
+```
+
+After that succeeds, invoke `recipe-start` (or optionally `recipe-status`).
+Use this skill only for a later re-run/restage or uninstall.
+
 ## B. Prerequisites
 
-- None strictly required before invocation — `install.sh` itself already handles its own
-  prerequisite bootstrap (`preflight()`/`ensure_prereq()` for `python3`/`git`/`node`/`gh`/
-  `gsd_core`/`graphify`), and `recipe-validate-tokens`/`recipe-install-verify` are each
-  self-contained, standalone-invokable skills with no prerequisites of their own.
+- The first-install runner above must already have staged this skill and its sibling skills.
+  This chicken-and-egg requirement is why `recipe-install` is a re-run/restage command, not the
+  canonical first-install front door.
+- No additional CLI prerequisite is strictly required before invocation — `install.sh` itself
+  already handles its own prerequisite bootstrap (`preflight()`/`ensure_prereq()` for `python3`/
+  `git`/`node`/`gh`/`gsd_core`/`graphify`), and `recipe-validate-tokens`/
+  `recipe-install-verify` are each self-contained, standalone-invokable skills with no
+  prerequisites of their own.
 - `<target>` must be a git repo root (`install.sh` itself fails closed on this — this skill does
   not duplicate that check, it surfaces whatever `install.sh` reports).
 - `recipe-validate-tokens` and `recipe-install-verify` may or may not already be staged at
@@ -64,10 +81,9 @@ Run steps A-E below, in order, **unless `--uninstall` was passed** — in that c
      every `recipe-*`/`gsd-jira-sync` skill this repo has built) into `<target>` — the same
      directory-tree preview `INSTALL-LLD.md`'s own "Directory tree (created or updated)" section
      documents.
-   - That this is the first time this recipe would be writing scaffolding into `<target>` (or, if
-     some of it already exists, that `install.sh` is idempotent and will leave existing
-     operator-customized files untouched — same "never overwrite operator data" guarantee
-     `install.sh`'s own header comment documents).
+   - That this is a re-run/restage of an existing recipe installation and that `install.sh` is
+     idempotent and will leave existing operator-customized files untouched — same "never overwrite
+     operator data" guarantee `install.sh`'s own header comment documents.
    - Ask something equivalent to: "Ready to install the NetApp GSD recipe into `<target>`? [y/n]" —
      then **stop and wait for the operator's actual next message.** Never answer on their behalf,
      never assume "yes" because `recipe-validate-tokens` reported all-`PASS`, never proceed without
@@ -78,15 +94,9 @@ Run steps A-E below, in order, **unless `--uninstall` was passed** — in that c
      declined — install not run" in the final summary. Do not run Step C or Step D.
 
 3. **Step C — run `install.sh` directly (real script call, INSTALL-LLD.md Steps 2-4).** This is the
-   one call in this skill that genuinely cannot go through `.gsd-recipe/scripts/recipe-paths.sh`
-   the way every other `recipe-*` skill's harness-path lookups do (see
-   `recipe-validate-tokens-SKILL.md` § C step 1 for that mechanism's full rationale) — a chicken-
-   and-egg problem: on a first-ever bootstrap, `<target>` has no `.gsd-recipe/` tree yet, so there
-   is no staged `recipe-paths.sh` there to ask. Resolve `install.sh` directly from **this recipe's
-   own source repo** instead — the repo this `recipe-install` skill invocation is actually running
-   from, which is guaranteed to have `bench/lib/recipe-paths.sh` (the resolver's canonical source
-   location, always present in the recipe's own source tree regardless of that repo's own install
-   state). `Shell`:
+   one call in this skill that resolves `install.sh` from the recorded recipe source rather than
+   treating the target's staged copy as another operator-facing front door. The initial runner has
+   already established the recipe source and staged `recipe-paths.sh`; use that resolver. `Shell`:
    ```
    RESOLVED="$(bench/lib/recipe-paths.sh resolve .gsd-recipe/scripts/install.sh --target <target>)"
    "$RESOLVED" --yes --target <target>
@@ -210,20 +220,12 @@ redundant re-ask of it:
 - It sits **above** `install.sh`'s own umbrella prompt, not beside or inside it — Step B happens in
   the operator's live conversation with this skill, before `install.sh` (and its own `--yes`-skipped
   prompt) is ever invoked at all.
-- `recipe-install` is, per this task's own framing, **the one place in the whole recipe that
-  actually writes new scaffolding into a possibly-unfamiliar target repo for the first time.** Every
-  other `recipe-*` skill in this repo either (a) has its own standalone installer that stages
-  exactly one skill file with its own single consent prompt (`recipe-sync`, `recipe-settle`, etc. —
-  narrow, single-purpose, low-stakes), or (b) does no installing at all (`recipe-run-phase`,
-  `recipe-plan-phase`, etc. — pure runtime orchestration over an already-installed recipe).
-  `recipe-install` is unique in being the **umbrella, first-time, whole-tree** install path,
-  wrapped in a conversational skill an operator might invoke against a repo they've never run this
-  recipe against before, possibly without having read `INSTALL-LLD.md`'s own directory-tree preview
-  first. A single, explicit, human-readable preview-then-confirm exchange in the operator's own
-  conversation — not a scripted `--yes` flag they may have passed without fully registering what it
-  authorizes — is the appropriate level of ceremony for that specific moment, mirroring exactly the
-  rigor `recipe-settle-SKILL.md`'s own PO-accept gate applies to its own "this is the one
-  consequential, non-mechanical decision point in this skill" moment.
+- `recipe-install` is an umbrella **re-run/restage** operation over an already-installed recipe.
+  The first-time whole-tree bootstrap belongs exclusively to
+  `bench/runners/install-recipe-to-target.sh` from the recipe source clone. The live gate remains
+  appropriate because a restage can still write many recipe-owned files; it previews that
+  consequential operation before delegating to the script, mirroring the rigor
+  `recipe-settle-SKILL.md` applies to its own human decision point.
 - Passing `--yes` to `install.sh` in Step C therefore does not defeat or duplicate Step B — it
   simply prevents `install.sh` from asking its *own*, lower-level, "stage these 16 mechanically
   composed files?" question a second time, immediately after the operator already answered the
@@ -273,12 +275,11 @@ live, in the operator's conversation, before that cascade is ever triggered.
 
 # recipe-install — end-to-end install orchestrator (TASK-031)
 
-Formalizes `docs/netapp-recipe/lld/INSTALL-LLD.md`'s full install flow (Steps 0 through 5) into its
-own invoke-by-name Cursor skill, so an operator can run the entire install sequence — token
+Formalizes `docs/netapp-recipe/lld/INSTALL-LLD.md`'s re-run/restage flow (Steps 0 through 5) into its
+own invoke-by-name Cursor skill, so an operator with skills already staged can run the sequence — token
 validation, a genuine human consent gate, the real fallback installer, and the post-install
 verification checklist — as a single command, instead of invoking `recipe-validate-tokens`,
-`install.sh`, and `recipe-install-verify` as three separate manual steps. This is the last remaining
-unbuilt named `recipe-*` skill in the spec; once built, every named `recipe-*` skill is Built.
+`install.sh`, and `recipe-install-verify` as three separate manual steps.
 
 **Spec:** `docs/netapp-recipe/lld/INSTALL-LLD.md` (all steps) · `docs/netapp-recipe/BACKLOG.md`
 TASK-031.
@@ -323,8 +324,7 @@ which is a separate, higher-level gate this skill asks in its own conversational
 `install.sh`'s own `--yes`" section for the full reasoning — the short version: `install.sh`'s
 "nested prompts are noise" policy is correct for its relationship to the 16 sub-installers it
 composes, not a reason to skip the one, higher-level "should this whole install run at all?"
-question a first-time (or first-time-into-this-repo) operator deserves to be asked, live, in their
-own conversation.
+question an operator deserves before a whole-tree restage, live, in their own conversation.
 
 ## What this does NOT do
 

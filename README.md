@@ -29,26 +29,35 @@ Before install or delivery, you need the following on the **machine** and in **C
 **Order of operations:**
 
 1. Install CLI tools above (or let `install.sh` attempt auto-fix for `brew`/`npx`/`uv` paths).
-2. Run **`install-recipe-to-target.sh --verify`** (see Quick start).
-3. In Cursor on the target repo: **`recipe-validate-tokens`** — confirms GitHub + Atlassian before recipe work.
-4. If install left Jira as `pending`: `.gsd-recipe/scripts/install.sh --record-jira-check pass --target <repo>` (after MCP works).
+2. Run the **first-install runner** shown below.
+3. In Cursor on the target repo, press Enter on the prefilled **`recipe-start`** prompt (or type it). `recipe-status` is an optional read-only snapshot.
+4. Use **`recipe-validate-tokens`** when you are ready to confirm GitHub + Atlassian access.
 5. Check `.gsd-recipe/install-report.json` → `prereqs` for `python3`, `git`, `gh`, `gsd_core`, `graphify` pass/warn/fail.
 
 Spec detail: [docs/netapp-recipe/lld/INSTALL-LLD.md](docs/netapp-recipe/lld/INSTALL-LLD.md) Steps 0–1.
 
-## Quick start (install)
+## Quick start: install into any repo
 
 From this repo (or any clone of [NetApp-GSD-Recipe](https://github.com/vs06101996/NetApp-GSD-Recipe.git)):
 
 ```bash
-./bench/runners/install-recipe-to-target.sh --target /<path-to-repo> --verify
+./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes
 ```
 
-Already inside the target repo? Omit `--target` — the installer detects the git root automatically:
+This runner is the **only first-install front door**. Do **not** type `recipe-install` before the recipe skills exist: it is itself one of the skills created by this command.
 
-```bash
-/path/to/gsd-benchmark/bench/runners/install-recipe-to-target.sh --verify
-```
+On an interactive install, the runner may open Cursor with `recipe-start` prefilled. Review it and press **Enter**; the deeplink never submits it automatically. Pass `--no-open-start` to skip opening Cursor. After install, `recipe-start` is the next command; `recipe-status` is optional.
+
+### Install decision tree
+
+| Your situation | Use this path | Why |
+|---|---|---|
+| **First clone, new laptop, or target has no recipe skills** | From the recipe source clone: `./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes` | Bootstraps the skills needed by every `recipe-*` command. |
+| **Recipe skills already exist; re-run or restage** | In Cursor on the target: `recipe-install` | Restages through the existing skill after the chicken-and-egg bootstrap is solved. |
+| **Recipe is installed; verify health** | In Cursor on the target: `recipe-install-verify` | Runs the post-install checklist without presenting another install front door. |
+| **Recipe is installed; uninstall** | In Cursor on the target: `recipe-install --uninstall` | Uses the staged skill's confirmation gate and delegates removal to the installer. |
+
+`install.sh` is an implementation detail already called by the runner and staged skills; operators should not choose it as a competing install command. `bin/recipe install` remains a compatibility-only thin alias of the same runner, not a separate workflow.
 
 Then open the target repo in Cursor and invoke the **`recipe-*`** commands below by name. You do **not** need the benchmark harness scripts in the next section for normal feature delivery.
 
@@ -67,7 +76,7 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 | 3 | `recipe-create-epic` | Jira Epic + `intake_started` sync |
 | 4 | `recipe-create-phase-tasks` | Jira sub-tasks per ROADMAP phase |
 
-**Prerequisites:** git repo root, GSD skills (`.cursor/skills/gsd-*`), recipe skills staged (full install via `recipe-install` or `install.sh --yes`), Atlassian MCP when Epic/phase-task steps run.
+**Prerequisites:** git repo root, GSD skills (`.cursor/skills/gsd-*`), recipe skills staged by the first-install runner above (or restaged later with `recipe-install`), Atlassian MCP when Epic/phase-task steps run.
 
 **Invoke in Cursor Agent** (by name, not `/slash`):
 

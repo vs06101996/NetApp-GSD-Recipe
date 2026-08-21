@@ -115,14 +115,33 @@ grep -qi "ownership" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents an ownership table (which step owns which INSTALL-LLD step)" "$rc"
 grep -q "INSTALL-LLD" "$STAGED" && rc=0 || rc=$?
 check "staged skill references INSTALL-LLD.md" "$rc"
+grep -q "install-recipe-to-target.sh --target /path/to/product --yes" "$STAGED" && rc=0 || rc=$?
+check "staged skill names the bash runner as the first-install front door" "$rc"
+grep -qi "do not.*recipe-install.*before.*skills exist" "$STAGED" && rc=0 || rc=$?
+check "staged skill makes the chicken-and-egg boundary explicit" "$rc"
+grep -qi "re-run/restage" "$STAGED" && rc=0 || rc=$?
+check "staged skill describes recipe-install as re-run/restage only" "$rc"
+grep -q "recipe-start" "$STAGED" && rc=0 || rc=$?
+check "staged skill points successful first install to recipe-start" "$rc"
 
-# 5. Idempotent re-run: no duplicate ledger rows
+# 5. Root README keeps the same canonical front-door decision.
+ROOT_README="$REPO_ROOT/README.md"
+grep -q "./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes" "$ROOT_README" && rc=0 || rc=$?
+check "root README names the canonical first-install command" "$rc"
+grep -qi "recipe-install.*before the recipe skills exist" "$ROOT_README" && rc=0 || rc=$?
+check "root README documents the recipe-install chicken-and-egg" "$rc"
+grep -q -- "--no-open-start" "$ROOT_README" && grep -q "recipe-start" "$ROOT_README" && rc=0 || rc=$?
+check "root README documents the post-install recipe-start prompt and opt-out" "$rc"
+grep -q "First clone" "$ROOT_README" && grep -q "re-run or restage" "$ROOT_README" && grep -q "verify health" "$ROOT_README" && grep -q "uninstall" "$ROOT_README" && rc=0 || rc=$?
+check "root README decision tree covers first install, restage, verify, and uninstall" "$rc"
+
+# 6. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 LEDGER_COUNT2="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-install']))")"
 [ "$LEDGER_COUNT2" = "1" ]
 check "re-running install does not duplicate ledger rows" "$?"
 
-# 6. Uninstall removes the skill, clears the ledger entry, and cleans up the dir
+# 7. Uninstall removes the skill, clears the ledger entry, and cleans up the dir
 TARGET2="$(new_repo)"
 "$INSTALLER" --yes --target "$TARGET2" >/dev/null
 "$INSTALLER" --uninstall --target "$TARGET2" >/dev/null
@@ -135,10 +154,17 @@ check "uninstall clears the component's ledger entry" "$?"
 [ ! -d "$TARGET2/.cursor/skills/recipe-install" ]
 check "uninstall cleans up the now-empty skill directory" "$?"
 
-# 7. Self-install case (installing into a copy of this repo) does not error,
+# 8. Self-install case (installing into a copy of this repo) does not error,
 # never touches install.sh itself, and preserves canonical source on uninstall.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
+# A source checkout may itself be a linked worktree, where .git is a file
+# pointing outside the copied tree. Reinitialize only that copied fixture so
+# the self-install check remains valid in isolated task worktrees.
+if [ -f "$COPY/.git" ]; then
+  rm "$COPY/.git"
+  (cd "$COPY" && git init -q && git commit --allow-empty -qm init)
+fi
 INSTALL_SH_BEFORE="$(cat "$COPY/.gsd-recipe/scripts/install.sh")"
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-install.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"

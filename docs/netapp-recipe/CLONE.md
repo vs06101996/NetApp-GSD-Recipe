@@ -6,8 +6,11 @@ Recipe scaffold is **gitignored** on external product repos so feature PRs stay 
 
 | Situation | What to run |
 |-----------|-------------|
-| New laptop / `git clone` of the product | Install recipe into that clone (below) |
-| Switched git branch and `.gitignore` lost recipe lines | **Same install command again** (idempotent; does not wipe `.planning/`). If `git switch` refuses because install dirtied `.gitignore`, stash or keep that file, switch, then restage. |
+| New laptop / `git clone` of the product, with no recipe skills | Run the first-install runner below |
+| Switched git branch and recipe skills still exist | Invoke `recipe-install` in Cursor to restage |
+| Switched branch or clone and recipe skills are missing | Run the first-install runner below again (idempotent; does not wipe `.planning/`). If `git switch` refuses because install dirtied `.gitignore`, stash or keep that file, switch, then restage. |
+| Recipe is installed and you only need a health check | Invoke `recipe-install-verify` in Cursor |
+| Recipe is installed and should be removed | Invoke `recipe-install --uninstall` in Cursor |
 | Want ROADMAP/PRD shared with the team | Optional chore PR that **tracks** `.planning/` / `docs/PRD.md` — default is still local-only |
 
 ## Install / restage (copy-paste)
@@ -16,8 +19,11 @@ From the **recipe source** repo (`gsd-benchmark` / NetApp-GSD-Recipe):
 
 ```bash
 ./bench/runners/install-recipe-to-target.sh --target /path/to/product-repo --yes
-./bench/runners/install-recipe-to-target.sh --target /path/to/product-repo --verify
 ```
+
+This is the only first-install command. The runner already calls `install.sh`;
+do not choose `install.sh` as another front door. `bin/recipe install` is kept
+only as a thin compatibility alias of this runner.
 
 Dummy test target:
 

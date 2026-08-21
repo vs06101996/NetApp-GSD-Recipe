@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# recipe — recipe harness CLI (run from inside any target git repo).
+# recipe — compatibility CLI for the recipe harness.
 #
 # Resolves the target repo from cwd; --target is optional everywhere.
+# `recipe install` is only a thin alias of
+# bench/runners/install-recipe-to-target.sh. The documented first-install
+# front door is that runner from a recipe source clone; this alias does not
+# define a separate install workflow.
 #
 # Usage:
 #   /path/to/gsd-benchmark/bin/recipe reset [--yes] [--verify] [--dry-run]
-#   /path/to/gsd-benchmark/bin/recipe install [--verify] [--record-jira-check pass|fail]
+#   /path/to/gsd-benchmark/bin/recipe install [--yes] [--verify] [--record-jira-check pass|fail]
 #
 # Set RECIPE_ROOT in your shell profile to shorten the path:
 #   export RECIPE_ROOT=~/Projects/gsd-benchmark
