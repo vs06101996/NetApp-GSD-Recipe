@@ -2,14 +2,15 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-07-23T12:16:28Z_
+_Generated: 2026-08-21T04:58:27Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
 ## Quick start (delivery workflow)
 
 ```text
-recipe-install → recipe-onboard (or step-by-step intake/epic/tasks)
+After bash install:  recipe-start     (or recipe-status / recipe-help --next)
+recipe-onboard (or step-by-step intake/epic/tasks)
   → recipe-bootstrap-knowledge
   → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)
   → recipe-verify-feature N → recipe-review-ship N → recipe-settle
@@ -17,6 +18,16 @@ recipe-install → recipe-onboard (or step-by-step intake/epic/tasks)
 ```
 
 Enable planning policy: add `"agent_skills": {"gsd-planner": ["skills/recipe-planning-policy"]}` to `.planning/config.json` (print-only during install).
+
+## Jira tickets (assign + status)
+
+Creating an Epic or phase tasks **assigns a person** and moves the new issue to **To Do** (or Backlog / Open / New).
+
+- Pass `--assignee "Display Name or email"` on `recipe-onboard`, `recipe-create-epic`, or `recipe-create-phase-tasks`.
+- Or set `"assignee": "..."` in `.gsd-recipe/config.json`.
+- Else the skill uses `git config user.name`, then asks.
+
+`gsd-jira-sync` posts a **comment and a status change** when `jira-events.json` names one (not comment-only): plan/execute → **In Progress**; verify/review → **In Review**; settle → **Done**. If the board has no matching transition, it warns and still posts the comment. Override with `--transition "Name"`.
 
 ## Field benchmarks (recipe vs ad-hoc)
 
@@ -32,6 +43,8 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 
 | Command | Status | Purpose |
 |---------|--------|---------|
+| `recipe-start` | built | First-run coach: after install, prints the next friendly Cursor command (how to onboard a PRD, then bootstrap/plan/ru... |
+| `recipe-status` | built | Read-only status snapshot: branch, PRD/ROADMAP/Epic/phase keys, PLAN/SUMMARY, install and sync hints, then the same n... |
 | `recipe-install` | built | Thin, invoke-by-name end-to-end install orchestrator: chains recipe-validate-tokens (informational) -> a live, non-sk... |
 | `recipe-validate-tokens` | built | Standalone, re-invokable GitHub + Jira/Atlassian credential/scope check (real --check-github probe; agent-mediated Ji... |
 | `recipe-install-verify` | built | Post-install Step-5 verification checklist wrapper (delegates items 5-7 to install.sh --verify, item 4 to recipe-vali... |
@@ -42,9 +55,9 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 |---------|--------|---------|
 | `recipe-onboard` | built | Single onboarding orchestrator closing the 'no single on-ramp' SDLC coverage gap. Chains, in order, whichever of reci... |
 | `recipe-prd-intake` | built | PRD intake wrapper: fills .templates/PRD.template.md, writes docs/PRD.md, invokes fotw-observer-bootstrap as its fina... |
-| `recipe-new-project` | planned | Gated repo-bootstrap wrapper closing the 'make my current repo ready' SDLC coverage gap. Determines first-init vs re-... |
-| `recipe-create-epic` | built | PRD -> Jira Epic bridge: drafts summary/description from docs/PRD.md (bench/runners/draft-jira-epic.sh), resolves the... |
-| `recipe-create-phase-tasks` | built | Agent-mediated phase-task creation: closes TASK-007's detect+draft+queue-only gap. Runs create-phase-tasks.sh detect ... |
+| `recipe-new-project` | built | Gated repo-bootstrap wrapper closing the 'make my current repo ready' SDLC coverage gap. Determines first-init vs re-... |
+| `recipe-create-epic` | built | PRD -> Jira Epic bridge: drafts summary/description from docs/PRD.md, resolves project/issue type, looks up assignee ... |
+| `recipe-create-phase-tasks` | built | Agent-mediated phase-task creation: detect then list, resolve issue type, assign via lookupJiraAccountId, confirm, th... |
 
 ## Recipe skills — Knowledge bootstrap
 
@@ -65,7 +78,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 | Command | Status | Purpose |
 |---------|--------|---------|
 | `recipe-verify-feature` | built | Gated single-phase verify wrapper chaining native gsd-audit-milestone -> gsd-audit-uat (each warn-and-skip if inappli... |
-| `recipe-review-ship` | built | Gate-and-invoke wrapper calling native gsd-code-review N, syncing review_complete via gsd-jira-sync (optional 'In Rev... |
+| `recipe-review-ship` | built | Gate-and-invoke wrapper calling native gsd-code-review N, syncing review_complete via gsd-jira-sync (required 'In Rev... |
 | `recipe-settle` | built | Quality-floor settle gate formalizing 'Settled = PO + CI green': real --check-ci probe (gh pr checks, falling back to... |
 
 ## Recipe skills — Sync and tracker
@@ -73,7 +86,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 | Command | Status | Purpose |
 |---------|--------|---------|
 | `tracker-sync` | built | Tracker-agnostic front door for GSD lifecycle sync; dispatches to gsd-jira-sync for tracker: jira. |
-| `gsd-jira-sync` | built | Posts GSD lifecycle milestones as Jira comments (and optional transitions) via Atlassian MCP, emitting matching KPI s... |
+| `gsd-jira-sync` | built | Posts GSD lifecycle milestones as Jira comments and required status transitions via Atlassian MCP, emitting matching ... |
 | `recipe-sync` | built | One-shot detect->queue->drain sync pass: runs sync-reconcile.sh directly, then (unless --dry-run) invokes gsd-jira-sy... |
 | `recipe-pr-comment` | built | Real, scriptable draft->idempotency-check->post->ledger GitHub PR lifecycle comment poster: calls draft-github-pr-com... |
 

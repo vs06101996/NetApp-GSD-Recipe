@@ -78,6 +78,10 @@ grep -q "addCommentToJiraIssue" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the addCommentToJiraIssue MCP tool" "$rc"
 grep -q "transitionJiraIssue" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the transitionJiraIssue MCP tool" "$rc"
+grep -q "jira-transition-name.sh" "$STAGED" && rc=0 || rc=$?
+check "staged skill uses jira-transition-name.sh for catalog status" "$rc"
+grep -q "comment-only" "$STAGED" && rc=0 || rc=$?
+check "staged skill forbids comment-only when a status is named" "$rc"
 grep -q "plugin-atlassian-atlassian" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the plugin-atlassian-atlassian MCP server" "$rc"
 grep -q "draft-jira-comment.sh" "$STAGED" && rc=0 || rc=$?

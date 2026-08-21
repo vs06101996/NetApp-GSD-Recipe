@@ -11,23 +11,49 @@
 #
 # Optional override:
 #   install-recipe-to-target.sh --target /other/repo
+#   install-recipe-to-target.sh --open-start       # force Cursor prompt deeplink
+#   install-recipe-to-target.sh --no-open-start    # never open Cursor
 #
-# Forwards any install.sh flags; adds --yes when no other flags are given.
+# Successful interactive installs open Cursor with `recipe-start` pre-filled.
+# Cursor still requires the operator to press Enter; deeplinks never execute.
+# Non-interactive runs skip this unless --open-start is explicit.
+#
+# Forwards install.sh flags; adds --yes when no other flags are given.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BENCHMARK_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-INSTALL_SH="$BENCHMARK_ROOT/.gsd-recipe/scripts/install.sh"
+INSTALL_SH="${RECIPE_INSTALL_SH:-$BENCHMARK_ROOT/.gsd-recipe/scripts/install.sh}"
 # shellcheck source=../lib/recipe-target-root.sh
 . "$SCRIPT_DIR/../lib/recipe-target-root.sh"
 
 TARGET=""
 FORWARD=()
+OPEN_START="auto"
+INSTALL_MODE=1
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --target)
       TARGET="$2"
+      shift 2
+      ;;
+    --open-start)
+      OPEN_START="yes"
+      shift
+      ;;
+    --no-open-start)
+      OPEN_START="no"
+      shift
+      ;;
+    --verify|--uninstall)
+      INSTALL_MODE=0
+      FORWARD+=("$1")
+      shift
+      ;;
+    --record-jira-check)
+      INSTALL_MODE=0
+      FORWARD+=("$1" "${2:?--record-jira-check requires pass or fail}")
       shift 2
       ;;
     *)
@@ -56,4 +82,18 @@ if [ ${#FORWARD[@]} -eq 0 ]; then
   FORWARD=(--yes)
 fi
 
-exec "$INSTALL_SH" "${FORWARD[@]}" --target "$TARGET"
+"$INSTALL_SH" "${FORWARD[@]}" --target "$TARGET"
+
+if [ "$INSTALL_MODE" -eq 1 ] && { [ "$OPEN_START" = "yes" ] || { [ "$OPEN_START" = "auto" ] && [ -t 1 ]; }; }; then
+  START_URL="cursor://anysphere.cursor-deeplink/prompt?text=recipe-start"
+  if command -v open >/dev/null 2>&1; then
+    open "$START_URL" >/dev/null 2>&1 || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$START_URL" >/dev/null 2>&1 || true
+  elif command -v cmd.exe >/dev/null 2>&1; then
+    cmd.exe /c start "" "$START_URL" >/dev/null 2>&1 || true
+  else
+    echo "Cursor prompt: $START_URL"
+  fi
+  echo "Cursor opened with 'recipe-start' pre-filled. Review it, then press Enter."
+fi

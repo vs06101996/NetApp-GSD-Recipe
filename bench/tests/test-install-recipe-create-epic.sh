@@ -78,6 +78,10 @@ grep -q "createJiraIssue" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the real createJiraIssue MCP call" "$rc"
 grep -q "init-tracker" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the parse-state.sh init-tracker linkage step" "$rc"
+grep -q "lookupJiraAccountId" "$STAGED" && rc=0 || rc=$?
+check "staged skill looks up assignee via lookupJiraAccountId" "$rc"
+grep -q "assignee_account_id" "$STAGED" && rc=0 || rc=$?
+check "staged skill passes assignee_account_id on create" "$rc"
 grep -q "gsd-jira-sync intake_started" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the gsd-jira-sync intake_started sync call" "$rc"
 grep -qi "getVisibleJiraProjects" "$STAGED" && rc=0 || rc=$?
@@ -86,8 +90,8 @@ grep -qi "getJiraProjectIssueTypesMetadata" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the getJiraProjectIssueTypesMetadata issue-type resolution" "$rc"
 grep -q -- "--force" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the --force relink flag" "$rc"
-grep -qi "never call \`addCommentToJiraIssue\` or \`transitionJiraIssue\` directly" "$STAGED" && rc=0 || rc=$?
-check "staged skill disclaims posting/transitioning Jira issues directly" "$rc"
+grep -qi "never call \`addCommentToJiraIssue\`" "$STAGED" && rc=0 || rc=$?
+check "staged skill disclaims posting Jira comments directly" "$rc"
 
 # 6. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null

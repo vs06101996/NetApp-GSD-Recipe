@@ -11,16 +11,16 @@ Invoke by name (`recipe-onboard`) with:
   verbatim to `recipe-prd-intake` in step 2's chain **only if** `docs/PRD.md` doesn't already
   exist. If it already exists, this input is ignored (that step is skipped entirely — see § C
   step 1).
-- `--project KEY` / `--issue-type NAME` / `--force` — optional. Forwarded verbatim to
-  `recipe-create-epic` in step 4's chain **only if** that step actually runs (no Epic linked yet).
-  Same semantics as `recipe-create-epic-SKILL.md` § A documents for each.
+- `--project KEY` / `--issue-type NAME` / `--assignee NAME` / `--force` — optional. Forwarded
+  verbatim to `recipe-create-epic` (and `--assignee` also to `recipe-create-phase-tasks`) when
+  those steps actually run.
 
 Examples:
 - `recipe-onboard` — no PRD source given; onboard whatever is missing, asking for PRD input live
   if that step is reached and nothing was provided.
 - `recipe-onboard docs/PRD.md` — already-written PRD file; skips intake's own file/paste/freeform
   question if that step runs.
-- `recipe-onboard --project KAN` — skips the live Jira-project question if the Epic step runs.
+- `recipe-onboard --project KAN --assignee "Ada Lovelace"` — skips the live Jira-project question if the Epic step runs; assigns created tickets.
 
 ## B. Prerequisites
 

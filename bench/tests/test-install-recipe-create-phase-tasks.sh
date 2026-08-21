@@ -86,6 +86,12 @@ grep -qi "Sub-task" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents falling back to Sub-task" "$rc"
 grep -q "createJiraIssue" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the real createJiraIssue MCP call" "$rc"
+grep -q "lookupJiraAccountId" "$STAGED" && rc=0 || rc=$?
+check "staged skill looks up assignee via lookupJiraAccountId" "$rc"
+grep -q "assignee_account_id" "$STAGED" && rc=0 || rc=$?
+check "staged skill assigns on create" "$rc"
+grep -q "To Do" "$STAGED" && rc=0 || rc=$?
+check "staged skill transitions new tasks to To Do" "$rc"
 grep -q "createIssueLink" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the real createIssueLink MCP call" "$rc"
 grep -q "parent" "$STAGED" && rc=0 || rc=$?

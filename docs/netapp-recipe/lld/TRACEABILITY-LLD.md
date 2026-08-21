@@ -12,6 +12,7 @@ Related: [DATA-CONTRACTS.md](../contracts/DATA-CONTRACTS.md) · [FAILURE-MATRIX.
 2. GSD stays orchestrator; traceability mirrors artifacts.
 3. Idempotent posts via `.gsd-recipe/sync-ledger.jsonl`.
 4. **Settled** = PO + CI green.
+5. Jira sync is **comment + status**: when `jira-events.json` names a `transition`, `gsd-jira-sync` must apply it (warn-and-continue if the board has no matching transition). New tickets are assigned (`--assignee` / config `assignee` / git user.name) and moved to **To Do**.
 
 ---
 
