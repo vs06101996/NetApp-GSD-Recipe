@@ -534,7 +534,7 @@ rm -rf "$FAKEBIN"
 # PATH state — this makes the exclusion robust, not an accident of it.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
-(cd "$COPY" && rm -f .git && git init -q && git add -A && git commit -qm init)
+(cd "$COPY" && rm -rf .git && git init -q && git add -A && git commit -qm init)
 FAKEBIN11="$(make_scratch_path_excluding "graphify uv")"
 (cd "$COPY" && PATH="$FAKEBIN11" ./.gsd-recipe/scripts/install.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"

@@ -4,8 +4,15 @@ External throwaway git repo for pickup + **unbiased tester** runs. Not AgentStud
 
 **Default path:** `~/Projects/recipe-sandbox`
 
+TASK-040 / TASK-044 are Built. Unbiased testers still use **two directories**, never one working tree ([PARALLEL-PICKUP.md](PARALLEL-PICKUP.md)):
+
 ```bash
-# Recreate
+./bench/runners/setup-recipe-sandbox.sh --dir "$HOME/Projects/recipe-sandbox-040" --reset
+./bench/runners/setup-recipe-sandbox.sh --dir "$HOME/Projects/recipe-sandbox-044" --reset
+```
+
+```bash
+# Recreate (default path)
 ./bench/runners/setup-recipe-sandbox.sh --reset
 
 # Install recipe into it (idempotent restage)

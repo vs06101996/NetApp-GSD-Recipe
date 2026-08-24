@@ -28,7 +28,9 @@ For **Built** rows the Priority column is the historical importance for the reco
 
 ## Next up — targeting queue (control-group ordered)
 
-**Shipped this pickup:** TASK-056 (`recipe-start`), TASK-038 (`recipe-help --next` / `--stuck`), TASK-041 (`CLONE.md`).
+**Shipped this pickup:** TASK-056 (`recipe-start`), TASK-060 (`recipe-status`), TASK-038 (`recipe-help --next` / `--stuck`), TASK-041 (`CLONE.md`), TASK-040 (install front door), TASK-044 (install doctor).
+
+**Unbiased testers still due** for TASK-040 and TASK-044 — [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md). Next implement: **TASK-039**.
 
 Sourced from [CONTROL-GROUP.md](CONTROL-GROUP.md) (2026-08-18 persona control-group). All items are **repo-agnostic** — detect only generic artifacts (`docs/PRD.md`, `.planning/*`, `.templates/*`, `.gsd-recipe/config.json`); never hardcode a product repo.
 
@@ -235,7 +237,7 @@ Practical spikes once [TASK-009](BACKLOG.md) (`dag-build.sh`) is unparked. Not i
 
 ## Pick-up / done
 
-**Cadence:** one TASK at a time from the targeting queue. Do not start the next until Done below is true.
+**Cadence:** one TASK at a time from the targeting queue. The TASK-040 + TASK-044 parallel exception ([PARALLEL-PICKUP.md](PARALLEL-PICKUP.md)) has landed on `main`; unbiased tester reports are the remaining close-out.
 
 ### Per-task loop
 
@@ -258,13 +260,13 @@ Practical spikes once [TASK-009](BACKLOG.md) (`dag-build.sh`) is unparked. Not i
 
 | # | Task | Why this order | Tester persona |
 |---|------|----------------|----------------|
-| 1 | **TASK-056** `recipe-start` | First-run coach; unblocks everything else | New-dev |
-| 2 | **TASK-038** `recipe-help --next` | Reuses 056 resolver | New-dev (stuck) |
-| 3 | **TASK-040** install front door | Docs + chicken-egg | New-dev + Platform |
-| 4 | **TASK-041** team clone playbook | Docs only | Platform |
-| 5 | **TASK-039** swappable templates | Then P1 cluster | Bugfixer / Feature-dev |
+| 1 | **TASK-056** `recipe-start` | **Built** | New-dev |
+| 2 | **TASK-038** `recipe-help --next` | **Built** | New-dev (stuck) |
+| 3 | **TASK-040** install front door | **Built** — unbiased tester report still due | New-dev + Platform |
+| 4 | **TASK-041** team clone playbook | **Built** | Platform |
+| 5 | **TASK-044** install doctor | **Built** — unbiased tester report still due | Platform |
 
-Then continue the targeting queue (042, 054, 055, 058, 059, …). **TASK-059** tester extra: two branches, agent `git switch`, opt-out env, file-only checkout.
+Then continue the targeting queue (**039**, 042, 054, 055, 058, 059, …). **TASK-059** tester extra: two branches, agent `git switch`, opt-out env, file-only checkout.
 
 ---
 
