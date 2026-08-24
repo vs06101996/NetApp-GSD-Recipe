@@ -17,7 +17,7 @@ Read this before implementing or operating the recipe in Cursor.
 1. [README.md](README.md) — built vs spec, run smoke test, commands
 2. [BENCHMARKS.md](BENCHMARKS.md) — field benchmarks (recipe vs ad-hoc) and harness status
 3. [BACKLOG.md](BACKLOG.md) — pick the next **Planned** `TASK-00N` (currently **TASK-039**; order from [CONTROL-GROUP.md](CONTROL-GROUP.md))
-3a. TASK-040 + TASK-044 are **Built** on `main`. Unbiased tester reports still due — [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md)
+3a. TASK-040 + TASK-044 are **Built** on `main` (unbiased testers PASS — [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md))
 3b. Pickup/tester target: [SANDBOX.md](SANDBOX.md) (`~/Projects/recipe-sandbox`) — not AgentStudio
 3c. Fresh clone / lost skills: [CLONE.md](CLONE.md) (bash `install-recipe-to-target.sh --target /path/to/product --yes` first; do not type `recipe-install` before skills exist) — **then** type **`recipe-start`** (`recipe-install` is restage-only)
 4. [DATA-CONTRACTS.md](contracts/DATA-CONTRACTS.md) — required for STATE, ledger, config work
@@ -72,4 +72,4 @@ Skill detail: [reference/skills/gsd-jira-sync/SKILL.md](reference/skills/gsd-jir
 | TASK-003 | Implement `sync-reconcile.sh --dry-run` per TRACEABILITY-LLD; queue to `sync-queue.jsonl` |
 | TASK-010 | Implement idempotent `install.sh` per INSTALL-LLD |
 | TASK-039 | Next Planned: swappable recipe templates (OD-12) |
-| TASK-040 / TASK-044 unbiased tester | Follow AC in [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md); write `bench/report/task-TASK-040-unbiased-test.md` / `task-TASK-044-unbiased-test.md` |
+| TASK-040 / TASK-044 unbiased tester | Done — `bench/report/task-TASK-040-unbiased-test.md` / `task-TASK-044-unbiased-test.md` |

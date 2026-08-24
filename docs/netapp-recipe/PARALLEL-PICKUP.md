@@ -1,6 +1,6 @@
 # Parallel pickup — TASK-040 + TASK-044
 
-**Status:** implementation landed on `main` (TASK-040 merge `b023a97`, TASK-044 merge `af65850`). Unbiased testers still required (fresh agents, not implementers). **Do not** share one working tree or one sandbox.
+**Status:** implementation landed on `main` (TASK-040 merge `b023a97`, TASK-044 merge `af65850`). Unbiased testers **PASS** — [task-TASK-040-unbiased-test.md](../../bench/report/task-TASK-040-unbiased-test.md), [task-TASK-044-unbiased-test.md](../../bench/report/task-TASK-044-unbiased-test.md). **Do not** share one working tree or one sandbox.
 
 Historical exception to BACKLOG “one TASK at a time”: these two closed remaining first-success install friction and **did not share implementation files** if the ownership table below was followed.
 

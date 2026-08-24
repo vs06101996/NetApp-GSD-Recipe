@@ -105,7 +105,7 @@ Use [BACKLOG.md § Next up](BACKLOG.md#next-up-post-v1-operator-ux--control-grou
 
 1. **TASK-056** — `recipe-start` first-run coach (**take first**; ~1.5–2.5 d)
 2. **TASK-038** — `recipe-help --next` (reuse resolver; ~0.5–1 d)
-3. **TASK-040** — Unify install front door (one-page decision tree) (**Built**; unbiased tester still due — [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md))
+3. **TASK-040** — Unify install front door (one-page decision tree) (**Built**; unbiased tester PASS)
 4. **TASK-041** — Team clone / reinstall playbook (**Built**)
 5. **TASK-039** — Swappable / light templates
 6. **TASK-042** — Light / bugfix path (`--skip-tracker`, optional `recipe-quick`)
@@ -113,7 +113,7 @@ Use [BACKLOG.md § Next up](BACKLOG.md#next-up-post-v1-operator-ux--control-grou
 8. **TASK-055** — Ephemeral test/validation artifacts only under gitignored `.gsd-recipe/scratch/`
 9. **TASK-058** — `recipe-update` in-place upgrade (~1.5–2.5 d)
 10. **TASK-059** — Per-branch snapshot/restore of gitignored PRD + `.planning/` on checkout
-11. **TASK-044** — Install doctor (MCP paste, `recipe_source`, Jira verify collapse) (**Built**; unbiased tester still due — [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md))
+11. **TASK-044** — Install doctor (MCP paste, `recipe_source`, Jira verify collapse) (**Built**; unbiased tester PASS)
 12. **TASK-043** — `--plan-only` on `recipe-run-phases`
 13. **TASK-045** — Operator cheat-sheet + graphify doc align + `--full` prominence
 14. **TASK-036** — Build or reconcile `recipe-new-project` catalog status

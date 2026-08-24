@@ -30,7 +30,7 @@ For **Built** rows the Priority column is the historical importance for the reco
 
 **Shipped this pickup:** TASK-056 (`recipe-start`), TASK-060 (`recipe-status`), TASK-038 (`recipe-help --next` / `--stuck`), TASK-041 (`CLONE.md`), TASK-040 (install front door), TASK-044 (install doctor).
 
-**Unbiased testers still due** for TASK-040 and TASK-044 — [PARALLEL-PICKUP.md](PARALLEL-PICKUP.md). Next implement: **TASK-039**.
+**Unbiased testers:** TASK-040 and TASK-044 **PASS** ([task-TASK-040-unbiased-test.md](../../bench/report/task-TASK-040-unbiased-test.md), [task-TASK-044-unbiased-test.md](../../bench/report/task-TASK-044-unbiased-test.md)). Next implement: **TASK-039**.
 
 Sourced from [CONTROL-GROUP.md](CONTROL-GROUP.md) (2026-08-18 persona control-group). All items are **repo-agnostic** — detect only generic artifacts (`docs/PRD.md`, `.planning/*`, `.templates/*`, `.gsd-recipe/config.json`); never hardcode a product repo.
 
@@ -237,7 +237,7 @@ Practical spikes once [TASK-009](BACKLOG.md) (`dag-build.sh`) is unparked. Not i
 
 ## Pick-up / done
 
-**Cadence:** one TASK at a time from the targeting queue. The TASK-040 + TASK-044 parallel exception ([PARALLEL-PICKUP.md](PARALLEL-PICKUP.md)) has landed on `main`; unbiased tester reports are the remaining close-out.
+**Cadence:** one TASK at a time from the targeting queue. The TASK-040 + TASK-044 parallel exception ([PARALLEL-PICKUP.md](PARALLEL-PICKUP.md)) is closed (implementation + unbiased testers).
 
 ### Per-task loop
 
@@ -262,9 +262,9 @@ Practical spikes once [TASK-009](BACKLOG.md) (`dag-build.sh`) is unparked. Not i
 |---|------|----------------|----------------|
 | 1 | **TASK-056** `recipe-start` | **Built** | New-dev |
 | 2 | **TASK-038** `recipe-help --next` | **Built** | New-dev (stuck) |
-| 3 | **TASK-040** install front door | **Built** — unbiased tester report still due | New-dev + Platform |
+| 3 | **TASK-040** install front door | **Built** — [unbiased tester PASS](../../bench/report/task-TASK-040-unbiased-test.md) | New-dev + Platform |
 | 4 | **TASK-041** team clone playbook | **Built** | Platform |
-| 5 | **TASK-044** install doctor | **Built** — unbiased tester report still due | Platform |
+| 5 | **TASK-044** install doctor | **Built** — [unbiased tester PASS](../../bench/report/task-TASK-044-unbiased-test.md) | Platform |
 
 Then continue the targeting queue (**039**, 042, 054, 055, 058, 059, …). **TASK-059** tester extra: two branches, agent `git switch`, opt-out env, file-only checkout.
 
