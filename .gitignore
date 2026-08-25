@@ -19,3 +19,6 @@ tasks/*/reference/
 .templates/
 .planning/
 code_base_details/
+__pycache__/
+*.pyc
+results/**/stamps.jsonl
