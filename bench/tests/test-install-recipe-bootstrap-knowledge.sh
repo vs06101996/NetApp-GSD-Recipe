@@ -102,6 +102,10 @@ grep -q "gsd-extract-learnings\|gsd-capture" "$STAGED" && rc=0 || rc=$?
 check "staged skill disclaims wrapping gsd-extract-learnings/gsd-capture (out of scope)" "$rc"
 grep -q "dag" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents .knowledge/dag/ as explicitly out of scope" "$rc"
+grep -q "recipe-verify-knowledge.sh --write-marker" "$STAGED" && rc=0 || rc=$?
+check "staged skill writes marker only via verify guardrail" "$rc"
+grep -q "recipe-verify-knowledge" "$STAGED" && rc=0 || rc=$?
+check "staged skill references recipe-verify-knowledge guardrail" "$rc"
 
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null

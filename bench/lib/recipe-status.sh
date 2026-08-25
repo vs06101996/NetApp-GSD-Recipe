@@ -33,10 +33,22 @@ fi
 
 TARGET="$(cd "$TARGET" && pwd)"
 
-python3 - "$TARGET" <<'PY'
-import json, os, re, subprocess, sys
+KNOWLEDGE_LIB="$SCRIPT_DIR/recipe_knowledge.py"
+python3 - "$TARGET" "$KNOWLEDGE_LIB" <<'PY'
+import importlib.util, json, os, re, subprocess, sys
 
 target = sys.argv[1]
+knowledge_lib = sys.argv[2]
+
+def load_knowledge(path):
+    if not os.path.isfile(path):
+        return None
+    spec = importlib.util.spec_from_file_location("recipe_knowledge", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+_knowledge = load_knowledge(knowledge_lib)
 
 def exists(*parts):
     return os.path.exists(os.path.join(target, *parts))
@@ -52,6 +64,19 @@ def read(rel):
 def yn(ok):
     return "yes" if ok else "no"
 
+def skip_tracker():
+    raw = read(".gsd-recipe/config.json")
+    try:
+        cfg = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        return False
+    return (cfg.get("onboard") or {}).get("skip_tracker") is True
+
+def knowledge_ready():
+    if _knowledge is None:
+        return False
+    return _knowledge.knowledge_ready(target)
+
 branch = "(unknown)"
 try:
     branch = subprocess.check_output(
@@ -63,7 +88,12 @@ except (OSError, subprocess.CalledProcessError):
 
 state = read(".planning/STATE.md")
 epic_m = re.search(r"(?m)^-\s*epic:\s*(\S+)", state)
-epic = epic_m.group(1) if epic_m else "(none)"
+if epic_m:
+    epic = epic_m.group(1)
+elif skip_tracker():
+    epic = "(skipped)"
+else:
+    epic = "(none)"
 
 phase_keys = []
 in_table = False
@@ -81,7 +111,7 @@ for line in state.splitlines():
             phase_keys.append((m.group(1).strip(), m.group(2).strip()))
 
 rm = read(".planning/ROADMAP.md")
-ids = sorted(set(int(x) for x in re.findall(r"(?m)^## Phase (\d+)\b", rm)))
+ids = sorted(set(int(x) for x in re.findall(r"(?m)^#{2,3} Phase (\d+)\b", rm)))
 
 def phase_flag(n, kind):
     phases = os.path.join(target, ".planning", "phases")
@@ -159,7 +189,7 @@ print(f"Branch:          {branch}")
 print(f"Recipe skills:   {yn(exists('.cursor', 'skills', 'recipe-onboard', 'SKILL.md'))}")
 print(f"PRD:             {yn(exists('docs', 'PRD.md'))}  (docs/PRD.md)")
 print(f"ROADMAP:         {yn(exists('.planning', 'ROADMAP.md'))}")
-print(f"Knowledge:       {yn(exists('.knowledge', 'index.md'))}")
+print(f"Knowledge:       {yn(knowledge_ready())}")
 print(f"Epic:            {epic}")
 if phase_keys:
     print("Phase tasks:")

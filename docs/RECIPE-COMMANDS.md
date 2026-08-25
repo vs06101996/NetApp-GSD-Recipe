@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-08-21T04:58:27Z_
+_Generated: 2026-08-24T09:22:24Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
@@ -11,13 +11,23 @@ In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use
 ```text
 After bash install:  recipe-start     (or recipe-status / recipe-help --next)
 recipe-onboard (or step-by-step intake/epic/tasks)
-  → recipe-bootstrap-knowledge
+recipe-onboard --skip-tracker  (skip Jira only; knowledge still runs)
+  → knowledge is verified during onboard
   → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)
   → recipe-verify-feature N → recipe-review-ship N → recipe-settle
   → recipe-sync / tracker-sync as needed
 ```
 
 Enable planning policy: add `"agent_skills": {"gsd-planner": ["skills/recipe-planning-policy"]}` to `.planning/config.json` (print-only during install).
+
+## PRD input formats
+
+`recipe-prd-intake` and `recipe-onboard` accept a Jira/Confluence PRD export, an already-canonical PRD, pasted text, or a freeform description.
+
+- For the official NetApp 15-section Jira/Confluence shape, start from `.templates/JIRA-PRD.input.template.md`.
+- Mapping rules are documented in `.templates/JIRA-PRD.input.MAPPING.md`.
+- The Jira/Confluence shape is **input only**. Intake always creates canonical `docs/PRD.md` using `.templates/PRD.template.md`.
+- Examples: `recipe-prd-intake @path/to/jira-prd.md` or `recipe-onboard @path/to/jira-prd.md`.
 
 ## Jira tickets (assign + status)
 

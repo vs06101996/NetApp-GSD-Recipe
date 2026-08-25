@@ -58,6 +58,14 @@
       "type": "string",
       "minLength": 1,
       "description": "Default Jira display name or email used when creating Epics and phase tasks (lookupJiraAccountId). Overridden by --assignee."
+    },
+    "onboard": {
+      "type": "object",
+      "description": "Onboard-path flags. skip_tracker is set by recipe-onboard --skip-tracker after PRD + planning without Jira.",
+      "properties": {
+        "skip_tracker": { "type": "boolean" }
+      },
+      "additionalProperties": true
     }
   },
   "required": ["traceability", "observer"],

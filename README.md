@@ -20,8 +20,8 @@ Before install or delivery, you need the following on the **machine** and in **C
 | **CLI** | `git` | Yes | `install.sh` preflight |
 | **CLI** | `node` / `npx` (GSD install) | Soft | `install.sh` preflight (warn) |
 | **CLI** | `gh` + `gh auth login` (PR, CI, ship) | Soft | `install.sh` + `recipe-validate-tokens` |
-| **CLI** | **GSD** (`gsd-new-project`, `gsd-plan-phase`, …) | Soft | `install.sh` preflight (warn) |
-| **CLI** | `graphify` (knowledge graph) | Optional | `install.sh` preflight (warn) — fix: `./.gsd-recipe/scripts/install-graphify.sh` |
+| **CLI** | **GSD for Cursor, full profile** (`gsd-new-project`, knowledge commands + agents) | Yes | `install.sh` auto-installs and fails closed if verification fails |
+| **CLI** | `graphify` (knowledge graph) | Required to finish onboard | Install warns if missing; knowledge bootstrap fails closed — fix: `./.gsd-recipe/scripts/install-graphify.sh` |
 | **CLI** | `uv` (only if installing graphify) | Optional | `install-graphify.sh` |
 | **Integrations** | **Atlassian MCP** authenticated in Cursor (Jira epic, sync, phase tasks) | Yes for Jira path | `recipe-validate-tokens` + `install.sh --record-jira-check pass` |
 | **Integrations** | GitHub repo access (push branch, open PR) | Yes for ship path | `gh auth status` |
@@ -41,7 +41,7 @@ Spec detail: [docs/netapp-recipe/lld/INSTALL-LLD.md](docs/netapp-recipe/lld/INST
 From this repo (or any clone of [NetApp-GSD-Recipe](https://github.com/vs06101996/NetApp-GSD-Recipe.git)):
 
 ```bash
-./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes
+./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes --no-open-start
 ```
 
 This runner is the **only first-install front door**. Do **not** type `recipe-install` before the recipe skills exist: it is itself one of the skills created by this command.
@@ -52,7 +52,7 @@ On an interactive install, the runner may open Cursor with `recipe-start` prefil
 
 | Your situation | Use this path | Why |
 |---|---|---|
-| **First clone, new laptop, or target has no recipe skills** | From the recipe source clone: `./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes` | Bootstraps the skills needed by every `recipe-*` command. |
+| **First clone, new laptop, or target has no recipe skills** | From the recipe source clone: `./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes --no-open-start` | Bootstraps the skills needed by every `recipe-*` command. |
 | **Recipe skills already exist; re-run or restage** | In Cursor on the target: `recipe-install` | Restages through the existing skill after the chicken-and-egg bootstrap is solved. |
 | **Recipe is installed; verify health** | In Cursor on the target: `recipe-install-verify` | Runs the post-install checklist without presenting another install front door. |
 | **Recipe is installed; uninstall** | In Cursor on the target: `recipe-install --uninstall` | Uses the staged skill's confirmation gate and delegates removal to the installer. |
@@ -67,26 +67,52 @@ Single on-ramp for new features: one preview-then-confirm gate, then chains whic
 
 ```text
 recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-create-phase-tasks
+→ recipe-bootstrap-knowledge
 ```
+
+Light path (no Jira): `recipe-onboard --skip-tracker` skips only Epic/tasks; it still runs intake,
+new-project, and mandatory knowledge bootstrap, then sets `onboard.skip_tracker`. `recipe-start`
+opens gitignored `docs/RECIPE-SEQUENCE.md`. After Yes on onboard, it asks whether to create Jira.
 
 | Step | Skill | Artifact |
 |------|-------|----------|
-| 1 | `recipe-prd-intake` | `docs/PRD.md` |
+| 1 | `recipe-prd-intake` | `docs/PRD.md` (from Jira/Confluence export, canonical PRD, or freeform) |
 | 2 | `recipe-new-project` | `.planning/PROJECT.md`, `ROADMAP.md`, `STATE.md` |
-| 3 | `recipe-create-epic` | Jira Epic + `intake_started` sync |
-| 4 | `recipe-create-phase-tasks` | Jira sub-tasks per ROADMAP phase |
+| 3 | `recipe-create-epic` | Jira Epic + `intake_started` sync (skipped with `--skip-tracker`) |
+| 4 | `recipe-create-phase-tasks` | Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker`) |
+| 5 | `recipe-bootstrap-knowledge` | Verified codebase map + graph; writes knowledge-ready marker |
 
-**Prerequisites:** git repo root, GSD skills (`.cursor/skills/gsd-*`), recipe skills staged by the first-install runner above (or restaged later with `recipe-install`), Atlassian MCP when Epic/phase-task steps run.
+**Prerequisites:** git repo root, GSD skills (`.cursor/skills/gsd-*` or user-global GSD), recipe skills staged by the first-install runner above (or restaged later with `recipe-install`), Atlassian MCP when Epic/phase-task steps run.
 
 **Invoke in Cursor Agent** (by name, not `/slash`):
 
 ```text
 recipe-onboard
+recipe-onboard @docs/input/my-feature-prd.md
 recipe-onboard docs/PRD.md
+recipe-onboard --skip-tracker
 recipe-onboard --project KAN
 ```
 
 Skips any step whose artifact already exists; stops the whole chain on the first failure. Step-by-step alternative: invoke each skill in the table above separately.
+
+### PRD input (Jira / Confluence)
+
+NetApp 15-section Jira/Confluence PRDs are **input only**. `recipe-prd-intake` (and onboard) map them to canonical `docs/PRD.md`.
+
+| What | Path |
+|------|------|
+| Input skeleton | `.templates/JIRA-PRD.input.template.md` |
+| Section mapping | `.templates/JIRA-PRD.input.MAPPING.md` |
+| Canonical output | `.templates/PRD.template.md` → `docs/PRD.md` |
+
+Fill or paste an export, then:
+
+```text
+recipe-prd-intake @docs/input/my-feature-prd.md
+```
+
+Do not write the 15-section form to `docs/PRD.md`. Discover this path with `recipe-help` (or `recipe-help --stuck`).
 
 Full install, troubleshooting, and spec links: **[docs/RECIPE-ONBOARD.md](docs/RECIPE-ONBOARD.md)**.
 
@@ -97,7 +123,8 @@ Typical path for a new feature (example: KB-Evaluations Feature 2). Invoke each 
 | Command | One-liner use case |
 |---------|-------------------|
 | `recipe-validate-tokens` | Check GitHub + Jira/Atlassian credentials/scopes before doing recipe work. |
-| `recipe-prd-intake KB-Evaluations-Feature2-PRD.md` | Turn the raw PRD into canonical `docs/PRD.md` (+ bootstrap FOTW observer). |
+| `recipe-prd-intake path/to/jira-export.md` | Map Jira/Confluence PRD input → canonical `docs/PRD.md` (+ bootstrap FOTW observer). |
+| `recipe-prd-intake @docs/input/my-feature-prd.md` | Same — input may follow `.templates/JIRA-PRD.input.template.md` (15-section NetApp shape). |
 | `recipe-new-project` | Bootstrap `.planning/*` via native `gsd-new-project` (first-init vs re-init gate; prefers `docs/PRD.md` as input). |
 | `recipe-onboard @KB-Evaluations-Feature2-PRD.md` | Full onboarding chain above in one command — skips steps whose artifacts already exist. |
 | `recipe-bootstrap-knowledge` | Build/refresh `.knowledge/` + `/gsd-map-codebase` + **`/gsd-graphify build`** — run once after onboard, before first `recipe-plan-phase` (see Graphify section below). |
@@ -127,15 +154,19 @@ There is **no** `recipe-graphify` skill. Graphify is wired in three places:
 | When | Where | Command |
 |------|-------|---------|
 | **Once per target repo** (if install reported `graphify: fail`) | Terminal, in the **target repo** | `./.gsd-recipe/scripts/install-graphify.sh` — installs the `graphify` CLI (requires `uv`). Re-run `install.sh --verify` or check `install-report.json`. |
-| **After onboard, before planning** | Cursor Agent, **target repo** | `recipe-bootstrap-knowledge` — scaffolds `.knowledge/` and calls native `/gsd-map-codebase [--fast]` + **`/gsd-graphify build`** (writes `.planning/graphs/`). Run once per feature or after large repo changes. |
+| **During `recipe-onboard` (automatic)** | Cursor Agent, **target repo** | `recipe-bootstrap-knowledge` — mandatory final onboard step; maps code, builds the graph, then writes the readiness marker. Invoke it separately only to refresh after large repo changes. |
 | **During plan or execute** (explore dependencies) | Cursor Agent, **target repo** | **`/gsd-graphify query <term>`** — ad-hoc lookup while writing or following a `PLAN.md` (optional; use when you need graph context mid-phase). |
 
-`recipe-plan-phase` / `recipe-run-phase` do **not** invoke graphify themselves — bootstrap (or a manual `/gsd-graphify build`) should happen **before** the first `recipe-plan-phase N`. If `graphify` is missing, `recipe-bootstrap-knowledge` still runs map-codebase and warns; planning policy may suggest graphify for complex phases.
+`recipe-plan-phase` / `recipe-run-phase` do **not** invoke graphify themselves. Onboard must verify
+knowledge first via `recipe-verify-knowledge.sh`; if graphify cannot run, onboarding fails.
+
+Guardrails (staged under `.gsd-recipe/scripts/`): `recipe-verify-knowledge.sh`,
+`recipe-verify-planning.sh`, `graphify-probe.sh`, `recipe_knowledge.py`.
 
 Full chain in one line (after install):
 
 ```text
-recipe-validate-tokens → recipe-onboard → recipe-bootstrap-knowledge  (/gsd-graphify build inside)
+recipe-validate-tokens → recipe-onboard  (includes knowledge + /gsd-graphify build)
   → recipe-plan-phase N → recipe-run-phase N  (AND per phase, OR use recipe-run-phases [<start> <end>] [--full])
   → recipe-sync
 ```

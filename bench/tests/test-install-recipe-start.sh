@@ -40,8 +40,11 @@ check "fresh install stages .cursor/skills/recipe-start/SKILL.md" "$?"
 check "fresh install stages .gsd-recipe/scripts/recipe-next.sh" "$?"
 
 LEDGER_COUNT1="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-start']))")"
-[ "$LEDGER_COUNT1" = "2" ]
-check "fresh install records exactly 2 ledger rows (skill + helper)" "$?"
+[ "$LEDGER_COUNT1" = "3" ]
+check "fresh install records exactly 3 ledger rows (skill + helper + sequence)" "$?"
+
+[ -f "$TARGET1/docs/RECIPE-SEQUENCE.md" ]
+check "fresh install stages docs/RECIPE-SEQUENCE.md" "$?"
 
 STAGED="$TARGET1/.cursor/skills/recipe-start/SKILL.md"
 grep -q "recipe-next.sh" "$STAGED" && rc=0 || rc=$?
@@ -50,10 +53,20 @@ grep -qi "Yes / No\|Yes/No" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents Yes/No invoke gate" "$rc"
 grep -q "recipe-onboard" "$STAGED" && rc=0 || rc=$?
 check "staged skill mentions recipe-onboard" "$rc"
+grep -q -- "--skip-tracker" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents --skip-tracker" "$rc"
+grep -qi "Jira Epic" "$STAGED" && rc=0 || rc=$?
+check "staged skill asks the Jira Epic yes/no" "$rc"
+grep -q "RECIPE-SEQUENCE.md" "$STAGED" && rc=0 || rc=$?
+check "staged skill opens RECIPE-SEQUENCE.md" "$rc"
+grep -q "JIRA-PRD.input.template.md" "$STAGED" && rc=0 || rc=$?
+check "staged skill exposes Jira PRD input template" "$rc"
+grep -q "JIRA-PRD.input.MAPPING.md" "$TARGET1/docs/RECIPE-SEQUENCE.md" && rc=0 || rc=$?
+check "staged sequence exposes Jira PRD input mapping" "$rc"
 
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 LEDGER_COUNT2="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-start']))")"
-[ "$LEDGER_COUNT2" = "2" ]
+[ "$LEDGER_COUNT2" = "3" ]
 check "re-running install does not duplicate ledger rows" "$?"
 
 TARGET2="$(new_repo)"
@@ -63,6 +76,8 @@ TARGET2="$(new_repo)"
 check "uninstall removes the staged skill" "$?"
 [ ! -f "$TARGET2/.gsd-recipe/scripts/recipe-next.sh" ]
 check "uninstall removes staged recipe-next.sh on a fresh target" "$?"
+[ ! -f "$TARGET2/docs/RECIPE-SEQUENCE.md" ]
+check "uninstall removes staged docs/RECIPE-SEQUENCE.md on a fresh target" "$?"
 LEDGER_AFTER="$(python3 -c "import json; d=json.load(open('$TARGET2/.gsd-recipe/ledger.json')); print('recipe-start' in d)")"
 [ "$LEDGER_AFTER" = "False" ]
 check "uninstall clears the component's ledger entry" "$?"
@@ -77,6 +92,8 @@ check "self-install uninstall does not error" "$rc"
 check "self-uninstall preserves the canonical skill template source" "$?"
 [ -f "$COPY/.gsd-recipe/scripts/recipe-next.sh" ]
 check "self-uninstall preserves canonical recipe-next.sh" "$?"
+[ -f "$COPY/.gsd-recipe/templates/RECIPE-SEQUENCE.md" ]
+check "self-uninstall preserves canonical RECIPE-SEQUENCE.md template" "$?"
 
 INSTALL_SH="$REPO_ROOT/.gsd-recipe/scripts/install.sh"
 grep -q "RECIPE_START_INSTALLER" "$INSTALL_SH" && rc=0 || rc=$?

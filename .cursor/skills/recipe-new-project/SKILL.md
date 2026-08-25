@@ -49,18 +49,45 @@ Examples:
    - **`--import` passed** → invoke native `gsd-import` directly in this same turn with the
      resolved input (skill-to-skill / workflow invocation — read and follow
      `gsd-import-SKILL.md`'s own documented workflow).
-   - **`--import` not passed** → invoke native `gsd-new-project` directly in this same turn (read
-     and follow `gsd-new-project-SKILL.md`'s own documented workflow).
+   - **`--import` not passed** and the resolved input is a file (`docs/PRD.md` or an explicit
+     path) → invoke native `gsd-new-project --auto` in this same turn with that file
+     (`@docs/PRD.md`). Read and follow `gsd-new-project-SKILL.md`, with these recipe overrides
+     (answer in this turn; do not ask the operator extra config questions):
+     - YOLO mode (already implicit in `--auto`).
+     - `commit_docs: false`. Do **not** `git add` or `git commit` `.planning/*`. Recipe install
+       already gitignores `.planning/`. If native wants to append `.planning/` to `.gitignore`
+       again, that is a no-op. A skipped planning commit is **not** a failure.
+     - If GSD **agents** are not installed (`agents_installed` false): warn, skip research
+       subagents, and use native's **inline** roadmap path. Missing agents is not a stop.
+     - Fail closed **only** when the native **skill file** is missing (block below). Do not
+       fabricate `.planning/*` yourself — native (or its documented inline path) must write them.
+   - **`--import` not passed** and there is no file brief → invoke native `gsd-new-project`
+     without `--auto`; let its questioning flow run. Still `commit_docs: false` and do not
+     commit `.planning/*`. Missing agents → inline path, not a stop.
 
-4. **Re-verify the expected planning artifacts exist.** After the native call returns, `Glob`/`Read`
-   for:
-   - `.planning/PROJECT.md`
-   - `.planning/ROADMAP.md`
-   - `.planning/STATE.md`
-   - Any missing → report plainly which file(s) are absent and **stop here** — do not fabricate
-     `.planning/*` artifacts yourself. Native GSD aborted, was declined, or errored inside its own
-     call.
-   - All three present → report success with a one-line summary of what native GSD produced.
+   **Fail closed if `gsd-new-project` (or `gsd-import` when `--import`) is not invokable in this
+   Agent.** Check for a skill file at `.cursor/skills/gsd-new-project/SKILL.md` in this repo **or**
+   the user/global Cursor GSD install (`~/.cursor/skills/gsd-new-project/SKILL.md`, same family as
+   `gsd-help`). If neither exists, **stop**. Do not fabricate `.planning/*`. Tell the operator:
+
+   ```text
+   Native GSD is not available in this Cursor Agent (no gsd-new-project skill).
+   Install GSD for Cursor, then re-run recipe-new-project:
+
+     node /path/to/gsd-core/bin/install.js --cursor --local --profile=standard
+
+   Recipe install does not copy GSD skills into the product repo.
+   ```
+
+4. **Re-verify the expected planning artifacts exist.** After the native call returns, run:
+
+   ```bash
+   .gsd-recipe/scripts/recipe-verify-planning.sh --target .
+   ```
+
+   Exit non-zero → report which check failed and **stop** — do not fabricate `.planning/*`.
+   Also `Glob`/`Read` for `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/STATE.md` when
+   the script is unavailable (fallback only).
 
 5. **Print the final summary, always.** Note first-init vs re-init, which native command ran
    (`gsd-new-project` vs `gsd-import`), which input source was used (`docs/PRD.md`, explicit path,
@@ -99,7 +126,8 @@ so operators following the recipe end-to-end still had to type native GSD direct
 1. Check whether `.planning/ROADMAP.md` already exists → first-init vs re-init.
 2. Soft warn-and-confirm gate on re-init only.
 3. Resolve input (`<input>` arg → else `docs/PRD.md` → else conversational) and call native
-   `gsd-new-project` or `gsd-import` (`--import`).
+   `gsd-new-project --auto` (when a PRD/file exists) or `gsd-import` (`--import`). Always
+   `commit_docs: false`; do not commit `.planning/*`. Missing GSD agents → inline roadmap, not fail.
 4. Re-verify `.planning/PROJECT.md`, `ROADMAP.md`, and `STATE.md` exist.
 5. Final summary — never sync tracker events from here.
 

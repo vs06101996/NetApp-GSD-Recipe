@@ -49,7 +49,7 @@ Never commit tokens. Reference only via env vars or the host secret manager.
 ```mermaid
 flowchart TB
   SRC["Source: {VCS_PROVIDER} clone"] --> TOK["Step 0–1: token validation [X]"]
-  TOK --> GSD["Confirm GSD installed [N: /gsd-health]"]
+  TOK --> GSD["Install + verify Cursor GSD full profile [N]"]
   GSD --> CAP["Step 2: capability install OR fallback installer [N/X]"]
   CAP --> DIRS["Scaffold .templates, .knowledge, .learnings, code_base_details"]
   CAP --> MCP["MCP fragment: gsd-browser, chrome-devtools-mcp, {TRACKER}-mcp [E]"]
@@ -115,7 +115,12 @@ another workspace. Non-interactive installs skip it by default; flags:
 1. Token exists in environment or secret store.
 2. API probe succeeds (e.g. `GET /user` equivalent on VCS; `GET issue` on tracker).
 3. Scope probe: can read target repo/project; can create comment (dry-run or test issue in sandbox).
-4. Optional: verify GSD version supports required commands (`/gsd-surface status`, `/gsd-health`, `/gsd-autonomous` if auto-loop enabled).
+4. Required: install Cursor GSD full profile when absent:
+   `npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full`.
+   The fallback installer downloads the same published package tarball directly when npm's
+   certificate path is unavailable; it does not disable TLS verification.
+   Fail closed unless `gsd-new-project`, `gsd-map-codebase`, `gsd-graphify`, `gsd-ingest-docs`,
+   and the `gsd-roadmapper` agent are present.
 
 **Implementation note:** Small preflight script or agent checklist. No stack-specific assumptions.
 
@@ -156,6 +161,8 @@ Machine-readable schema/examples for these paths live in [DATA-CONTRACTS.md](../
 ```
 .templates/                    # gitignored — recipe templates (local install)
   PRD.template.md
+  JIRA-PRD.input.template.md   # Jira/Confluence intake shape (input only)
+  JIRA-PRD.input.MAPPING.md    # maps intake → PRD.template.md
   SPEC.template.md
   TDD.template.md
   {TRACKER}-comment.template.md      # v1: jira-comment.template.md
@@ -212,6 +219,7 @@ code_base_details/
 skills/
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
+docs/RECIPE-SEQUENCE.md
 ```
 
 **Not** a blanket `docs/*` — that would hide product docs in the target repo. Only recipe-owned doc filenames are ignored. Cursor skills under `.cursor/skills/` follow whatever `.cursor/` policy the target already uses (installer also adds specific `.cursor/gsd-*` ignores). `.planning/` is GSD-native working state (plans, STATE, ROADMAP) — local-only by default so feature PRs stay free of agent planning artifacts.

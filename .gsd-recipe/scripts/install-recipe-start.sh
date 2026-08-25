@@ -42,6 +42,8 @@ else
   NEXT_SRC="$SELF_ROOT/bench/lib/recipe-next.sh"
 fi
 NEXT_DEST="$GSD_RECIPE_DIR/scripts/recipe-next.sh"
+SEQ_SRC="$SCRIPT_DIR/../templates/RECIPE-SEQUENCE.md"
+SEQ_DEST="$TARGET/docs/RECIPE-SEQUENCE.md"
 COMPONENT="recipe-start"
 
 mkdir -p "$GSD_RECIPE_DIR"
@@ -101,6 +103,13 @@ is_canonical_next() {
   [ "$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")" = "$(cd "$(dirname "$NEXT_SRC")" && pwd)/$(basename "$NEXT_SRC")" ]
 }
 
+is_canonical_seq() {
+  local candidate="$1"
+  [ -e "$candidate" ] || return 1
+  [ -e "$SEQ_SRC" ] || return 1
+  [ "$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")" = "$(cd "$(dirname "$SEQ_SRC")" && pwd)/$(basename "$SEQ_SRC")" ]
+}
+
 install() {
   if [ "$YES" -ne 1 ]; then
     read -r -p "Install recipe-start skill into $TARGET? [y/N] " reply
@@ -115,12 +124,20 @@ install() {
     exit 1
   fi
 
+  if [ ! -f "$SEQ_SRC" ]; then
+    echo "recipe-start installer: missing $SEQ_SRC" >&2
+    exit 1
+  fi
+
   safe_copy "$SKILL_SRC" "$SKILL_DEST"
   ledger_record ".cursor/skills/recipe-start/SKILL.md"
   mkdir -p "$(dirname "$NEXT_DEST")"
   safe_copy "$NEXT_SRC" "$NEXT_DEST"
   chmod +x "$NEXT_DEST"
   ledger_record ".gsd-recipe/scripts/recipe-next.sh"
+  mkdir -p "$(dirname "$SEQ_DEST")"
+  safe_copy "$SEQ_SRC" "$SEQ_DEST"
+  ledger_record "docs/RECIPE-SEQUENCE.md"
 
   echo "recipe-start installer: staged. Files tracked in $LEDGER:"
   ledger_files | sed 's/^/  - /'
@@ -133,7 +150,7 @@ install() {
 uninstall() {
   echo "recipe-start installer: removing tracked files for component '$COMPONENT'..."
   while IFS= read -r rel; do
-    if is_canonical_source "$TARGET/$rel" || is_canonical_next "$TARGET/$rel"; then
+    if is_canonical_source "$TARGET/$rel" || is_canonical_next "$TARGET/$rel" || is_canonical_seq "$TARGET/$rel"; then
       echo "  keeping $rel (canonical source — self-install)"
       continue
     fi

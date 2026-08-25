@@ -43,20 +43,30 @@ TARGET1="$(new_repo)"
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 [ -f "$TARGET1/.templates/PRD.template.md" ]
 check "fresh install stages .templates/PRD.template.md" "$?"
+[ -f "$TARGET1/.templates/JIRA-PRD.input.template.md" ]
+check "fresh install stages .templates/JIRA-PRD.input.template.md" "$?"
+[ -f "$TARGET1/.templates/JIRA-PRD.input.MAPPING.md" ]
+check "fresh install stages .templates/JIRA-PRD.input.MAPPING.md" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" ]
 check "fresh install stages .cursor/skills/recipe-prd-intake/SKILL.md" "$?"
 LEDGER_COUNT1="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-prd-intake']))")"
-[ "$LEDGER_COUNT1" = "2" ]
-check "fresh install records exactly 2 ledger rows" "$?"
+[ "$LEDGER_COUNT1" = "4" ]
+check "fresh install records exactly 4 ledger rows" "$?"
 
 # 3. The staged skill references the fotw-observer-bootstrap integration point
 grep -q "fotw-observer-bootstrap" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
 check "staged skill references fotw-observer-bootstrap" "$rc"
 
+grep -q "JIRA-PRD.input.MAPPING" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
+check "staged skill references Jira PRD input mapping" "$rc"
+
+grep -q "Never write the 15-section Jira/Confluence form" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
+check "staged skill forbids writing Jira shape to docs/PRD.md" "$rc"
+
 # 4. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 LEDGER_COUNT2="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-prd-intake']))")"
-[ "$LEDGER_COUNT2" = "2" ]
+[ "$LEDGER_COUNT2" = "4" ]
 check "re-running install does not duplicate ledger rows" "$?"
 
 # 5. Never overwrites an operator-customized PRD.template.md on re-install

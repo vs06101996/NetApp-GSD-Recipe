@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
-# recipe-prd-intake installer — standalone fallback path per
-# lld/INSTALL-LLD.md Step 3's documented pattern (same approach already used
-# by install-observer.sh), independent of the full TASK-010 install.sh
-# (size L, not yet built).
-#
-# NOTE: BACKLOG.md TASK-016 lists this as depending on TASK-010. This script
-# exists ahead of that dependency, at explicit operator request, mirroring
-# how the FOTW observer (TASK-013, formally post-pilot) was already built
-# standalone. It is opt-in, idempotent, and fully removable via --uninstall.
+# recipe-prd-intake installer — composed into TASK-010 install.sh and also
+# usable standalone per lld/INSTALL-LLD.md Step 3 (same approach as
+# install-observer.sh). Idempotent; fully removable via --uninstall.
 #
 # Usage:
 #   ./.gsd-recipe/scripts/install-recipe-prd-intake.sh [--yes] [--target <repo_root>]
@@ -54,6 +48,10 @@ SKILL_DEST="$TARGET/.cursor/skills/recipe-prd-intake/SKILL.md"
 SKILL_SRC="$SCRIPT_DIR/../templates/recipe-prd-intake-SKILL.md"
 TEMPLATE_DEST="$TARGET/.templates/PRD.template.md"
 TEMPLATE_SRC="$SCRIPT_DIR/../templates/PRD.template.md"
+JIRA_INPUT_DEST="$TARGET/.templates/JIRA-PRD.input.template.md"
+JIRA_INPUT_SRC="$SCRIPT_DIR/../templates/JIRA-PRD.input.template.md"
+JIRA_MAP_DEST="$TARGET/.templates/JIRA-PRD.input.MAPPING.md"
+JIRA_MAP_SRC="$SCRIPT_DIR/../templates/JIRA-PRD.input.MAPPING.md"
 COMPONENT="recipe-prd-intake"
 
 mkdir -p "$GSD_RECIPE_DIR"
@@ -111,7 +109,7 @@ is_canonical_source() {
   # template, not just an installed copy.
   local candidate="$1" src
   [ -e "$candidate" ] || return 1
-  for src in "$SKILL_SRC" "$TEMPLATE_SRC"; do
+  for src in "$SKILL_SRC" "$TEMPLATE_SRC" "$JIRA_INPUT_SRC" "$JIRA_MAP_SRC"; do
     [ -e "$src" ] || continue
     if [ "$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")" = "$(cd "$(dirname "$src")" && pwd)/$(basename "$src")" ]; then
       return 0
@@ -136,16 +134,29 @@ install() {
     ledger_record ".templates/PRD.template.md"
   fi
 
+  if [ -f "$JIRA_INPUT_DEST" ]; then
+    echo "recipe-prd-intake installer: $JIRA_INPUT_DEST already exists, leaving it untouched."
+  else
+    safe_copy "$JIRA_INPUT_SRC" "$JIRA_INPUT_DEST"
+    ledger_record ".templates/JIRA-PRD.input.template.md"
+  fi
+
+  if [ -f "$JIRA_MAP_DEST" ]; then
+    echo "recipe-prd-intake installer: $JIRA_MAP_DEST already exists, leaving it untouched."
+  else
+    safe_copy "$JIRA_MAP_SRC" "$JIRA_MAP_DEST"
+    ledger_record ".templates/JIRA-PRD.input.MAPPING.md"
+  fi
+
   safe_copy "$SKILL_SRC" "$SKILL_DEST"
   ledger_record ".cursor/skills/recipe-prd-intake/SKILL.md"
 
   echo "recipe-prd-intake installer: staged. Files tracked in $LEDGER:"
   ledger_files | sed 's/^/  - /'
   echo
-  echo "Invoke 'recipe-prd-intake' by name with a PRD file, pasted text, or a"
-  echo "freeform description. It writes docs/PRD.md and, as its final step,"
-  echo "invokes 'fotw-observer-bootstrap' (if that's installed) to start the"
-  echo "FOTW observer watching this session."
+  echo "Invoke 'recipe-prd-intake' by name with a Jira/Confluence PRD export, PRD file,"
+  echo "pasted text, or a freeform description. It maps Jira-shaped input via"
+  echo ".templates/JIRA-PRD.input.MAPPING.md and writes canonical docs/PRD.md."
   echo "Remove entirely: $0 --uninstall --target $TARGET"
 }
 
@@ -153,7 +164,7 @@ uninstall() {
   echo "recipe-prd-intake installer: removing tracked files for component '$COMPONENT'..."
   while IFS= read -r rel; do
     case "$rel" in
-      .templates/PRD.template.md)
+      .templates/PRD.template.md|.templates/JIRA-PRD.input.template.md|.templates/JIRA-PRD.input.MAPPING.md)
         echo "  keeping $rel (operator-customizable scaffold data, same as observer-config.json — remove by hand if desired)"
         continue
         ;;

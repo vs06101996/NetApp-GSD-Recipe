@@ -39,11 +39,23 @@ fi
 
 TARGET="$(cd "$TARGET" && pwd)"
 
-python3 - "$TARGET" "$ID_ONLY" <<'PY'
-import os, re, sys
+KNOWLEDGE_LIB="$SCRIPT_DIR/recipe_knowledge.py"
+python3 - "$TARGET" "$ID_ONLY" "$KNOWLEDGE_LIB" <<'PY'
+import importlib.util, json, os, re, sys
 
 target = sys.argv[1]
 id_only = sys.argv[2] == "1"
+knowledge_lib = sys.argv[3]
+
+def load_knowledge(path):
+    if not os.path.isfile(path):
+        return None
+    spec = importlib.util.spec_from_file_location("recipe_knowledge", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+_knowledge = load_knowledge(knowledge_lib)
 
 def exists(*parts):
     return os.path.exists(os.path.join(target, *parts))
@@ -56,16 +68,31 @@ def read(rel):
     except OSError:
         return ""
 
+def skip_tracker():
+    raw = read(".gsd-recipe/config.json")
+    try:
+        cfg = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        return False
+    onboard = cfg.get("onboard") or {}
+    return onboard.get("skip_tracker") is True
+
+def knowledge_ready():
+    if _knowledge is None:
+        return False
+    return _knowledge.knowledge_ready(target)
+
 skill_onboard = exists(".cursor", "skills", "recipe-onboard", "SKILL.md")
 prd = exists("docs", "PRD.md")
 roadmap = exists(".planning", "ROADMAP.md")
 state = read(".planning/STATE.md")
 epic = bool(re.search(r"(?m)^-\s*epic:\s*\S+", state))
-knowledge = exists(".knowledge", "index.md")
+tracker_ok = epic or skip_tracker()
+knowledge = knowledge_ready()
 
 phase_n = None
 rm = read(".planning/ROADMAP.md")
-ids = [int(x) for x in re.findall(r"(?m)^## Phase (\d+)\b", rm)]
+ids = [int(x) for x in re.findall(r"(?m)^#{2,3} Phase (\d+)\b", rm)]
 ids = sorted(set(ids))
 
 def phase_has_plan(n):
@@ -93,11 +120,18 @@ def phase_has_summary(n):
                     return True
     return False
 
+ONBOARD_INPUT = """  Jira/Confluence PRD input: recipe-onboard @docs/input/my-feature-prd.md
+  Template: .templates/JIRA-PRD.input.template.md (input only)
+"""
+ONBOARD_SKIP = """  No Jira: recipe-onboard --skip-tracker
+  Sequence: docs/RECIPE-SEQUENCE.md"""
+
 step_id = "ONBOARD"
 cmd = "recipe-onboard"
 why = "No PRD or planning cycle yet."
 how = """  recipe-onboard
-  (no file yet: Agent will ask you to paste or describe the work)"""
+  (no file yet: Agent will ask you to paste or describe the work)
+""" + ONBOARD_INPUT + ONBOARD_SKIP
 
 if not skill_onboard and not exists(".gsd-recipe", "config.json"):
     step_id = "INSTALL"
@@ -113,17 +147,18 @@ elif not prd:
     cmd = "recipe-onboard"
     why = "There is no docs/PRD.md yet."
     how = """  recipe-onboard
-  (no file yet: Agent will ask you to paste or describe the work)"""
+  (no file yet: Agent will ask you to paste or describe the work)
+""" + ONBOARD_INPUT + ONBOARD_SKIP
 elif not roadmap:
     step_id = "ONBOARD"
     cmd = "recipe-onboard"
     why = "You have a PRD, but no .planning/ROADMAP.md yet."
-    how = "  recipe-onboard"
-elif not epic:
+    how = "  recipe-onboard\n" + ONBOARD_SKIP
+elif not tracker_ok:
     step_id = "ONBOARD"
     cmd = "recipe-onboard"
     why = "Planning exists, but no Jira Epic is linked in .planning/STATE.md yet."
-    how = "  recipe-onboard"
+    how = "  recipe-onboard\n" + ONBOARD_SKIP
 elif not knowledge:
     step_id = "BOOTSTRAP"
     cmd = "recipe-bootstrap-knowledge"

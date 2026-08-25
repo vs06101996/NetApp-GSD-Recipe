@@ -35,8 +35,8 @@ check "output lists recipe-plan-phase" "$?"
 grep -q "recipe-help" "$TMP"
 check "output lists recipe-help" "$?"
 
-grep -q "| planned |" "$TMP"
-check "output marks planned capabilities (e.g. recipe-new-project/onboard)" "$?"
+grep -q "| built |" "$TMP"
+check "output marks installed capabilities as built" "$?"
 
 grep -q "Native GSD commands" "$TMP"
 check "output includes native GSD section" "$?"
@@ -49,6 +49,15 @@ check "output includes field benchmarks section" "$?"
 
 grep -q "KAN-53" "$TMP"
 check "output includes KB-Evaluations benchmark row" "$?"
+
+grep -q "PRD input formats" "$TMP"
+check "output exposes PRD input formats" "$?"
+
+grep -q "JIRA-PRD.input.template.md" "$TMP"
+check "output references Jira PRD input template" "$?"
+
+grep -q "input only" "$TMP"
+check "output distinguishes Jira input from canonical output" "$?"
 
 rm -f "$TMP"
 

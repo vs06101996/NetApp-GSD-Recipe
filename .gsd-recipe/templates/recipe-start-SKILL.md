@@ -36,12 +36,14 @@ bash "$NEXT" --target "$ROOT"
 
 Print the helper output **verbatim** — that is the user-facing next step.
 
-3. Then ask **one** Yes/No question:
+3. Open the sequenced command list (local, gitignored): `docs/RECIPE-SEQUENCE.md`. Use the editor Open-file tool, or `cursor docs/RECIPE-SEQUENCE.md` if the CLI exists. If the file is missing, say so (re-run recipe install / `install-recipe-start.sh`). Do not commit this file.
+
+4. Then ask **one** Yes/No question:
 
 > Run that command for you now? (Yes / No)
 
-- **No** → stop. They already have the text to copy.
-- **Yes** → invoke **only** the recommended `recipe-*` skill by name in this same turn (e.g. `recipe-onboard`, `recipe-bootstrap-knowledge`, `recipe-plan-phase N`). Do not invent a different workflow. If the helper said to run the **bash installer**, print that command again and do **not** pretend `recipe-install` exists on a repo with no skills.
+- **No** → stop. They already have the text to copy (and the sequence page).
+- **Yes** → if the helper **Command** is `recipe-onboard`, ask one extra: “Create Jira Epic and phase tasks? (Yes / No)”. Yes → invoke `recipe-onboard`. No → invoke `recipe-onboard --skip-tracker`. For any other Command, invoke **only** that `recipe-*` skill by name in this same turn (e.g. `recipe-bootstrap-knowledge`, `recipe-plan-phase N`). Do not invent a different workflow. If the helper said to run the **bash installer**, print that command again and do **not** pretend `recipe-install` exists on a repo with no skills.
 
 ## D. Do NOT
 
@@ -58,11 +60,17 @@ It looks only at generic files (`docs/PRD.md`, `.planning/ROADMAP.md`, `STATE.md
 
 | You have | It suggests |
 |----------|-------------|
-| No PRD | `recipe-onboard` (file, paste, or describe) |
+| No PRD | `recipe-onboard` (Jira/Confluence export, file, paste, or describe). No Jira: `--skip-tracker` |
 | PRD, no ROADMAP | `recipe-onboard` |
 | ROADMAP, no Epic | `recipe-onboard` |
-| Onboarded | `recipe-bootstrap-knowledge` |
+| Onboarded (knowledge included) | `recipe-plan-phase N` |
 | Then | `recipe-plan-phase N` → `recipe-run-phase N` → verify → review-ship → settle |
+
+After Yes on onboard, it asks whether to create Jira tickets. Sequence page (gitignored): `docs/RECIPE-SEQUENCE.md`.
+
+Jira/Confluence PRD exports use `.templates/JIRA-PRD.input.template.md` as an
+**input-only** shape. Pass one with `recipe-onboard @path/to/file.md`; intake maps it
+to canonical `docs/PRD.md` using `.templates/JIRA-PRD.input.MAPPING.md`.
 
 Full catalog: `recipe-help`  
 Snapshot + next step (read-only): `recipe-status`  

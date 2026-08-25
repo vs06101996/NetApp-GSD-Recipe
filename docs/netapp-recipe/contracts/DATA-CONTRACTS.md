@@ -19,7 +19,10 @@
 | Sync idempotency ledger | `.gsd-recipe/sync-ledger.jsonl` | JSON Lines (append-only) |
 | Sync backlog queue | `.gsd-recipe/sync-queue.jsonl` | JSON Lines (append-only) |
 | Install verification marker | `.gsd-recipe/INSTALL-VERIFIED.json` | JSON object |
-| PRD structure baseline | `.templates/PRD.template.md` | Markdown skeleton |
+| Knowledge readiness marker | `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED` | JSON object |
+| PRD structure baseline | `.templates/PRD.template.md` | Markdown skeleton (canonical output) |
+| Jira/Confluence PRD input skeleton | `.templates/JIRA-PRD.input.template.md` | Markdown skeleton (intake only) |
+| Jira/Confluence → canonical PRD mapping | `.templates/JIRA-PRD.input.MAPPING.md` | Markdown guide |
 | DAG graph output | `.knowledge/dag/graph.json` | JSON object (runtime output) |
 | bare_metal command template | `.templates/bare_metal.template.md` | Markdown template (runtime gate input) |
 | Jira event vocabulary | [reference/harness/recipe/trackers/jira-events.json](../reference/harness/recipe/trackers/jira-events.json) (`bench/recipe/trackers/` after copy to gsd-benchmark) | JSON catalog |
@@ -104,6 +107,7 @@ Validation implementation target: TASK-008 in [BACKLOG.md](../BACKLOG.md) · [IN
 | `observer.enabled` | boolean | yes | enable/disable p2 observer flow |
 | `observer.interval_minutes` | integer | yes when observer enabled | loop interval recommendation |
 | `assignee` | string | no | default Jira display name or email for new Epics and phase tasks (`lookupJiraAccountId`) |
+| `onboard.skip_tracker` | boolean | no | set by `recipe-onboard --skip-tracker` after PRD + planning succeed without creating Jira issues. `recipe-next` / `recipe-status` treat a missing Epic as intentional, not an incomplete onboard. Do not invent an Epic key in `STATE.md`. |
 
 ### Example
 
@@ -302,28 +306,74 @@ One queued event request per line:
 
 ---
 
+## `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`
+
+Written only by `recipe-bootstrap-knowledge` after native map output and graphify both verify.
+Install-time `.knowledge/` placeholders never create this marker.
+
+Readiness requires **all** of:
+- this file with `"status": "ready"` (written only by `recipe-verify-knowledge.sh --write-marker`)
+- at least two substantive `.planning/codebase/*.md` files from native map-codebase
+- at least one non-empty graph file under `.planning/graphs/` or `graphify-out/`
+- functional `graphify` on PATH (no-op stubs rejected)
+
+Guardrail scripts (staged under `.gsd-recipe/scripts/`):
+- `recipe-verify-knowledge.sh` — check / `--write-marker`
+- `recipe-verify-planning.sh` — after `recipe-new-project`
+- `graphify-probe.sh` — stub detection (sourced by verify-knowledge)
+
+`recipe-status` / `recipe-next` use the same rules via `recipe_knowledge.py`.
+
+```json
+{"status":"ready","completed_at":"2026-08-24T08:00:00Z"}
+```
+
+Required fields: `status` (must equal `"ready"`) and `completed_at` (RFC3339 UTC).
+
+---
+
 <a id="prd-template-md"></a>
 ## `.templates/PRD.template.md`
 
-Minimal section skeleton:
+**Canonical output** for `recipe-prd-intake` → `docs/PRD.md`. Required sections:
 
 ```markdown
-# Product Requirements Document
+# PRD: {Feature / Project Name}
 
-## 1. Problem statement
+## Problem
 
-## 2. Goals and non-goals
+## Goals
 
-## 3. Users and use cases
+## Non-Goals
 
-## 4. Requirements
+## Requirements
 
-## 5. Acceptance criteria
+## Out of Scope
 
-## 6. Risks and assumptions
-
-## 7. Open questions
+## Open Questions (optional)
 ```
+
+---
+
+<a id="jira-prd-input-template-md"></a>
+## `.templates/JIRA-PRD.input.template.md`
+
+**Input only** — matches the NetApp Confluence/Jira PRD shape (15 numbered sections).
+Operators paste exports or fill this locally; `recipe-prd-intake` maps it to
+`.templates/PRD.template.md` using `.templates/JIRA-PRD.input.MAPPING.md`.
+
+Official source: [NetApp Confluence PRD Template](https://netapp.atlassian.net/wiki/spaces/CLOUDVOL/pages/108168914/PRD+Template).
+
+Never write this 15-section form to `docs/PRD.md`.
+
+---
+
+<a id="jira-prd-input-mapping-md"></a>
+## `.templates/JIRA-PRD.input.MAPPING.md`
+
+Normative section map from Jira/Confluence input → canonical PRD sections (Problem,
+Goals, Non-Goals, Requirements, Out of Scope, Open Questions). Consumed by
+`recipe-prd-intake` at intake time.
 
 ---
 

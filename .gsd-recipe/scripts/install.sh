@@ -26,9 +26,9 @@
 #   - preflight() runs at the very start of install(), before any scaffolding.
 #     python3/git are hard prerequisites (install.sh itself shells out to
 #     both) — unresolved after the check->auto-fix->reverify->prompt flow
-#     below aborts with exit 1. node/gh/gsd_core/graphify are soft —
-#     warn-only, recorded in install-report.json's "prereqs" object, install
-#     proceeds.
+#     below aborts with exit 1. node and Cursor GSD are also hard because
+#     onboarding now always runs native planning + knowledge commands.
+#     gh/graphify remain warn-only and are recorded in install-report.json.
 #   - GSD presence is detected via the Cursor-facing signal file at
 #     $GSD_SIGNAL_PATH (defaults to ~/.cursor/skills/gsd-help/SKILL.md,
 #     overridable via the GSD_SIGNAL_PATH env var — tests must always
@@ -161,17 +161,31 @@ RECIPE_OBSERVE_INSTALLER="$SCRIPT_DIR/install-recipe-observe.sh"
 RECIPE_CREATE_EPIC_INSTALLER="$SCRIPT_DIR/install-recipe-create-epic.sh"
 RECIPE_CREATE_PHASE_TASKS_INSTALLER="$SCRIPT_DIR/install-recipe-create-phase-tasks.sh"
 RECIPE_HELP_INSTALLER="$SCRIPT_DIR/install-recipe-help.sh"
+RECIPE_PRD_INTAKE_INSTALLER="$SCRIPT_DIR/install-recipe-prd-intake.sh"
 RECIPE_NEW_PROJECT_INSTALLER="$SCRIPT_DIR/install-recipe-new-project.sh"
 RECIPE_ONBOARD_INSTALLER="$SCRIPT_DIR/install-recipe-onboard.sh"
 RECIPE_START_INSTALLER="$SCRIPT_DIR/install-recipe-start.sh"
 RECIPE_STATUS_INSTALLER="$SCRIPT_DIR/install-recipe-status.sh"
 CAPABILITY_SCHEMA_LIB="$SCRIPT_DIR/../../bench/lib/capability-schema.sh"
+GRAPHIFY_PROBE_SRC="$SCRIPT_DIR/../../bench/lib/graphify-probe.sh"
+if [ -f "$GRAPHIFY_PROBE_SRC" ]; then
+  # shellcheck source=/dev/null
+  source "$GRAPHIFY_PROBE_SRC"
+fi
 
-# Cursor-facing GSD presence signal (see "Key research finding" in the plan:
-# unclear whether the npx installer's --claude --global target is what backs
-# this, so it's always re-checked rather than assumed). Override for tests —
-# never point this at the real path when testing.
+# Cursor-facing GSD signals. A help skill alone is not enough: onboarding
+# needs new-project, map-codebase, graphify, ingest-docs, and the roadmapper
+# agent. GSD_SIGNAL_PATH remains overridable for isolated tests; the other
+# signals derive from the same Cursor root.
 GSD_SIGNAL_PATH="${GSD_SIGNAL_PATH:-$HOME/.cursor/skills/gsd-help/SKILL.md}"
+GSD_CURSOR_ROOT="${GSD_CURSOR_ROOT:-$(dirname "$(dirname "$(dirname "$GSD_SIGNAL_PATH")")")}"
+GSD_NEW_PROJECT_SIGNAL_PATH="$GSD_CURSOR_ROOT/skills/gsd-new-project/SKILL.md"
+GSD_MAP_CODEBASE_SIGNAL_PATH="$GSD_CURSOR_ROOT/skills/gsd-map-codebase/SKILL.md"
+GSD_GRAPHIFY_SIGNAL_PATH="$GSD_CURSOR_ROOT/skills/gsd-graphify/SKILL.md"
+GSD_INGEST_DOCS_SIGNAL_PATH="$GSD_CURSOR_ROOT/skills/gsd-ingest-docs/SKILL.md"
+GSD_ROADMAPPER_SIGNAL_PATH="$GSD_CURSOR_ROOT/agents/gsd-roadmapper.md"
+GSD_FALLBACK_METADATA_URL="${GSD_FALLBACK_METADATA_URL:-https://registry.npmjs.org/@opengsd/gsd-core/latest}"
+GSD_PREFER_NPX="${GSD_PREFER_NPX:-0}"
 
 # GSD's own schema-aware config mutator, used exclusively to auto-set
 # graphify.enabled in $TARGET/.planning/config.json (see
@@ -179,7 +193,7 @@ GSD_SIGNAL_PATH="${GSD_SIGNAL_PATH:-$HOME/.cursor/skills/gsd-help/SKILL.md}"
 # that file. Overridable for tests, same override precedent as
 # GSD_SIGNAL_PATH above — tests must always point this at a scratch stub,
 # never the real gsd-tools.cjs.
-GSD_TOOLS_CJS_PATH="${GSD_TOOLS_CJS_PATH:-$HOME/.claude/get-shit-done/bin/gsd-tools.cjs}"
+GSD_TOOLS_CJS_PATH="${GSD_TOOLS_CJS_PATH:-$HOME/.cursor/get-shit-done/bin/gsd-tools.cjs}"
 
 PREREQ_PYTHON3=""
 PREREQ_GIT=""
@@ -395,6 +409,48 @@ ensure_prereq() {
   return 0
 }
 
+gsd_cursor_ready() {
+  local required
+  for required in \
+    "$GSD_SIGNAL_PATH" \
+    "$GSD_NEW_PROJECT_SIGNAL_PATH" \
+    "$GSD_MAP_CODEBASE_SIGNAL_PATH" \
+    "$GSD_GRAPHIFY_SIGNAL_PATH" \
+    "$GSD_INGEST_DOCS_SIGNAL_PATH" \
+    "$GSD_ROADMAPPER_SIGNAL_PATH"; do
+    [ -f "$required" ] || return 1
+  done
+}
+
+install_cursor_gsd_package() {
+  local tmp metadata tarball rc
+  tmp="$(mktemp -d)"
+  metadata="$tmp/meta.json"
+  if ! curl -fsSL "$GSD_FALLBACK_METADATA_URL" -o "$metadata"; then
+    rm -rf "$tmp"
+    return 1
+  fi
+  tarball="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dist"]["tarball"])' "$metadata")" || {
+    rm -rf "$tmp"
+    return 1
+  }
+  curl -fsSL "$tarball" -o "$tmp/gsd.tgz" &&
+    tar -xzf "$tmp/gsd.tgz" -C "$tmp" &&
+    node "$tmp/package/bin/install.js" --cursor --global --profile=full
+  rc=$?
+  rm -rf "$tmp"
+  return "$rc"
+}
+
+install_cursor_gsd() {
+  if [ "$GSD_PREFER_NPX" = "1" ]; then
+    npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full
+    return
+  fi
+  install_cursor_gsd_package ||
+    npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full
+}
+
 preflight() {
   # python3/git first and hard — every script in this repo, including this
   # one, shells out to both internally.
@@ -406,8 +462,8 @@ preflight() {
     "install.sh needs the git CLI. Install it (e.g. 'brew install git') and re-run."
   PREREQ_GIT="$PREREQ_RESULT"
 
-  ensure_prereq "node" "command -v npx" "$(brew_fix_cmd node)" 0 \
-    "Node/npm/npx not found — the GSD auto-install step will be skipped (install still proceeds). Install Node (e.g. 'brew install node') to enable it."
+  ensure_prereq "node" "command -v npx" "$(brew_fix_cmd node)" 1 \
+    "Node/npm/npx is required to install Cursor GSD. Install Node (e.g. 'brew install node') and re-run."
   PREREQ_NODE="$PREREQ_RESULT"
 
   ensure_prereq "gh" "command -v gh" "$(brew_fix_cmd gh)" 0 \
@@ -415,26 +471,23 @@ preflight() {
   PREREQ_GH="$PREREQ_RESULT"
 
   # GSD auto-fix only ever fires when completely absent — an already-present
-  # GSD is left alone (upgrades stay /gsd-update's job). Also skipped
-  # entirely when node is unavailable, since the installer is npx-based.
+  # GSD is left alone (upgrades stay /gsd-update's job). Install the full
+  # Cursor surface: the recipe requires both planning and knowledge commands.
+  # The old --claude command could never satisfy this Cursor signal.
   local gsd_fix=""
-  if [ "$PREREQ_NODE" != "fail" ] && [ ! -f "$GSD_SIGNAL_PATH" ]; then
-    gsd_fix="npx -y --package=@opengsd/gsd-core@latest -- gsd-core --claude --global"
+  if [ "$PREREQ_NODE" != "fail" ] && ! gsd_cursor_ready; then
+    gsd_fix="install_cursor_gsd"
   fi
-  ensure_prereq "gsd_core" "test -f \"$GSD_SIGNAL_PATH\"" "$gsd_fix" 0 \
-    "GSD not detected at $GSD_SIGNAL_PATH. Install it: npx -y --package=@opengsd/gsd-core@latest -- gsd-core --claude --global"
+  ensure_prereq "gsd_core" "gsd_cursor_ready" "$gsd_fix" 1 \
+    "Cursor GSD full profile is incomplete under $GSD_CURSOR_ROOT. Install it: npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full"
   PREREQ_GSD_CORE="$PREREQ_RESULT"
 
-  # graphify: soft/optional, standalone CLI (not an MCP server) — presence
-  # is checked via binary detection (command -v), same pattern as every
-  # other prerequisite here; GSD's own wrapper additionally probes
-  # `graphify --help` (not `--version`, which graphify doesn't support) at
-  # call time, but a simple PATH check is all preflight() needs. Auto-fix
-  # only ever attempted when uv is already present (uv_fix_cmd returns
-  # empty otherwise), matching brew_fix_cmd's "never guess at installing
-  # the installer" precedent.
-  ensure_prereq "graphify" "command -v graphify" "$(uv_fix_cmd)" 0 \
-    "graphify not found — optional knowledge-graph tooling will be skipped (install still proceeds). Install it (no sudo): .gsd-recipe/scripts/install-graphify.sh (requires uv: brew install uv or https://docs.astral.sh/uv/)."
+  # graphify: soft/optional — must be a real CLI, not a no-op bash stub that
+  # only `exit 0` (common on dev machines). graphify_functional() rejects
+  # stubs and requires `graphify --help` output. Auto-fix routes through
+  # install-graphify.sh when uv is present.
+  ensure_prereq "graphify" "graphify_functional" "$(uv_fix_cmd)" 0 \
+    "graphify missing or non-functional (no-op stub counts as missing). Optional at install, required for knowledge bootstrap. Fix (no sudo): .gsd-recipe/scripts/install-graphify.sh"
   PREREQ_GRAPHIFY="$PREREQ_RESULT"
 }
 
@@ -656,7 +709,7 @@ install() {
   fi
 
   if [ "$YES" -ne 1 ]; then
-    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-new-project + recipe-onboard + recipe-start + recipe-status) into $TARGET? [y/N] " reply
+    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status) into $TARGET? [y/N] " reply
     case "$reply" in
       [yY]|[yY][eE][sS]) : ;;
       *) echo "install.sh: aborted, no consent given."; exit 0 ;;
@@ -669,6 +722,8 @@ install() {
 
   mkdir -p "$TEMPLATES_DEST_DIR"
   stage_template "PRD.template.md" "PRD.template.md" ".templates/PRD.template.md"
+  stage_template "JIRA-PRD.input.template.md" "JIRA-PRD.input.template.md" ".templates/JIRA-PRD.input.template.md"
+  stage_template "JIRA-PRD.input.MAPPING.md" "JIRA-PRD.input.MAPPING.md" ".templates/JIRA-PRD.input.MAPPING.md"
   stage_template "SPEC.template.md" "SPEC.template.md" ".templates/SPEC.template.md"
   stage_template "TDD.template.md" "TDD.template.md" ".templates/TDD.template.md"
   stage_template "bare_metal.template.md" "bare_metal.template.md" ".templates/bare_metal.template.md"
@@ -766,6 +821,7 @@ code_base_details/
 skills/
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
+docs/RECIPE-SEQUENCE.md
 bench/
 .cursor/get-shit-done/
 .cursor/gsd-install-state.json
@@ -790,8 +846,22 @@ GITIGNORE_LINES
   safe_copy "$SCRIPT_DIR/install-graphify.sh" "$GSD_RECIPE_DIR/scripts/install-graphify.sh"
   chmod +x "$GSD_RECIPE_DIR/scripts/install-graphify.sh"
   ledger_record ".gsd-recipe/scripts/install-graphify.sh"
+  if [ -f "$GRAPHIFY_PROBE_SRC" ]; then
+    safe_copy "$GRAPHIFY_PROBE_SRC" "$GSD_RECIPE_DIR/scripts/graphify-probe.sh"
+    chmod +x "$GSD_RECIPE_DIR/scripts/graphify-probe.sh"
+    ledger_record ".gsd-recipe/scripts/graphify-probe.sh"
+  fi
+  for guard in recipe_knowledge.py recipe_verify_planning.py recipe-verify-knowledge.sh recipe-verify-planning.sh; do
+    src="$SCRIPT_DIR/../../bench/lib/$guard"
+    [ -f "$src" ] || src="$SCRIPT_DIR/$guard"
+    if [ -f "$src" ]; then
+      safe_copy "$src" "$GSD_RECIPE_DIR/scripts/$guard"
+      chmod +x "$GSD_RECIPE_DIR/scripts/$guard" 2>/dev/null || true
+      ledger_record ".gsd-recipe/scripts/$guard"
+    fi
+  done
 
-  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-new-project, recipe-onboard, recipe-start)..."
+  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
   "$TRACKER_SYNC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PLANNING_POLICY_INSTALLER" --yes --target "$TARGET"
@@ -812,6 +882,7 @@ GITIGNORE_LINES
   "$RECIPE_CREATE_EPIC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_HELP_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_PRD_INTAKE_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_NEW_PROJECT_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_ONBOARD_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_START_INSTALLER" --yes --target "$TARGET"
@@ -877,7 +948,7 @@ for k in ('python3', 'git', 'node', 'gh', 'gsd_core', 'graphify'):
   fi
 
   local missing_templates=""
-  for f in PRD.template.md SPEC.template.md TDD.template.md bare_metal.template.md jira-comment.template.md github-pr-comment.template.md; do
+  for f in PRD.template.md JIRA-PRD.input.template.md JIRA-PRD.input.MAPPING.md SPEC.template.md TDD.template.md bare_metal.template.md jira-comment.template.md github-pr-comment.template.md; do
     [ -f "$TEMPLATES_DEST_DIR/$f" ] || missing_templates="$missing_templates $f"
   done
   if [ -z "$missing_templates" ]; then
@@ -925,6 +996,7 @@ code_base_details/
 skills/
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
+docs/RECIPE-SEQUENCE.md
 bench/
 .cursor/get-shit-done/
 .cursor/gsd-install-state.json
@@ -1109,6 +1181,12 @@ if o['enabled']:
     echo "    recipe-help composed — FAIL (recipe-help ledger component absent)"
     ok=0
   fi
+  if ledger_has_component "recipe-prd-intake"; then
+    echo "    recipe-prd-intake composed — pass"
+  else
+    echo "    recipe-prd-intake composed — FAIL (recipe-prd-intake ledger component absent)"
+    ok=0
+  fi
   if ledger_has_component "recipe-new-project"; then
     echo "    recipe-new-project composed — pass"
   else
@@ -1239,6 +1317,7 @@ PY
   "$RECIPE_CREATE_EPIC_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_HELP_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_PRD_INTAKE_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_NEW_PROJECT_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_ONBOARD_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_START_INSTALLER" --uninstall --target "$TARGET"

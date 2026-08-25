@@ -10,10 +10,10 @@ For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMA
 | Requirement | Why |
 |-------------|-----|
 | **Git repo root** | Recipe installers fail closed outside a git repository. |
-| **GSD for Cursor** | Native skills under `.cursor/skills/gsd-*` (e.g. `gsd-new-project`, `gsd-plan-phase`). Install: `node /path/to/gsd-core/bin/install.js --cursor --local --profile=standard` |
+| **GSD for Cursor (full)** | Installed and verified by recipe install. Manual repair: `npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full` |
 | **Recipe skills staged** | At minimum: `recipe-onboard` plus the four skills it chains (see Install below). Full recipe: `recipe-install` or `./.gsd-recipe/scripts/install.sh --yes` |
 | **Atlassian MCP** (Epic + phase tasks only) | Authenticated Jira access when steps 4–5 of the chain actually run. Not needed if you only need PRD + `.planning/` bootstrap. |
-| **PRD input** (optional) | File path, pasted text, or freeform description. If `docs/PRD.md` already exists, the intake step is skipped. |
+| **PRD input** (optional) | Jira/Confluence export (`.templates/JIRA-PRD.input.template.md` shape), file path, pasted text, or freeform description. Output is always canonical `docs/PRD.md`. If `docs/PRD.md` already exists, the intake step is skipped. |
 
 ## Install
 
@@ -68,24 +68,36 @@ With Jira project pre-selected (skips live project picker when Epic step runs):
 recipe-onboard --project KAN
 ```
 
+PRD + planning + knowledge, without Jira Epic or phase tasks:
+
+```text
+recipe-onboard --skip-tracker
+```
+
+That flag still uses one preview-then-confirm gate. Epic and phase-task steps show **skip (flag)**;
+knowledge bootstrap still runs. After PRD + `.planning/` succeed, the skill sets
+`"onboard": {"skip_tracker": true}`. `recipe-start` opens gitignored
+`docs/RECIPE-SEQUENCE.md` with Jira vs skip options.
+
 ### What happens
 
-1. **Read-only check** — which artifacts exist: `docs/PRD.md`, `.planning/ROADMAP.md`, linked Epic in `.planning/STATE.md`, phase-task rows.
-2. **One preview-then-confirm gate** — shows which of the four steps will **run** vs **skip**. Decline → nothing runs.
+1. **Read-only check** — PRD, ROADMAP, Epic, phase tasks, and knowledge-ready marker.
+2. **One preview-then-confirm gate** — shows which of the five steps will **run** vs **skip**.
 3. **Chain** (only missing steps):
    - `recipe-prd-intake` → writes `docs/PRD.md`
-   - `recipe-new-project` → creates `.planning/*` via native `gsd-new-project`
-   - `recipe-create-epic` → Jira Epic + `intake_started` sync
-   - `recipe-create-phase-tasks` → Jira sub-tasks per ROADMAP phase
+   - `recipe-new-project` → creates `.planning/*` via native `gsd-new-project --auto` when `docs/PRD.md` (or another file brief) exists. The wrapper answers native config in-turn (`commit_docs: false`, no `git commit` of gitignored `.planning/`). Missing GSD research agents is a warning plus native's inline roadmap — not a hard stop. Fail closed only if the `gsd-new-project` skill file is missing.
+   - `recipe-create-epic` → Jira Epic + `intake_started` sync (skipped with `--skip-tracker`)
+   - `recipe-create-phase-tasks` → Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker`)
+   - `recipe-bootstrap-knowledge` → mandatory map + graph; verifies and writes
+     `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`
 4. **Stops the whole chain** on the first step that fails or is declined.
-5. **Final summary** — skipped / completed / failed per step.
+5. **Final summary** — skipped / completed / failed per step. Knowledge failure fails onboarding.
 
 ### After onboarding
 
-Continue with the delivery workflow:
+Knowledge is already complete. Continue with planning:
 
 ```text
-recipe-bootstrap-knowledge
 recipe-plan-phase 1
 recipe-run-phase 1
 ```

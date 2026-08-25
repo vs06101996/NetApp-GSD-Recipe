@@ -44,7 +44,7 @@ flowchart TB
 
 | | |
 |--|--|
-| **Inputs** | User PRD file, tracker epic body, or freeform intent |
+| **Inputs** | User PRD file (Jira/Confluence export, canonical PRD, or freeform), tracker epic body, or freeform intent |
 | **Outputs** | PRD conforming to `.templates/PRD.template.md` |
 | **Artifacts** | `docs/PRD.md` or `.planning/intake/PRD.md`; optional `{TRACKER}` epic key in `.planning/STATE.md` |
 | **Human gates** | Operator confirms scope when template was incomplete and agent asked clarifying questions |

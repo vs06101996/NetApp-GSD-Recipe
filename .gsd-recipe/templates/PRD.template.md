@@ -1,7 +1,11 @@
 <!--
-PRD template — canonical source for the `recipe-prd-intake` skill
+PRD template — canonical OUTPUT for the `recipe-prd-intake` skill
 (`.cursor/skills/recipe-prd-intake/SKILL.md`), staged into target repos at
 `.templates/PRD.template.md` by `.gsd-recipe/scripts/install-recipe-prd-intake.sh`.
+
+For Jira/Confluence-shaped INPUT (15-section NetApp PRD), use
+`.templates/JIRA-PRD.input.template.md` and see `.templates/JIRA-PRD.input.MAPPING.md`.
+Intake maps that form into this template; do not write the 15-section shape to docs/PRD.md.
 
 Per docs/netapp-recipe/lld/RUNTIME-LLD.md §1.a: "Outputs: PRD conforming to
 .templates/PRD.template.md". Every section below is required unless marked

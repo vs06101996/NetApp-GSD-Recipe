@@ -60,12 +60,24 @@ STAGED="$TARGET1/.cursor/skills/recipe-onboard/SKILL.md"
 
 grep -q "recipe-prd-intake" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-prd-intake by name" "$rc"
+grep -q -- "--skip-tracker" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents --skip-tracker" "$rc"
+grep -q "skip_tracker" "$STAGED" && rc=0 || rc=$?
+check "staged skill records onboard.skip_tracker in config.json" "$rc"
 grep -q "recipe-new-project" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-new-project by name" "$rc"
 grep -q "recipe-create-epic" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-create-epic by name" "$rc"
 grep -q "recipe-create-phase-tasks" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-create-phase-tasks by name" "$rc"
+grep -q "recipe-bootstrap-knowledge" "$STAGED" && rc=0 || rc=$?
+check "staged skill invokes mandatory recipe-bootstrap-knowledge" "$rc"
+grep -q "recipe-verify-knowledge" "$STAGED" && rc=0 || rc=$?
+check "staged skill verifies knowledge via recipe-verify-knowledge.sh" "$rc"
+grep -qi "do not.*Write tool\|never treat a hand-written marker" "$STAGED" && rc=0 || rc=$?
+check "staged skill rejects hand-written knowledge markers" "$rc"
+grep -qi -- "--skip-tracker.*never skips\\|skip-tracker.*knowledge" "$STAGED" && rc=0 || rc=$?
+check "--skip-tracker skips Jira but not knowledge" "$rc"
 grep -qi "preview-then-confirm\|preview.*confirm" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents a single preview-then-confirm gate" "$rc"
 grep -qi "stop the whole chain\|stops the whole chain" "$STAGED" && rc=0 || rc=$?

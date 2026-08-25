@@ -28,6 +28,25 @@ new_repo() {
   echo "$dir"
 }
 
+# Never let general installer cases touch the developer's real Cursor GSD.
+# Purpose-built prerequisite cases below override this signal again.
+TEST_GSD_ROOT="$(mktemp -d)/.cursor"
+export GSD_SIGNAL_PATH="$TEST_GSD_ROOT/skills/gsd-help/SKILL.md"
+mkdir -p \
+  "$TEST_GSD_ROOT/skills/gsd-help" \
+  "$TEST_GSD_ROOT/skills/gsd-new-project" \
+  "$TEST_GSD_ROOT/skills/gsd-map-codebase" \
+  "$TEST_GSD_ROOT/skills/gsd-graphify" \
+  "$TEST_GSD_ROOT/skills/gsd-ingest-docs" \
+  "$TEST_GSD_ROOT/agents"
+touch \
+  "$GSD_SIGNAL_PATH" \
+  "$TEST_GSD_ROOT/skills/gsd-new-project/SKILL.md" \
+  "$TEST_GSD_ROOT/skills/gsd-map-codebase/SKILL.md" \
+  "$TEST_GSD_ROOT/skills/gsd-graphify/SKILL.md" \
+  "$TEST_GSD_ROOT/skills/gsd-ingest-docs/SKILL.md" \
+  "$TEST_GSD_ROOT/agents/gsd-roadmapper.md"
+
 # A PATH containing everything the installer/test harness needs (python3,
 # git, coreutils, bash, sed, etc.) except a binary named "gh" — simulates
 # an environment where the GitHub CLI is not installed, per the plan's
@@ -80,7 +99,7 @@ check "refuses to install into a non-git directory" "$?"
 TARGET1="$(new_repo)"
 INSTALL_OUT1="$("$INSTALLER" --yes --target "$TARGET1")"
 
-for f in PRD.template.md SPEC.template.md TDD.template.md bare_metal.template.md jira-comment.template.md github-pr-comment.template.md; do
+for f in PRD.template.md JIRA-PRD.input.template.md JIRA-PRD.input.MAPPING.md SPEC.template.md TDD.template.md bare_metal.template.md jira-comment.template.md github-pr-comment.template.md; do
   [ -f "$TARGET1/.templates/$f" ]
   check "fresh install stages .templates/$f" "$?"
 done
@@ -119,6 +138,7 @@ code_base_details/
 skills/
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
+docs/RECIPE-SEQUENCE.md
 bench/
 .cursor/get-shit-done/
 .cursor/gsd-install-state.json
@@ -170,6 +190,17 @@ check "fresh external --target install writes recipe_source pointing at the reci
 [ -x "$TARGET1/.gsd-recipe/scripts/recipe-paths.sh" ]
 check "fresh install stages recipe-paths.sh, executable" "$?"
 
+[ -x "$TARGET1/.gsd-recipe/scripts/recipe-verify-knowledge.sh" ]
+check "fresh install stages recipe-verify-knowledge.sh guardrail" "$?"
+[ -x "$TARGET1/.gsd-recipe/scripts/recipe-verify-planning.sh" ]
+check "fresh install stages recipe-verify-planning.sh guardrail" "$?"
+[ -f "$TARGET1/.gsd-recipe/scripts/recipe_knowledge.py" ]
+check "fresh install stages recipe_knowledge.py guardrail lib" "$?"
+[ -f "$TARGET1/.gsd-recipe/scripts/recipe_verify_planning.py" ]
+check "fresh install stages recipe_verify_planning.py guardrail lib" "$?"
+[ -x "$TARGET1/.gsd-recipe/scripts/graphify-probe.sh" ]
+check "fresh install stages graphify-probe.sh guardrail lib" "$?"
+
 # 3. Cascading composition: install-observer.sh / install-tracker-sync.sh /
 # install-recipe-planning-policy.sh / install-recipe-run-phase.sh actually ran
 [ -f "$TARGET1/.cursor/skills/fotw-observer-bootstrap/SKILL.md" ]
@@ -212,6 +243,8 @@ check "install.sh composes install-recipe-create-epic.sh (skill + runner staged)
 check "install.sh composes install-recipe-create-phase-tasks.sh (skill staged)" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-help/SKILL.md" ] && [ -f "$TARGET1/docs/RECIPE-COMMANDS.md" ] && [ -f "$TARGET1/docs/RECIPE-BENCHMARKS.md" ]
 check "install.sh composes install-recipe-help.sh (skill + docs staged)" "$?"
+[ -f "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" ]
+check "install.sh composes install-recipe-prd-intake.sh (skill staged)" "$?"
 if [ -f "$TARGET1/.cursor/skills/recipe-new-project/SKILL.md" ]; then
   check "install.sh composes install-recipe-new-project.sh (skill staged)" "0"
 fi
@@ -252,6 +285,7 @@ assert 'recipe-observe' in d and d['recipe-observe'], d
 assert 'recipe-create-epic' in d and d['recipe-create-epic'], d
 assert 'recipe-create-phase-tasks' in d and d['recipe-create-phase-tasks'], d
 assert 'recipe-help' in d and d['recipe-help'], d
+assert 'recipe-prd-intake' in d and d['recipe-prd-intake'], d
 assert 'install-core' in d and d['install-core'], d
 if 'recipe-new-project' in d:
     assert d['recipe-new-project'], d
@@ -283,11 +317,12 @@ assert set(d['install-core']).isdisjoint(set(d['recipe-observe'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-epic'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-phase-tasks'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-help'])), d
+assert set(d['install-core']).isdisjoint(set(d['recipe-prd-intake'])), d
 for _opt in ('recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status'):
     if _opt in d:
         assert set(d['install-core']).isdisjoint(set(d[_opt])), d
 "
-check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-new-project/recipe-onboard/recipe-start/recipe-status components (no cross-tracking)" "$?"
+check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-prd-intake/recipe-new-project/recipe-onboard/recipe-start/recipe-status components (no cross-tracking)" "$?"
 
 # capability.json is generated once install() has composed every sub-installer,
 # and validates against the new capability.schema.json (TASK-011).
@@ -415,6 +450,8 @@ echo "$VERIFY_OUT1" | grep -q "recipe-create-phase-tasks composed — pass" && r
 check "--verify output mentions recipe-create-phase-tasks composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-help composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-help composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-prd-intake composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-prd-intake composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-onboard composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-onboard composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-start composed — pass" && rc=0 || rc=$?
@@ -486,6 +523,8 @@ check "uninstall cascades to install-recipe-create-epic.sh --uninstall" "$?"
 check "uninstall cascades to install-recipe-create-phase-tasks.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-help/SKILL.md" ] && [ ! -f "$TARGET3/docs/RECIPE-COMMANDS.md" ] && [ ! -f "$TARGET3/docs/RECIPE-BENCHMARKS.md" ]
 check "uninstall cascades to install-recipe-help.sh --uninstall" "$?"
+[ ! -f "$TARGET3/.cursor/skills/recipe-prd-intake/SKILL.md" ]
+check "uninstall cascades to install-recipe-prd-intake.sh --uninstall" "$?"
 
 [ -d "$TARGET3/code_base_details" ] && [ -f "$TARGET3/code_base_details/README.md" ]
 check "uninstall preserves code_base_details/" "$?"
@@ -555,7 +594,26 @@ rm -rf "$FAKEBIN11"
 # A scratch, never-real GSD-presence signal path, matching the shape of the
 # real ~/.cursor/skills/gsd-help/SKILL.md but rooted under a fresh tmpdir.
 fake_gsd_signal_path() {
-  echo "$(mktemp -d)/cursor-skills/gsd-help/SKILL.md"
+  echo "$(mktemp -d)/.cursor/skills/gsd-help/SKILL.md"
+}
+
+seed_fake_gsd() {
+  local help_signal="$1" cursor_root
+  cursor_root="$(dirname "$(dirname "$(dirname "$help_signal")")")"
+  mkdir -p \
+    "$(dirname "$help_signal")" \
+    "$cursor_root/skills/gsd-new-project" \
+    "$cursor_root/skills/gsd-map-codebase" \
+    "$cursor_root/skills/gsd-graphify" \
+    "$cursor_root/skills/gsd-ingest-docs" \
+    "$cursor_root/agents"
+  touch \
+    "$help_signal" \
+    "$cursor_root/skills/gsd-new-project/SKILL.md" \
+    "$cursor_root/skills/gsd-map-codebase/SKILL.md" \
+    "$cursor_root/skills/gsd-graphify/SKILL.md" \
+    "$cursor_root/skills/gsd-ingest-docs/SKILL.md" \
+    "$cursor_root/agents/gsd-roadmapper.md"
 }
 
 # Polls $2 (a log file) for literal substring $1 for up to $3 seconds.
@@ -614,15 +672,32 @@ write_scratch_planning_config() {
 EOF
 }
 
-# Writes a fake `graphify` binary at $1 that always succeeds — used for the
-# "graphify pre-existing" cases where preflight's `command -v graphify`
-# should pass immediately (no fix attempt).
-write_fake_graphify_present() {
+# Writes a fake `graphify` binary at $1 that passes graphify_functional when
+# bench/lib/graphify-probe.sh is sourced — used for preflight pass cases.
+write_fake_graphify_functional() {
+  cat > "$1" <<'EOF'
+#!/usr/bin/env bash
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  echo "graphify — knowledge graph CLI (test stub)"
+  exit 0
+fi
+exit 0
+EOF
+  chmod +x "$1"
+}
+
+# Writes a no-op stub that graphify_functional rejects.
+write_fake_graphify_stub() {
   cat > "$1" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
   chmod +x "$1"
+}
+
+# Back-compat alias for tests that expect a working graphify on PATH.
+write_fake_graphify_present() {
+  write_fake_graphify_functional "$1"
 }
 
 # Writes a fake `uv` binary at $1 that, when invoked as `uv tool install ...` or
@@ -637,12 +712,20 @@ echo "\$@" >> "$log_file"
 if [ "\$1" = "tool" ] && [ "\$2" = "install" ]; then
   cat > "$fakebin_dir/graphify" <<'INNER'
 #!/usr/bin/env bash
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  echo "graphify — knowledge graph CLI (test stub)"
+  exit 0
+fi
 exit 0
 INNER
   chmod +x "$fakebin_dir/graphify"
 elif [ "\$1" = "pip" ] && [ "\$2" = "install" ]; then
   cat > "$fakebin_dir/graphify" <<'INNER'
 #!/usr/bin/env bash
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  echo "graphify — knowledge graph CLI (test stub)"
+  exit 0
+fi
 exit 0
 INNER
   chmod +x "$fakebin_dir/graphify"
@@ -742,12 +825,24 @@ FAKEBIN12="$(make_scratch_path_excluding "npx")"
 SIGNAL12="$(fake_gsd_signal_path)"
 cat > "$FAKEBIN12/npx" <<'EOF'
 #!/usr/bin/env bash
-mkdir -p "$(dirname "$FAKE_GSD_SIGNAL")"
-touch "$FAKE_GSD_SIGNAL"
+printf '%s\n' "$*" > "$FAKE_GSD_NPX_LOG"
+cursor_root="$(dirname "$(dirname "$(dirname "$FAKE_GSD_SIGNAL")")")"
+mkdir -p "$(dirname "$FAKE_GSD_SIGNAL")" \
+  "$cursor_root/skills/gsd-new-project" "$cursor_root/skills/gsd-map-codebase" \
+  "$cursor_root/skills/gsd-graphify" "$cursor_root/skills/gsd-ingest-docs" \
+  "$cursor_root/agents"
+touch "$FAKE_GSD_SIGNAL" \
+  "$cursor_root/skills/gsd-new-project/SKILL.md" \
+  "$cursor_root/skills/gsd-map-codebase/SKILL.md" \
+  "$cursor_root/skills/gsd-graphify/SKILL.md" \
+  "$cursor_root/skills/gsd-ingest-docs/SKILL.md" \
+  "$cursor_root/agents/gsd-roadmapper.md"
 EOF
 chmod +x "$FAKEBIN12/npx"
 TARGET12="$(new_repo)"
+NPX_LOG12="$(mktemp)"
 (cd "$TARGET12" && PATH="$FAKEBIN12" GSD_SIGNAL_PATH="$SIGNAL12" FAKE_GSD_SIGNAL="$SIGNAL12" \
+  FAKE_GSD_NPX_LOG="$NPX_LOG12" GSD_PREFER_NPX=1 \
   "$INSTALLER" --yes --target "$TARGET12" >/dev/null 2>&1) && rc=0 || rc=$?
 check "install succeeds when GSD is absent and the fake npx auto-fix creates the signal" "$rc"
 python3 -c "
@@ -758,10 +853,15 @@ assert d['prereqs']['gsd_core'] == 'auto_installed', d['prereqs']
 check "gsd_core recorded as auto_installed once the fake npx creates the signal file" "$?"
 [ -f "$SIGNAL12" ]
 check "fake npx auto-fix actually created the GSD signal file" "$?"
+grep -q -- 'gsd-core --cursor --global --profile=full' "$NPX_LOG12"
+check "GSD auto-install uses Cursor full profile (not Claude)" "$?"
+grep -q 'registry.npmjs.org/@opengsd/gsd-core/latest' "$INSTALLER" &&
+  ! grep -q 'strict.ssl=false\|strict_ssl=false' "$INSTALLER"
+check "GSD installer has TLS-verified package fallback without disabling certificate checks" "$?"
 rm -rf "$FAKEBIN12" "$(dirname "$(dirname "$SIGNAL12")")"
 
-# 13. GSD-absent-and-npx-doesn't-fix-it case: fallback fires and, under
-# --yes, warn-only-continues rather than hanging (no stdin available).
+# 13. GSD-absent-and-npx-doesn't-fix-it case: onboarding cannot work without
+# native Cursor GSD, so install fails closed instead of producing a broken repo.
 FAKEBIN13="$(make_scratch_path_excluding "npx")"
 SIGNAL13="$(fake_gsd_signal_path)"
 cat > "$FAKEBIN13/npx" <<'EOF'
@@ -772,15 +872,12 @@ exit 0
 EOF
 chmod +x "$FAKEBIN13/npx"
 TARGET13="$(new_repo)"
-(cd "$TARGET13" && PATH="$FAKEBIN13" GSD_SIGNAL_PATH="$SIGNAL13" run_with_timeout 20 \
+(cd "$TARGET13" && PATH="$FAKEBIN13" GSD_SIGNAL_PATH="$SIGNAL13" GSD_PREFER_NPX=1 run_with_timeout 20 \
   "$INSTALLER" --yes --target "$TARGET13" </dev/null >/dev/null 2>&1) && rc=0 || rc=$?
-check "install --yes does not hang when a missing prereq's auto-fix doesn't resolve it and no stdin is available" "$rc"
-python3 -c "
-import json
-d = json.load(open('$TARGET13/.gsd-recipe/install-report.json'))
-assert d['prereqs']['gsd_core'] == 'fail', d['prereqs']
-"
-check "gsd_core recorded as fail (warn-only) when the fake npx auto-fix is a no-op" "$?"
+[ "$rc" != "0" ]
+check "install fails closed when Cursor GSD auto-install does not resolve it" "$?"
+[ ! -f "$TARGET13/.gsd-recipe/install-report.json" ]
+check "failed Cursor GSD prerequisite aborts before writing install-report.json" "$?"
 rm -rf "$FAKEBIN13" "$(dirname "$(dirname "$SIGNAL13")")"
 
 # 14. python3 hard-fail case: absent, no brew fallback -> install.sh exits
@@ -815,7 +912,7 @@ cat > "$FAKEBIN16/brew" <<EOF
 echo "\$*" >> "$BREW_LOG16"
 EOF
 chmod +x "$FAKEBIN16/brew"
-SIGNAL16="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL16")" && touch "$SIGNAL16"
+SIGNAL16="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL16"
 TARGET16="$(new_repo)"
 (cd "$TARGET16" && PATH="$FAKEBIN16" GSD_SIGNAL_PATH="$SIGNAL16" \
   "$INSTALLER" --yes --target "$TARGET16" >/dev/null 2>&1) && rc=0 || rc=$?
@@ -842,7 +939,7 @@ FAKEBIN17="$(make_scratch_path_excluding "gh brew")"
 # prompt for it — this test's FIFO choreography is deliberately scripted
 # only for the gh prompt cycle.
 write_fake_graphify_present "$FAKEBIN17/graphify"
-SIGNAL17="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL17")" && touch "$SIGNAL17"
+SIGNAL17="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL17"
 TARGET17="$(new_repo)"
 LOG17="$(mktemp)"
 FIFO17="$(mktemp -u)"
@@ -887,7 +984,7 @@ FAKEBIN18="$(make_scratch_path_excluding "graphify uv gsd-tools")"
 write_fake_graphify_present "$FAKEBIN18/graphify"
 LOG18="$(mktemp)"
 write_fake_gsd_tools_shell "$FAKEBIN18/gsd-tools" "$LOG18"
-SIGNAL18="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL18")" && touch "$SIGNAL18"
+SIGNAL18="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL18"
 TARGET18="$(new_repo)"
 write_scratch_planning_config "$TARGET18"
 (cd "$TARGET18" && PATH="$FAKEBIN18" GSD_SIGNAL_PATH="$SIGNAL18" \
@@ -920,7 +1017,7 @@ write_fake_graphify_present "$FAKEBIN18B/graphify"
 LOG18B="$(mktemp)"
 CJS18B="$(mktemp -d)/fake-gsd-tools.cjs"
 write_fake_gsd_tools_cjs "$CJS18B" "$LOG18B"
-SIGNAL18B="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL18B")" && touch "$SIGNAL18B"
+SIGNAL18B="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL18B"
 TARGET18B="$(new_repo)"
 write_scratch_planning_config "$TARGET18B"
 (cd "$TARGET18B" && PATH="$FAKEBIN18B" GSD_SIGNAL_PATH="$SIGNAL18B" GSD_TOOLS_CJS_PATH="$CJS18B" \
@@ -950,7 +1047,7 @@ UVLOG19="$(mktemp)"
 write_fake_uv_installs_graphify "$FAKEBIN19/uv" "$UVLOG19" "$FAKEBIN19"
 LOG19="$(mktemp)"
 write_fake_gsd_tools_shell "$FAKEBIN19/gsd-tools" "$LOG19"
-SIGNAL19="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL19")" && touch "$SIGNAL19"
+SIGNAL19="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL19"
 TARGET19="$(new_repo)"
 write_scratch_planning_config "$TARGET19"
 # HOME is scoped to a scratch dir here because install-graphify.sh (the
@@ -978,7 +1075,7 @@ rm -rf "$FAKEBIN19" "$(dirname "$(dirname "$SIGNAL19")")" "$UVLOG19" "$LOG19" "$
 FAKEBIN20="$(make_scratch_path_excluding "graphify uv gsd-tools")"
 LOG20="$(mktemp)"
 write_fake_gsd_tools_shell "$FAKEBIN20/gsd-tools" "$LOG20"
-SIGNAL20="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL20")" && touch "$SIGNAL20"
+SIGNAL20="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL20"
 TARGET20="$(new_repo)"
 write_scratch_planning_config "$TARGET20"
 (cd "$TARGET20" && PATH="$FAKEBIN20" GSD_SIGNAL_PATH="$SIGNAL20" \
@@ -1009,7 +1106,7 @@ FAKEBIN21="$(make_scratch_path_excluding "graphify uv gsd-tools")"
 write_fake_graphify_present "$FAKEBIN21/graphify"
 LOG21="$(mktemp)"
 write_fake_gsd_tools_shell "$FAKEBIN21/gsd-tools" "$LOG21"
-SIGNAL21="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL21")" && touch "$SIGNAL21"
+SIGNAL21="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL21"
 TARGET21="$(new_repo)"
 (cd "$TARGET21" && PATH="$FAKEBIN21" GSD_SIGNAL_PATH="$SIGNAL21" \
   "$INSTALLER" --yes --target "$TARGET21" >/dev/null 2>&1) && rc=0 || rc=$?
@@ -1033,7 +1130,7 @@ rm -rf "$FAKEBIN21" "$(dirname "$(dirname "$SIGNAL21")")" "$LOG21"
 # install still exits 0, no crash, config.json left untouched.
 FAKEBIN22="$(make_scratch_path_excluding "graphify uv gsd-tools")"
 write_fake_graphify_present "$FAKEBIN22/graphify"
-SIGNAL22="$(fake_gsd_signal_path)"; mkdir -p "$(dirname "$SIGNAL22")" && touch "$SIGNAL22"
+SIGNAL22="$(fake_gsd_signal_path)"; seed_fake_gsd "$SIGNAL22"
 NONEXISTENT_CJS22="$(mktemp -u)/does-not-exist-gsd-tools.cjs"
 TARGET22="$(new_repo)"
 write_scratch_planning_config "$TARGET22"

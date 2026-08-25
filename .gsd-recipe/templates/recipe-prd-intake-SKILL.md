@@ -1,13 +1,14 @@
 ---
 name: recipe-prd-intake
-description: "Recipe: PRD intake for the NetApp GSD recipe (TASK-016). Takes an operator-supplied PRD file, pasted text, or freeform description, fills in .templates/PRD.template.md, writes docs/PRD.md, and — as its final step — invokes fotw-observer-bootstrap so the FOTW observer starts watching this session."
+description: "Recipe: PRD intake for the NetApp GSD recipe (TASK-016). Accepts Jira/Confluence PRD exports (.templates/JIRA-PRD.input.template.md shape), canonical PRD files, pasted text, or freeform description; maps input to .templates/PRD.template.md; writes docs/PRD.md; invokes fotw-observer-bootstrap as its final step."
 ---
 
 <cursor_skill_adapter>
 ## A. Skill Invocation
 
 Invoke by name (`recipe-prd-intake`) with one of:
-- a path to an existing PRD file to ingest,
+- a path to an existing PRD file to ingest (Jira/Confluence export, canonical PRD, or
+  a draft following `.templates/JIRA-PRD.input.template.md`),
 - PRD text pasted directly into the conversation, or
 - a freeform description of the feature/project to turn into a PRD.
 
@@ -21,31 +22,46 @@ falls back to the "no PRD" path (see Do NOT).
   `.gsd-recipe/scripts/install-recipe-prd-intake.sh`). If missing, tell the
   operator to run that installer first, then stop — do not fabricate a
   template inline.
+- `.templates/JIRA-PRD.input.template.md` and
+  `.templates/JIRA-PRD.input.MAPPING.md` (Jira/Confluence **input** shapes —
+  staged by the same installer). If missing, still run intake using
+  `PRD.template.md` only; mention the Jira input templates are optional.
 - `docs/` directory may or may not exist yet — create it if needed.
 
 ## C. Tool Usage
 
-1. `Read`: load `.templates/PRD.template.md` to get the required section
-   list (Problem, Goals, Non-Goals, Requirements, Out of Scope; Open
+1. `Read`: load `.templates/PRD.template.md` to get the required **output**
+   section list (Problem, Goals, Non-Goals, Requirements, Out of Scope; Open
    Questions is optional).
-2. Resolve the input source:
+2. `Read`: load `.templates/JIRA-PRD.input.MAPPING.md` when present — it defines
+   how NetApp Jira/Confluence PRD exports map into the canonical sections.
+3. Resolve the input source:
    - File path given → `Read` it.
    - PRD text pasted inline → use it directly.
    - Freeform description only → draft a first-pass PRD against the
      template sections from that description.
-   - Nothing at all → do not proceed to step 3; see Do NOT.
-3. For any **required** template section that ends up empty or clearly
-   underspecified, ask the operator a clarifying question before writing the
+   - Nothing at all → do not proceed to step 4; see Do NOT.
+4. Classify the input shape:
+   - **Jira/Confluence PRD** — headings like `# 1. Objective`, `# 5. Product
+     Feature Requirements`, or `Product Non-Requirements` (see MAPPING.md).
+     Map sections into the canonical `PRD.template.md` structure using
+     `.templates/JIRA-PRD.input.MAPPING.md`. Do **not** copy all 15 sections
+     into `docs/PRD.md`.
+   - **Already canonical** — input already matches `PRD.template.md` section
+     names → normalize lightly (remove HTML comments, fix heading levels).
+   - **Freeform / partial** → draft directly against `PRD.template.md`.
+5. For any **required** canonical section that ends up empty or clearly
+   underspecified after mapping, ask the operator a clarifying question before writing the
    file (human gate, per `RUNTIME-LLD.md` §1.a "Human gates: Operator
    confirms scope when template was incomplete and agent asked clarifying
    questions"). Do not guess and silently fill required sections.
-4. `Read` (check first): if `docs/PRD.md` already exists, do not overwrite
+6. `Read` (check first): if `docs/PRD.md` already exists, do not overwrite
    it silently — show the operator a diff/summary of what would change and
    get explicit confirmation before proceeding.
-5. `Write`: `docs/PRD.md`, conforming to `.templates/PRD.template.md`'s
-   section structure, with the template's leading HTML comment block
-   removed.
-6. Final step, always, once `docs/PRD.md` is written: invoke the
+7. `Write`: `docs/PRD.md`, conforming to `.templates/PRD.template.md`'s
+   section structure only, with the template's leading HTML comment block
+   removed. Never write the 15-section Jira/Confluence form to `docs/PRD.md`.
+8. Final step, always, once `docs/PRD.md` is written: invoke the
    `fotw-observer-bootstrap` skill. Do not inline its logic here — it owns
    its own guard (`can-spawn`) and its own subagent spec. If the observer
    isn't installed or is disabled, that skill silently no-ops; treat that as
@@ -65,10 +81,13 @@ falls back to the "no PRD" path (see Do NOT).
   `gsd-discuss-phase` first, then re-invoke `recipe-prd-intake` with its
   output. GSD stays the orchestrator (`ARCHITECTURE.md` principle); this
   skill is a thin recipe wrapper, not a replacement for native GSD commands.
-- Do not skip step 6 (invoking `fotw-observer-bootstrap`) even if you're
+- Do not skip step 8 (invoking `fotw-observer-bootstrap`) even if you're
   unsure whether the observer is installed — that skill's own guard handles
   the "not installed" case safely and silently.
 - Do not overwrite an existing `docs/PRD.md` without operator confirmation.
+- Do not write Jira/Confluence 15-section PRD structure to `docs/PRD.md` —
+  that input shape is for intake only; output is always canonical
+  `PRD.template.md`.
 </cursor_skill_adapter>
 
 # recipe-prd-intake — PRD intake (TASK-016)
@@ -88,12 +107,27 @@ not require `install.sh`; it has its own installer,
 
 ## Workflow
 
-1. Get a PRD from the operator (file, pasted text, or freeform description).
-2. Fill in `.templates/PRD.template.md`'s sections; ask clarifying questions
-   for anything required and missing.
-3. Write `docs/PRD.md` (never overwrite an existing one without asking).
-4. Invoke `fotw-observer-bootstrap` — the one-line integration point that
+1. Get a PRD from the operator (Jira/Confluence export, file, pasted text, or
+   freeform description).
+2. If input matches the NetApp Jira/Confluence PRD shape, map it using
+   `.templates/JIRA-PRD.input.MAPPING.md`; otherwise fill
+   `.templates/PRD.template.md`'s sections directly.
+3. Ask clarifying questions for anything required and missing.
+4. Write `docs/PRD.md` in **canonical** form only (never overwrite without asking).
+5. Invoke `fotw-observer-bootstrap` — the one-line integration point that
    skill's own docs describe as its intended caller.
+
+## Jira / Confluence input (not output)
+
+NetApp teams often start from the official Confluence PRD template (15 numbered
+sections). That shape is staged as **input only**:
+
+- `.templates/JIRA-PRD.input.template.md` — skeleton for exports/pastes
+- `.templates/JIRA-PRD.input.MAPPING.md` — how sections become Problem, Goals,
+  Requirements, etc.
+
+`recipe-create-epic` still reads **canonical** `docs/PRD.md` when drafting the
+Epic body — same as today.
 
 ## Why `docs/PRD.md` and not `.planning/intake/PRD.md`
 

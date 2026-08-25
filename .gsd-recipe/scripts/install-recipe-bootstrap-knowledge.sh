@@ -135,7 +135,8 @@ install() {
   echo "Invoke 'recipe-bootstrap-knowledge [--fast]' by name to idempotently"
   echo "scaffold any missing piece of the OKF-shaped .knowledge/ skeleton, then"
   echo "call native /gsd-map-codebase [--fast], /gsd-graphify build, and (if"
-  echo ".gsd-recipe/ingest-manifest.yaml exists) /gsd-ingest-docs directly."
+  echo ".gsd-recipe/ingest-manifest.yaml exists) /gsd-ingest-docs directly, then"
+  echo "write .gsd-recipe/KNOWLEDGE-BOOTSTRAPPED only after required outputs verify."
   echo "Remove entirely: $0 --uninstall --target $TARGET"
 }
 

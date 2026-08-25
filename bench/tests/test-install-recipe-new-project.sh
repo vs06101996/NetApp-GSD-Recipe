@@ -60,6 +60,16 @@ STAGED="$TARGET1/.cursor/skills/recipe-new-project/SKILL.md"
 
 grep -q "gsd-new-project" "$STAGED" && rc=0 || rc=$?
 check "staged skill references calling native gsd-new-project directly" "$rc"
+grep -q -- "--auto" "$STAGED" && rc=0 || rc=$?
+check "staged skill uses gsd-new-project --auto when a PRD/file exists" "$rc"
+grep -q "commit_docs" "$STAGED" && rc=0 || rc=$?
+check "staged skill sets commit_docs false" "$rc"
+grep -qi "do not.*git commit\|do not commit" "$STAGED" && rc=0 || rc=$?
+check "staged skill tells the agent not to commit .planning" "$rc"
+grep -qi "inline" "$STAGED" && grep -qi "agents" "$STAGED" && rc=0 || rc=$?
+check "staged skill treats missing GSD agents as inline path, not fail" "$rc"
+grep -qi "fail closed" "$STAGED" && rc=0 || rc=$?
+check "staged skill fail-closes when gsd-new-project is not invokable" "$rc"
 grep -q "gsd-import" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the --import routing to native gsd-import" "$rc"
 grep -qi "first-init\|re-init" "$STAGED" && rc=0 || rc=$?
@@ -70,6 +80,8 @@ grep -q "docs/PRD.md" "$STAGED" && rc=0 || rc=$?
 check "staged skill references docs/PRD.md as a preferred bootstrap input" "$rc"
 grep -q "PROJECT.md" "$STAGED" && rc=0 || rc=$?
 check "staged skill references re-verifying PROJECT.md" "$rc"
+grep -q "recipe-verify-planning" "$STAGED" && rc=0 || rc=$?
+check "staged skill uses recipe-verify-planning guardrail" "$rc"
 grep -q "intake_started" "$STAGED" && rc=0 || rc=$?
 check "staged skill references intake_started" "$rc"
 grep -qi "never sync\|does not sync\|do not sync" "$STAGED" && rc=0 || rc=$?

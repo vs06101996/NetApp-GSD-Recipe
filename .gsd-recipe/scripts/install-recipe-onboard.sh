@@ -124,8 +124,8 @@ install() {
   ledger_files | sed 's/^/  - /'
   echo
   echo "Invoke 'recipe-onboard [<PRD source>] [--project KEY] [--issue-type NAME] [--force]'"
-  echo "by name to run the full onboarding chain (PRD intake -> project bootstrap ->"
-  echo "Epic creation -> phase-task creation), skipping any step whose artifact"
+  echo "by name to run onboarding (PRD -> project -> optional Jira Epic/tasks ->"
+  echo "mandatory knowledge bootstrap), skipping any step whose artifact"
   echo "already exists, after one soft preview-then-confirm gate — stopping the"
   echo "whole chain immediately on the first step that fails or is declined."
   echo "Remove entirely: $0 --uninstall --target $TARGET"

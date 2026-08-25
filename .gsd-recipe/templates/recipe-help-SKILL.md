@@ -12,7 +12,7 @@ Invoke by name (`recipe-help`) with optional arguments (same spirit as `gsd-help
 |------|----------|
 | _(none)_ | Default tour: delivery workflow + top recipe commands |
 | `--next` | Same next-step coach as `recipe-start` (read-only; run `recipe-next.sh`) |
-| `--stuck` | Short FAQ: clone lost skills, no Epic, unassigned tickets, status did not move |
+| `--stuck` | Short FAQ: clone lost skills, PRD input formats, no Epic, unassigned tickets, status did not move |
 | `--brief` | One-line summary per command (recipe + harness CLI) |
 | `--full` | Display full `docs/RECIPE-COMMANDS.md` |
 | `--brief <topic>` | Lookup one command (e.g. `recipe-plan-phase`, `install`, `gsd-plan-phase`) |
@@ -42,14 +42,15 @@ Examples:
 1. **Resolve the reference doc.** Read `docs/RECIPE-COMMANDS.md` at the project root if it exists. Otherwise resolve via `recipe-paths.sh` from the harness source, or synthesize a minimal answer from this skill's built-in summary below.
 
 2. **Apply the requested mode** from § A:
-   - **Default:** Print the Quick start workflow from the doc, then the **Jira tickets (assign + status)** section if present, then a numbered list of the most-used commands: `recipe-start`, `recipe-status`, `recipe-help --next`, `recipe-onboard`, `recipe-bootstrap-knowledge`, `recipe-plan-phase`, `recipe-run-phase`, `recipe-run-phases`, `recipe-verify-feature`, `recipe-review-ship`, `recipe-settle`, `recipe-sync`, `recipe-help`. Add one line: “Stuck? Type `recipe-help --next`.”
+   - **Default:** Print the Quick start workflow from the doc, then the **PRD input formats** and **Jira tickets (assign + status)** sections if present, then a numbered list of the most-used commands: `recipe-start`, `recipe-status`, `recipe-help --next`, `recipe-onboard`, `recipe-bootstrap-knowledge`, `recipe-plan-phase`, `recipe-run-phase`, `recipe-run-phases`, `recipe-verify-feature`, `recipe-review-ship`, `recipe-settle`, `recipe-sync`, `recipe-help`. Add one line: “Stuck? Type `recipe-help --next`.”
    - **`--next`:** Run `.gsd-recipe/scripts/recipe-next.sh --target <repo root>` (same helper as `recipe-start`). Print its stdout verbatim. Do **not** invoke other skills. Do **not** ask Yes/No to run them (that is `recipe-start` only).
    - **`--stuck`:** Print this FAQ (do not invent product-specific names):
      1. Skills missing after clone/branch — re-run `./bench/runners/install-recipe-to-target.sh --target THIS_REPO --yes` from the recipe source repo. See clone playbook in the recipe docs (`CLONE.md`). Do not type `recipe-install` until skills exist.
-     2. Have PRD + ROADMAP but no Epic — type `recipe-onboard` (or `recipe-create-epic`). Pass `--assignee "Your Name"` so the Epic is assigned.
-     3. Tickets created unassigned — re-run create with `--assignee`, or set `"assignee"` in `.gsd-recipe/config.json`.
-     4. Sync commented but status did not move — board may lack that name (e.g. no **In Review** on a 3-column board). Recipe warns and still comments. Override: `gsd-jira-sync … --transition "In Progress"`.
-     5. Don’t know what to type — `recipe-start`, `recipe-status`, or `recipe-help --next`.
+     2. Have a Jira/Confluence PRD export — pass it to `recipe-prd-intake @path/to/file.md` or `recipe-onboard @path/to/file.md`. The 15-section shape is input only; use `.templates/JIRA-PRD.input.template.md` and its mapping guide. Output is canonical `docs/PRD.md`.
+     3. Have PRD + ROADMAP but no Epic — type `recipe-onboard` (or `recipe-create-epic`). Pass `--assignee "Your Name"` so the Epic is assigned. For no Jira: `recipe-onboard --skip-tracker`.
+     4. Tickets created unassigned — re-run create with `--assignee`, or set `"assignee"` in `.gsd-recipe/config.json`.
+     5. Sync commented but status did not move — board may lack that name (e.g. no **In Review** on a 3-column board). Recipe warns and still comments. Override: `gsd-jira-sync … --transition "In Progress"`.
+     6. Don’t know what to type — `recipe-start`, `recipe-status`, or `recipe-help --next`.
    - **`--brief`:** Extract the recipe-skills tables; one line per row (`command — purpose`).
    - **`--full`:** Output the entire markdown file verbatim (no commentary).
    - **`--brief <topic>`:** Find the matching row or section; print that entry only. If not found, say so and suggest `recipe-help --brief`.
@@ -74,12 +75,14 @@ Read-only catalog of NetApp GSD Recipe commands. Full generated reference: [docs
 
 ```text
 recipe-start  (or recipe-status / recipe-help --next)
-→ recipe-onboard → recipe-bootstrap-knowledge
+→ recipe-onboard  (includes mandatory knowledge bootstrap)
 → recipe-plan-phase / recipe-run-phase (or recipe-run-phases)
 → recipe-verify-feature → recipe-review-ship → recipe-settle
 ```
 
 **Jira:** `--assignee "Name"` on onboard/create-epic/phase-tasks (or config `assignee` / git user.name). New issues go to **To Do**. `gsd-jira-sync` comments **and** transitions (In Progress / In Review / Done). No matching board status → warn, comment still posts.
+
+**PRD input:** Jira/Confluence exports are accepted by `recipe-prd-intake` and `recipe-onboard`. Start from `.templates/JIRA-PRD.input.template.md`; mapping is in `.templates/JIRA-PRD.input.MAPPING.md`. This is input only — output remains canonical `docs/PRD.md`.
 
 **Harness CLI:** `bin/recipe install|reset` · `.gsd-recipe/scripts/install.sh --verify`
 
