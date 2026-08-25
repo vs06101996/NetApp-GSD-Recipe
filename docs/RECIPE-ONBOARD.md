@@ -84,7 +84,9 @@ knowledge bootstrap still runs. After PRD + `.planning/` succeed, the skill sets
 1. **Read-only check** — PRD, ROADMAP, Epic, phase tasks, and knowledge-ready marker.
 2. **One preview-then-confirm gate** — shows which of the five steps will **run** vs **skip**.
 3. **Chain** (only missing steps):
-   - `recipe-prd-intake` → writes `docs/PRD.md`
+   - `recipe-prd-intake` → writes `docs/PRD.md` (skipped if that file already exists)
+   - `fotw-observer-bootstrap` → starts the fly-on-the-wall observer once `docs/PRD.md` exists,
+     including when intake was skipped. No-op if disabled or already active; never blocks onboard.
    - `recipe-new-project` → creates `.planning/*` via native `gsd-new-project --auto` when `docs/PRD.md` (or another file brief) exists. The wrapper answers native config in-turn (`commit_docs: false`, no `git commit` of gitignored `.planning/`). Missing GSD research agents is a warning plus native's inline roadmap — not a hard stop. Fail closed only if the `gsd-new-project` skill file is missing.
    - `recipe-create-epic` → Jira Epic + `intake_started` sync (skipped with `--skip-tracker`)
    - `recipe-create-phase-tasks` → Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker`)

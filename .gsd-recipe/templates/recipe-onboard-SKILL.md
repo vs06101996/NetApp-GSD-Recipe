@@ -80,7 +80,9 @@ Examples:
    per-step gates (see "Why one preview gate" below).
    - **Decline** → stop here entirely. Nothing has been invoked. Report "operator declined —
      onboarding not run" as the final summary.
-   - **Confirm** → continue to step 3.
+   - **Confirm** → continue to step 3. Also note in the preview (not a sixth confirmable step):
+     once `docs/PRD.md` exists, this chain will invoke `fotw-observer-bootstrap` even if PRD
+     intake is skipped.
 
 3. **Step "PRD intake" — only if step 1 determined `docs/PRD.md` is missing.** Invoke
    `recipe-prd-intake` by name (skill-to-skill, same turn), forwarding whatever PRD source was
@@ -91,9 +93,17 @@ Examples:
    - `docs/PRD.md` still doesn't exist after this call returns → **this step failed.** Stop the
      whole chain immediately. Record "PRD intake" as the blocking step with reason
      "recipe-prd-intake did not produce docs/PRD.md", then print the final summary.
-   - `docs/PRD.md` now exists → continue to step 4.
+   - `docs/PRD.md` now exists → continue to the FOTW observer hook (next), then step 4.
    - **If step 1 determined this step should skip:** do not invoke `recipe-prd-intake` at all;
-     continue straight to step 4.
+     still run the FOTW observer hook below, then continue to step 4.
+
+3b. **FOTW observer hook — once `docs/PRD.md` exists, whether intake ran or was skipped.**
+    Invoke `fotw-observer-bootstrap` by name (skill-to-skill, same turn). Do not inline its
+    guard, target-descriptor write, or `Task` spawn — that skill owns `can-spawn` and will
+    no-op when the observer is uninstalled, disabled, or already active for this session.
+    Treat any no-op as **success for this chain**, not a blocking failure. This closes the
+    gap where skipping PRD intake (because `docs/PRD.md` already existed) never started the
+    observer. If intake just ran, a second invoke in the same turn is expected and harmless.
 
 4. **Step "project bootstrap" — only if step 1 determined `.planning/ROADMAP.md` is missing.**
    Invoke `recipe-new-project` by name (skill-to-skill, same turn) if it is staged at
@@ -173,7 +183,8 @@ Examples:
   `recipe-create-phase-tasks` already documents for itself — clarifying-question gates, first-init
   routing, live Jira project/issue-type questions, per-row create+link logic, or any of their own
   tracker syncs. This skill only ever decides, per artifact, *whether* to invoke each one, in what
-  order, and whether to keep going or stop.
+  order, and whether to keep going or stop. Do not inline `fotw-observer-bootstrap` spawn logic;
+  invoke it by name after PRD exists (step 3b).
 - Do not fabricate `docs/PRD.md`, `.planning/ROADMAP.md`, a Jira Epic key, or any phase-task issue
   key — every one of those is exclusively the invoked sibling skill's own real output. If a step's
   own call doesn't produce its artifact, that is a failure to report (§ C), never a value to invent.
@@ -212,6 +223,8 @@ operator still had to know and manually sequence all five.
    `--skip-tracker`, Epic and phase-task steps show **skip (flag)**. Without it, mention
    `recipe-onboard --skip-tracker` as the no-Jira option. Decline → stop, nothing invoked.
 3. PRD intake (skip if `docs/PRD.md` exists) → invoke `recipe-prd-intake` by name.
+3b. FOTW observer → invoke `fotw-observer-bootstrap` once `docs/PRD.md` exists (run **or** skip
+    of intake). No-op if already active/disabled; never fails the chain.
 4. Project bootstrap (skip if `.planning/ROADMAP.md` exists) → invoke `recipe-new-project` by name,
    or fall back to native `gsd-new-project` directly if that sibling skill isn't staged.
 5. Epic creation (skip if `--skip-tracker`, or if an Epic is already linked) → invoke

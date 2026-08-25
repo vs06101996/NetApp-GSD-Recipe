@@ -492,7 +492,7 @@ CATALOG = [
         "id": "recipe-onboard",
         "task_id": "TASK-037",
         "kind": "cursor-skill",
-        "description": "Single onboarding orchestrator closing the 'no single on-ramp' SDLC coverage gap. Chains, in order, whichever of recipe-prd-intake / recipe-new-project / recipe-create-epic / recipe-create-phase-tasks are actually missing their artifact (docs/PRD.md, .planning/ROADMAP.md, a linked Jira Epic, per-phase Jira sub-tasks), after one soft preview-then-confirm gate. Stops the whole chain on the first step that fails or is declined; never re-implements any invoked skill's own logic or duplicates its Jira sync.",
+        "description": "Single onboarding orchestrator closing the 'no single on-ramp' SDLC coverage gap. Chains, in order, whichever of recipe-prd-intake / recipe-new-project / recipe-create-epic / recipe-create-phase-tasks are actually missing their artifact (docs/PRD.md, .planning/ROADMAP.md, a linked Jira Epic, per-phase Jira sub-tasks), after one soft preview-then-confirm gate. Once docs/PRD.md exists (intake ran or skipped), invokes fotw-observer-bootstrap; observer no-op does not fail the chain. Stops the whole chain on the first required step that fails or is declined; never re-implements any invoked skill's own logic or duplicates its Jira sync.",
         "invoke_name": "recipe-onboard",
         "staged_path": ".cursor/skills/recipe-onboard/SKILL.md",
         "installer": ".gsd-recipe/scripts/install-recipe-onboard.sh",

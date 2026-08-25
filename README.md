@@ -31,7 +31,7 @@ Type these by name in Cursor Agent (not `/slash`).
 | A feature and you want Jira Epic + tasks | `recipe-onboard` |
 | Nothing written yet | `recipe-onboard` (it asks you to paste or describe) |
 
-Onboard runs PRD intake → planning bootstrap → optional Jira → knowledge bootstrap. It skips steps whose artifacts already exist and stops on the first failure.
+Onboard runs PRD intake → FOTW observer bootstrap → planning bootstrap → optional Jira → knowledge bootstrap. It skips steps whose artifacts already exist and stops on the first failure. Observer bootstrap still runs when intake is skipped because `docs/PRD.md` already exists.
 
 **PRD input:** Jira/Confluence 15-section PRDs are **input only**. Fill or paste one using `.templates/JIRA-PRD.input.template.md`; intake always writes canonical `docs/PRD.md`.
 
@@ -107,6 +107,7 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 | Step | Skill | Artifact |
 |------|-------|----------|
 | 1 | `recipe-prd-intake` | `docs/PRD.md` (from Jira/Confluence export, canonical PRD, or freeform) |
+| 1b | `fotw-observer-bootstrap` | Starts the observer once a PRD exists (also when intake is skipped; no-op if already active) |
 | 2 | `recipe-new-project` | `.planning/PROJECT.md`, `ROADMAP.md`, `STATE.md` |
 | 3 | `recipe-create-epic` | Jira Epic + `intake_started` sync (skipped with `--skip-tracker`) |
 | 4 | `recipe-create-phase-tasks` | Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker`) |

@@ -31,7 +31,8 @@ For a NetApp 15-section Jira/Confluence PRD, start from
 `.templates/JIRA-PRD.input.MAPPING.md` and writes canonical `docs/PRD.md`.
 
 Artifacts: `docs/PRD.md`, `.planning/ROADMAP.md`, and verified knowledge. Skip-tracker sets
-`onboard.skip_tracker` (no Epic) but does not skip knowledge.
+`onboard.skip_tracker` (no Epic) but does not skip knowledge. Onboard also invokes
+`fotw-observer-bootstrap` once a PRD exists, including when intake is skipped.
 
 ## 2. Plan then run (per phase N)
 
