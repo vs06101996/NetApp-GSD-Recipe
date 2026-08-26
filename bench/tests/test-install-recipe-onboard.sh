@@ -60,6 +60,10 @@ STAGED="$TARGET1/.cursor/skills/recipe-onboard/SKILL.md"
 
 grep -q "recipe-prd-intake" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-prd-intake by name" "$rc"
+grep -q "fotw-observer-bootstrap" "$STAGED" && rc=0 || rc=$?
+check "staged skill invokes fotw-observer-bootstrap after PRD exists" "$rc"
+grep -qi "whether intake ran or was skipped\|skip.*intake.*observer\|observer hook" "$STAGED" && rc=0 || rc=$?
+check "staged skill starts FOTW even when PRD intake is skipped" "$rc"
 grep -q -- "--skip-tracker" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents --skip-tracker" "$rc"
 grep -q "skip_tracker" "$STAGED" && rc=0 || rc=$?
