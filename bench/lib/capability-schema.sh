@@ -522,6 +522,17 @@ CATALOG = [
         "ledger_component": "recipe-status",
     },
     {
+        "id": "recipe-update",
+        "task_id": "TASK-058",
+        "kind": "cursor-skill",
+        "description": "In-place recipe upgrade: fetch recipe_source, preview incoming commits, Yes/No, restage via install.sh --yes without wiping planning or custom templates. recipe-start may run a read-only --check nudge; restage is never automatic.",
+        "invoke_name": "recipe-update",
+        "staged_path": ".cursor/skills/recipe-update/SKILL.md",
+        "installer": ".gsd-recipe/scripts/install-recipe-update.sh",
+        "composed_by_install_sh": True,
+        "ledger_component": "recipe-update",
+    },
+    {
         "id": "recipe-help",
         "task_id": "TASK-038",
         "kind": "cursor-skill",
