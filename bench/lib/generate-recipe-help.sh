@@ -70,7 +70,7 @@ def status_for(entry):
 
 WORKFLOW_GROUPS = [
     ("Install and verify", [
-        "recipe-start", "recipe-status", "recipe-install", "recipe-validate-tokens", "recipe-install-verify",
+        "recipe-start", "recipe-status", "recipe-update", "recipe-install", "recipe-validate-tokens", "recipe-install-verify",
     ]),
     ("Onboard", [
         "recipe-onboard", "recipe-prd-intake", "recipe-new-project",

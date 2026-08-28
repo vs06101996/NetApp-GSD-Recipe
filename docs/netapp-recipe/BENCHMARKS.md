@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — benchmarks
 
-_Generated: 2026-07-23T12:19:14Z_
+_Generated: 2026-08-28T05:10:30Z_
 
 Two tiers of evidence:
 

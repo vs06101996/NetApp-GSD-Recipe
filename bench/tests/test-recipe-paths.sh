@@ -97,11 +97,11 @@ check "resolve() finds a self-install target's own local copy with no recipe_sou
 VERIFY_OUT="$("$INSTALLER" --verify --target "$TARGET1" 2>&1)" || true
 printf '%s' "$VERIFY_OUT" | grep -q "recipe-paths.sh staged — pass"
 check "install.sh --verify reports recipe-paths.sh staged as pass" "$?"
-printf '%s' "$VERIFY_OUT" | grep -q "recipe_source — points at a real recipe source repo — pass"
+printf '%s' "$VERIFY_OUT" | grep -q "recipe_source resolvable (self-install or recorded in config.json) — pass"
 check "install.sh --verify reports a valid recipe_source as pass" "$?"
 
 VERIFY_OUT_SELF="$(cd "$COPY" && ./.gsd-recipe/scripts/install.sh --verify 2>&1)" || true
-printf '%s' "$VERIFY_OUT_SELF" | grep -q "recipe_source — not set (self-install, or predates this mechanism) — pass"
+printf '%s' "$VERIFY_OUT_SELF" | grep -q "recipe_source resolvable (self-install or recorded in config.json) — pass"
 check "install.sh --verify reports an unset recipe_source as pass on self-install" "$?"
 
 rm -rf "$TARGET1" "$(dirname "$COPY")"

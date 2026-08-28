@@ -2,7 +2,7 @@
 
 Structured feature delivery in Cursor: PRD → planning → execution → verification → Jira/GitHub sync.
 
-In Cursor, type **`recipe-help`** for the command catalog, **`recipe-start`** for the next step.
+In Cursor, type **`recipe-help`** for the command catalog, **`recipe-start`** for the next step (it also **checks** for recipe-source updates and tells you to type `recipe-update` if any; it does not restage).
 
 ## 1. Install
 

@@ -147,8 +147,8 @@ check "self-install into a copy of this repo does not error (src==dest collision
 check "self-install uninstall does not error" "$rc"
 [ -f "$COPY/.gsd-recipe/templates/recipe-observe-SKILL.md" ]
 check "self-uninstall preserves the canonical skill template source" "$?"
-[ -f "$COPY/.gsd-recipe/lib/observer-lib.sh" ]
-check "self-install/uninstall never removes this repo's own bench/lib/observer-lib.sh copy under .gsd-recipe/lib" "$?"
+[ -f "$COPY/bench/lib/observer-lib.sh" ]
+check "self-install/uninstall never removes this repo's own bench/lib/observer-lib.sh" "$?"
 
 echo "---"
 echo "$pass passed, $fail failed"

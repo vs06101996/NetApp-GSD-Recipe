@@ -257,6 +257,9 @@ fi
 if [ -f "$TARGET1/.cursor/skills/recipe-status/SKILL.md" ]; then
   check "install.sh composes install-recipe-status.sh (skill staged)" "0"
 fi
+if [ -f "$TARGET1/.cursor/skills/recipe-update/SKILL.md" ] && [ -f "$TARGET1/.gsd-recipe/lib/recipe-update.sh" ] && [ -f "$TARGET1/.gsd-recipe/lib/recipe-update-nudge.sh" ]; then
+  check "install.sh composes install-recipe-update.sh (skill + lib + nudge staged)" "0"
+fi
 [ -f "$TARGET1/.gsd-recipe/scripts/recipe-next.sh" ]
 check "install.sh stages recipe-next.sh with recipe-start" "$?"
 [ -f "$TARGET1/.gsd-recipe/scripts/recipe-status.sh" ]
@@ -295,6 +298,8 @@ if 'recipe-start' in d:
     assert d['recipe-start'], d
 if 'recipe-status' in d:
     assert d['recipe-status'], d
+if 'recipe-update' in d:
+    assert d['recipe-update'], d
 # install.sh must not re-ledger files the sub-installers already track under
 # their own component names.
 assert set(d['install-core']).isdisjoint(set(d['fotw-observer'])), d
@@ -318,11 +323,11 @@ assert set(d['install-core']).isdisjoint(set(d['recipe-create-epic'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-phase-tasks'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-help'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-prd-intake'])), d
-for _opt in ('recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status'):
+for _opt in ('recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status', 'recipe-update'):
     if _opt in d:
         assert set(d['install-core']).isdisjoint(set(d[_opt])), d
 "
-check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-prd-intake/recipe-new-project/recipe-onboard/recipe-start/recipe-status components (no cross-tracking)" "$?"
+check "ledger separates install-core from fotw-observer/tracker-sync/recipe-planning-policy/recipe-run-phase/recipe-plan-phase/recipe-validate-tokens/recipe-bootstrap-knowledge/recipe-install-verify/recipe-run-phases/recipe-verify-feature/recipe-review-ship/recipe-settle/gsd-jira-sync/recipe-sync/recipe-pr-comment/recipe-install/recipe-observe/recipe-create-epic/recipe-create-phase-tasks/recipe-prd-intake/recipe-new-project/recipe-onboard/recipe-start/recipe-status/recipe-update components (no cross-tracking)" "$?"
 
 # capability.json is generated once install() has composed every sub-installer,
 # and validates against the new capability.schema.json (TASK-011).
@@ -458,6 +463,8 @@ echo "$VERIFY_OUT1" | grep -q "recipe-start composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-start composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-status composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-status composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-update composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-update composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "config.schema.json — strict schema validation — pass" && rc=0 || rc=$?
 check "--verify output mentions config.schema.json strict validation" "$rc"
 
@@ -525,6 +532,8 @@ check "uninstall cascades to install-recipe-create-phase-tasks.sh --uninstall" "
 check "uninstall cascades to install-recipe-help.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-prd-intake/SKILL.md" ]
 check "uninstall cascades to install-recipe-prd-intake.sh --uninstall" "$?"
+[ ! -f "$TARGET3/.cursor/skills/recipe-update/SKILL.md" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-update.sh" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-update-nudge.sh" ]
+check "uninstall cascades to install-recipe-update.sh --uninstall" "$?"
 
 [ -d "$TARGET3/code_base_details" ] && [ -f "$TARGET3/code_base_details/README.md" ]
 check "uninstall preserves code_base_details/" "$?"

@@ -61,8 +61,12 @@ grep -q "RECIPE-SEQUENCE.md" "$STAGED" && rc=0 || rc=$?
 check "staged skill opens RECIPE-SEQUENCE.md" "$rc"
 grep -q "JIRA-PRD.input.template.md" "$STAGED" && rc=0 || rc=$?
 check "staged skill exposes Jira PRD input template" "$rc"
-grep -q "JIRA-PRD.input.MAPPING.md" "$TARGET1/docs/RECIPE-SEQUENCE.md" && rc=0 || rc=$?
-check "staged sequence exposes Jira PRD input mapping" "$rc"
+grep -q "recipe-update-nudge.sh" "$STAGED" && rc=0 || rc=$?
+check "staged skill runs recipe-update-nudge.sh" "$rc"
+grep -q "RECIPE_UPDATE_CHECK" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents RECIPE_UPDATE_CHECK opt-out" "$rc"
+grep -qi "never restages" "$STAGED" && rc=0 || rc=$?
+check "staged skill will not restage from the start Yes/No" "$rc"
 
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 LEDGER_COUNT2="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-start']))")"
@@ -106,6 +110,10 @@ grep -q 'ledger_has_component "recipe-start"' "$INSTALL_SH" && rc=0 || rc=$?
 check "install.sh's verify() checks the recipe-start ledger component" "$rc"
 grep -q "recipe-start" "$INSTALL_SH" && rc=0 || rc=$?
 check "install.sh success copy mentions recipe-start" "$rc"
+grep -q "RECIPE_UPDATE_INSTALLER" "$INSTALL_SH" && rc=0 || rc=$?
+check "install.sh declares RECIPE_UPDATE_INSTALLER" "$rc"
+grep -q 'RECIPE_UPDATE_INSTALLER" --yes' "$INSTALL_SH" && rc=0 || rc=$?
+check "install.sh's install() invokes RECIPE_UPDATE_INSTALLER --yes" "$rc"
 
 echo "---"
 echo "$pass passed, $fail failed"

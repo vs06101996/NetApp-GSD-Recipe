@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-08-24T09:22:24Z_
+_Generated: 2026-08-28T04:43:16Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
@@ -55,6 +55,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 |---------|--------|---------|
 | `recipe-start` | built | First-run coach: after install, prints the next friendly Cursor command (how to onboard a PRD, then bootstrap/plan/ru... |
 | `recipe-status` | built | Read-only status snapshot: branch, PRD/ROADMAP/Epic/phase keys, PLAN/SUMMARY, install and sync hints, then the same n... |
+| `recipe-update` | built | In-place recipe upgrade: fetch recipe_source, preview incoming commits, Yes/No, restage via install.sh --yes without ... |
 | `recipe-install` | built | Thin, invoke-by-name end-to-end install orchestrator: chains recipe-validate-tokens (informational) -> a live, non-sk... |
 | `recipe-validate-tokens` | built | Standalone, re-invokable GitHub + Jira/Atlassian credential/scope check (real --check-github probe; agent-mediated Ji... |
 | `recipe-install-verify` | built | Post-install Step-5 verification checklist wrapper (delegates items 5-7 to install.sh --verify, item 4 to recipe-vali... |
