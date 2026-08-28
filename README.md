@@ -50,7 +50,7 @@ Or run a range end-to-end: `recipe-run-phases 1 5 --full`
 | Cursor with Agent mode, target is a **git repo** | Install fails closed otherwise |
 | `python3`, `git` | Hard requirement |
 | GSD for Cursor (full profile) | Installed automatically; install fails if it can't verify |
-| `graphify` | Required to finish onboard — fix with `./.gsd-recipe/scripts/install-graphify.sh` |
+| `graphify` | Required to finish onboard — fix with `./.gsd-recipe/scripts/install-graphify.sh`. `install.sh` prepends `$HOME/bin` for the rest of that process after auto-install; new shells still need that PATH. |
 | Atlassian MCP | Only for the Jira path (`recipe-create-epic`, sync) |
 | `gh` + `gh auth login` | Only for PR / ship |
 
@@ -73,7 +73,7 @@ Everything below is detail. The four sections above are enough to install and sh
 | **CLI** | `node` / `npx` (GSD install) | Soft | `install.sh` preflight (warn) |
 | **CLI** | `gh` + `gh auth login` (PR, CI, ship) | Soft | `install.sh` + `recipe-validate-tokens` |
 | **CLI** | **GSD for Cursor, full profile** (`gsd-new-project`, knowledge commands + agents) | Yes | `install.sh` auto-installs and fails closed if verification fails |
-| **CLI** | `graphify` (knowledge graph) | Required to finish onboard | Install warns if missing; knowledge bootstrap fails closed — fix: `./.gsd-recipe/scripts/install-graphify.sh` |
+| **CLI** | `graphify` (knowledge graph) | Required to finish onboard | Install auto-fix prepends `$HOME/bin` for the rest of that `install.sh` process; knowledge bootstrap fails closed if still missing — fix: `./.gsd-recipe/scripts/install-graphify.sh` |
 | **CLI** | `uv` (only if installing graphify) | Optional | `install-graphify.sh` |
 | **Integrations** | **Atlassian MCP** authenticated in Cursor (Jira epic, sync, phase tasks) | Yes for Jira path | `recipe-validate-tokens` + `install.sh --record-jira-check pass` |
 | **Integrations** | GitHub repo access (push branch, open PR) | Yes for ship path | `gh auth status` |
@@ -175,7 +175,7 @@ There is **no** `recipe-graphify` skill. Graphify is wired in three places:
 
 | When | Where | Command |
 |------|-------|---------|
-| **Once per target repo** (if install reported `graphify: fail`) | Terminal, in the **target repo** | `./.gsd-recipe/scripts/install-graphify.sh` — installs the `graphify` CLI (requires `uv`). Re-run `install.sh --verify` or check `install-report.json`. |
+| **Once per target repo** (if install reported `graphify: fail`) | Terminal, in the **target repo** | `./.gsd-recipe/scripts/install-graphify.sh` — installs the `graphify` CLI (requires `uv`; `uv tool install` is `--quiet` unless `GRAPHIFY_INSTALL_VERBOSE=1`). Re-run `install.sh --verify` or check `install-report.json`. New shells need `export PATH="$HOME/bin:$PATH"`. |
 | **During `recipe-onboard` (automatic)** | Cursor Agent, **target repo** | `recipe-bootstrap-knowledge` — mandatory final onboard step; maps code, builds the graph, then writes the readiness marker. |
 | **During plan or execute** (explore dependencies) | Cursor Agent, **target repo** | **`/gsd-graphify query <term>`** — ad-hoc lookup while writing or following a `PLAN.md`. |
 

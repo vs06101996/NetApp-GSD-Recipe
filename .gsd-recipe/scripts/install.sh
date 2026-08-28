@@ -341,11 +341,14 @@ uv_fix_cmd() {
   if [ ! -x "$graphify_installer" ]; then
     graphify_installer="$GSD_RECIPE_DIR/scripts/install-graphify.sh"
   fi
+  # Export PATH in the *parent* eval so ensure_prereq's re-check can see
+  # $HOME/bin/graphify. install-graphify.sh only prepends that dir inside
+  # its own child process.
   if [ -x "$graphify_installer" ]; then
-    echo "\"$graphify_installer\""
+    echo "export PATH=\"\$HOME/bin:\$PATH\"; \"$graphify_installer\""
     return 0
   fi
-  echo "UV_CACHE_DIR=\"\$HOME/.uv-cache\" XDG_DATA_HOME=\"\$HOME/.xdg-data\" uv tool install graphifyy && graphify install"
+  echo "export PATH=\"\$HOME/bin:\$PATH\"; UV_CACHE_DIR=\"\$HOME/.uv-cache\" XDG_DATA_HOME=\"\$HOME/.xdg-data\" uv tool install --quiet --force graphifyy && graphify install"
 }
 
 # Generic check -> auto-fix-attempt -> verify -> prompt-and-reverify ->
@@ -368,7 +371,7 @@ ensure_prereq() {
 
   if [ -n "$fix_cmd" ]; then
     echo "install.sh: $name missing — attempting automated fix ($fix_cmd)..." >&2
-    eval "$fix_cmd" >/dev/null 2>&1 || true
+    eval "$fix_cmd" || true
     if eval "$check_cmd" >/dev/null 2>&1; then
       echo "install.sh: $name resolved by automated fix." >&2
       PREREQ_RESULT="auto_installed"
