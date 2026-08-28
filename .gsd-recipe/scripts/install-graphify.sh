@@ -6,6 +6,10 @@
 # Replaces no-op graphify stubs (bash scripts that only exit 0).
 #
 # Usage: .gsd-recipe/scripts/install-graphify.sh
+# When called from install.sh, that parent exports PATH=$HOME/bin for the rest
+# of the process so the prereq re-check can see the new binary. New shells still
+# need the profile line printed at the end.
+# GRAPHIFY_INSTALL_VERBOSE=1 keeps uv's full install log (no --quiet).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,7 +54,12 @@ if ! command -v graphify >/dev/null 2>&1; then
   # `uv tool install` is otherwise a no-op when graphifyy is registered but
   # its graphify symlink was removed (for example when replacing a no-op
   # stub). Force recreates both entry-point links in our explicit bin dir.
-  uv tool install --force graphifyy
+  uv_args=(tool install --force)
+  if [ "${GRAPHIFY_INSTALL_VERBOSE:-}" != "1" ]; then
+    uv_args+=(--quiet)
+  fi
+  uv_args+=(graphifyy)
+  uv "${uv_args[@]}"
 fi
 
 if ! command -v graphify >/dev/null 2>&1; then

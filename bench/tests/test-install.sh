@@ -702,33 +702,36 @@ write_fake_graphify_present() {
 
 # Writes a fake `uv` binary at $1 that, when invoked as `uv tool install ...` or
 # `uv pip install ...`, logs the call to $2 and simulates a successful `graphifyy`
-# install by creating a working `graphify` stub at $3 (the scratch bin dir graphify is
-# expected to land in — mirrors install-graphify.sh's effect without network access).
+# install by creating a working `graphify` stub. Prefers $UV_TOOL_BIN_DIR (what
+# install-graphify.sh exports) so tests catch a parent PATH that does not include
+# $HOME/bin; otherwise writes to $3.
 write_fake_uv_installs_graphify() {
   local uv_path="$1" log_file="$2" fakebin_dir="$3"
   cat > "$uv_path" <<EOF
 #!/usr/bin/env bash
 echo "\$@" >> "$log_file"
+dest="\${UV_TOOL_BIN_DIR:-$fakebin_dir}"
+mkdir -p "\$dest"
 if [ "\$1" = "tool" ] && [ "\$2" = "install" ]; then
-  cat > "$fakebin_dir/graphify" <<'INNER'
+  cat > "\$dest/graphify" <<'INNER'
 #!/usr/bin/env bash
-if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+if [ "\$1" = "--help" ] || [ "\$1" = "-h" ]; then
   echo "graphify — knowledge graph CLI (test stub)"
   exit 0
 fi
 exit 0
 INNER
-  chmod +x "$fakebin_dir/graphify"
+  chmod +x "\$dest/graphify"
 elif [ "\$1" = "pip" ] && [ "\$2" = "install" ]; then
-  cat > "$fakebin_dir/graphify" <<'INNER'
+  cat > "\$dest/graphify" <<'INNER'
 #!/usr/bin/env bash
-if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+if [ "\$1" = "--help" ] || [ "\$1" = "-h" ]; then
   echo "graphify — knowledge graph CLI (test stub)"
   exit 0
 fi
 exit 0
 INNER
-  chmod +x "$fakebin_dir/graphify"
+  chmod +x "\$dest/graphify"
 fi
 exit 0
 EOF
@@ -1058,8 +1061,10 @@ HOME19="$(mktemp -d)"
 (cd "$TARGET19" && PATH="$FAKEBIN19" GSD_SIGNAL_PATH="$SIGNAL19" HOME="$HOME19" \
   "$INSTALLER" --yes --target "$TARGET19" >/dev/null 2>&1) && rc=0 || rc=$?
 check "(b) install succeeds when graphify is absent and the fake uv auto-fix installs it" "$rc"
-grep -qE 'tool install graphifyy|pip install graphifyy' "$UVLOG19"
+grep -qE 'tool install .*graphifyy|pip install graphifyy' "$UVLOG19"
 check "(b) ensure_prereq invokes the fake uv to install graphifyy" "$?"
+grep -q -- '--quiet' "$UVLOG19"
+check "(b) uv tool install was invoked with --quiet" "$?"
 python3 -c "
 import json
 d = json.load(open('$TARGET19/.gsd-recipe/install-report.json'))
@@ -1067,6 +1072,8 @@ assert d['prereqs']['graphify'] == 'auto_installed', d['prereqs']
 assert d['graphify_config_enabled'] is True, d['graphify_config_enabled']
 "
 check "(b) graphify recorded auto_installed and graphify_config_enabled=true" "$?"
+[ -x "$HOME19/bin/graphify" ]
+check "(b) graphify landed in HOME/bin (not only on the scratch PATH)" "$?"
 rm -rf "$FAKEBIN19" "$(dirname "$(dirname "$SIGNAL19")")" "$UVLOG19" "$LOG19" "$HOME19"
 
 # 20. (c) graphify absent + no uv on scratch PATH -> fail, warn-only, install
