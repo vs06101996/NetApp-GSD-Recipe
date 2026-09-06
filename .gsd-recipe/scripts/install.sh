@@ -81,7 +81,7 @@
 #     "recipe-review-ship"/"recipe-settle"/"gsd-jira-sync"/"recipe-sync"/
 #     "recipe-pr-comment"/"recipe-install"/"recipe-observe"/
 #     "recipe-create-epic"/"recipe-create-phase-tasks"/"recipe-help"/
-#     "recipe-new-project"/"recipe-onboard"/"recipe-start"/"recipe-status"/"recipe-update", which the sub-installers/skills track under their
+#     "recipe-new-project"/"recipe-onboard"/"recipe-start"/"recipe-status"/"recipe-update"/"recipe-command-surface", which the sub-installers/skills track under their
 #     own component names.
 set -euo pipefail
 
@@ -167,6 +167,7 @@ RECIPE_ONBOARD_INSTALLER="$SCRIPT_DIR/install-recipe-onboard.sh"
 RECIPE_START_INSTALLER="$SCRIPT_DIR/install-recipe-start.sh"
 RECIPE_STATUS_INSTALLER="$SCRIPT_DIR/install-recipe-status.sh"
 RECIPE_UPDATE_INSTALLER="$SCRIPT_DIR/install-recipe-update.sh"
+RECIPE_COMMAND_SURFACE_INSTALLER="$SCRIPT_DIR/install-recipe-command-surface.sh"
 CAPABILITY_SCHEMA_LIB="$SCRIPT_DIR/../../bench/lib/capability-schema.sh"
 GRAPHIFY_PROBE_SRC="$SCRIPT_DIR/../../bench/lib/graphify-probe.sh"
 if [ -f "$GRAPHIFY_PROBE_SRC" ]; then
@@ -713,7 +714,7 @@ install() {
   fi
 
   if [ "$YES" -ne 1 ]; then
-    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status + recipe-update) into $TARGET? [y/N] " reply
+    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status + recipe-update + recipe-command-surface) into $TARGET? [y/N] " reply
     case "$reply" in
       [yY]|[yY][eE][sS]) : ;;
       *) echo "install.sh: aborted, no consent given."; exit 0 ;;
@@ -865,7 +866,7 @@ GITIGNORE_LINES
     fi
   done
 
-  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start, recipe-status, recipe-update)..."
+  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start, recipe-status, recipe-update, recipe-command-surface)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
   "$TRACKER_SYNC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PLANNING_POLICY_INSTALLER" --yes --target "$TARGET"
@@ -892,6 +893,7 @@ GITIGNORE_LINES
   "$RECIPE_START_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_STATUS_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_UPDATE_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_COMMAND_SURFACE_INSTALLER" --yes --target "$TARGET"
 
   install_report_write "$gh_result" "$PREREQ_PYTHON3" "$PREREQ_GIT" "$PREREQ_NODE" "$PREREQ_GH" "$PREREQ_GSD_CORE" "$PREREQ_GRAPHIFY" "$GRAPHIFY_CONFIG_ENABLED"
   ledger_record ".gsd-recipe/install-report.json"
@@ -1222,6 +1224,12 @@ if o['enabled']:
     echo "    recipe-update composed — FAIL (recipe-update ledger component absent)"
     ok=0
   fi
+  if ledger_has_component "recipe-command-surface"; then
+    echo "    recipe-command-surface composed — pass"
+  else
+    echo "    recipe-command-surface composed — FAIL (recipe-command-surface ledger component absent)"
+    ok=0
+  fi
 
   echo "[X] 10. Bare metal Gate A (.templates/bare_metal.template.md bootstrap run) — run manually"
 
@@ -1334,6 +1342,7 @@ PY
   "$RECIPE_START_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_STATUS_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_UPDATE_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_COMMAND_SURFACE_INSTALLER" --uninstall --target "$TARGET"
 
   echo "install.sh: uninstall complete. code_base_details/, .knowledge/, config.json, and .gitignore are left in place (shared/human data this installer doesn't own for deletion)."
 }
