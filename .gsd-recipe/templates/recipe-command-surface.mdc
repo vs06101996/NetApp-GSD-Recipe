@@ -1,0 +1,42 @@
+---
+description: Translate native GSD next-step suggestions into recipe commands
+alwaysApply: true
+---
+
+# Recipe command surface
+
+Native GSD workflows under `.cursor/get-shit-done/workflows/` hardcode `/gsd-*`
+commands in their handoff text. Those strings are upstream and cannot be
+patched. Translate them before showing a next step to the operator.
+
+**Never recommend a `gsd-*` command as the operator's next action.** When a
+native GSD workflow emits one, substitute the recipe wrapper:
+
+| Native GSD emits | Recommend instead |
+|---|---|
+| `gsd-new-project`, `gsd-import` | `recipe-onboard` |
+| `gsd-map-codebase`, `gsd-graphify build`, `gsd-ingest-docs` | `recipe-bootstrap-knowledge` |
+| `gsd-plan-phase N` | `recipe-plan-phase N` |
+| `gsd-execute-phase N [--wave W]` | `recipe-run-phase N [--wave W]` |
+| `gsd-verify-work N`, `gsd-audit-milestone`, `gsd-audit-uat` | `recipe-verify-feature N` |
+| `gsd-code-review N`, `gsd-ship N` | `recipe-review-ship N` |
+| `gsd-progress`, `gsd-next`, `gsd-health` | `recipe-status` |
+
+The wrappers add gating the native commands skip — planning-policy compliance
+checks, `depends_on` reminders, and `execute_started`/`execute_complete` Jira
+lifecycle events through the idempotent sync ledger. Recommending the native
+command silently drops tracker sync.
+
+If the correct next command is unclear, run
+`.gsd-recipe/scripts/recipe-next.sh` and print its output verbatim rather than
+guessing.
+
+## When `gsd-*` is still correct
+
+- The operator explicitly asked about or for a native GSD command.
+- Pointing at `gsd-help` for native depth beyond the recipe catalog.
+- Explaining which native skill a recipe wrapper delegates to.
+- Authoring or editing recipe templates, GSD workflows, or docs that describe
+  the delegation.
+
+Full mapping: [docs/RECIPE-COMMANDS.md](../../docs/RECIPE-COMMANDS.md)

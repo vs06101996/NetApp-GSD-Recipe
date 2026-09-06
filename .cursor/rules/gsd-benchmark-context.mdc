@@ -19,3 +19,5 @@ Install into a target repo: `bench/runners/install-recipe-to-target.sh --target 
 Regenerate command docs after catalog changes: `bench/lib/generate-recipe-help.sh`
 
 **Never invoke GSD skills** (`gsd-new-project`, `gsd-plan-phase`, etc.) on behalf of the user unless they explicitly asked you to run a recipe wrapper skill that documents same-turn native calls.
+
+When a native GSD workflow suggests a `gsd-*` command as the operator's next action, translate it using `.cursor/rules/recipe-command-surface.mdc`.
