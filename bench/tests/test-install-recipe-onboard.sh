@@ -98,6 +98,30 @@ grep -qi "recipe-discuss-phase" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents recipe-discuss-phase as explicitly deferred" "$rc"
 grep -qi "recipe-complete-milestone" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents recipe-complete-milestone as explicitly deferred" "$rc"
+grep -q "getJiraIssue\|parse-jira-issue-ref\|browse/" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents Jira ticket / browse URL onboard" "$rc"
+grep -q "init-tracker" "$STAGED" && rc=0 || rc=$?
+check "staged skill links existing tickets via init-tracker" "$rc"
+grep -qi "do not invoke \`recipe-create-epic\` when" "$STAGED" && rc=0 || rc=$?
+check "staged skill does not create a second Epic for an existing ticket" "$rc"
+grep -q 'workspace-swap.sh.*archive\|"$LIB" archive' "$STAGED" && rc=0 || rc=$?
+check "staged skill archives prior context for explicit new onboarding" "$rc"
+grep -qi "must not be used\|will not be reused\|do not reuse" "$STAGED" && rc=0 || rc=$?
+check "staged skill forbids reusing prior-cycle recipe artifacts" "$rc"
+grep -qi "preload.*before.*switch-out\|read.*before.*switch-out" "$STAGED" && rc=0 || rc=$?
+check "staged skill preserves incoming file source before switch-out" "$rc"
+grep -q "initiative-branch.sh.*validate" "$STAGED" &&
+  grep -q "initiative-branch.sh.*create" "$STAGED" && rc=0 || rc=$?
+check "staged skill validates and creates an initiative branch before intake" "$rc"
+grep -q -- "--branch NAME" "$STAGED" && grep -q -- "--no-branch" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents branch override and explicit no-branch escape hatch" "$rc"
+grep -qi "Never also.*archive\|never also.*archive" "$STAGED" && rc=0 || rc=$?
+check "staged skill keeps branch creation and archive-in-place mutually exclusive" "$rc"
+grep -q "phase-tasks-queue.jsonl" "$STAGED" &&
+  grep -q "sync-ledger.jsonl" "$STAGED" && rc=0 || rc=$?
+check "staged skill treats tracker queue and sync ledger as prior initiative state" "$rc"
+grep -qi "dirty product worktree\\|tracked/untracked product changes" "$STAGED" && rc=0 || rc=$?
+check "staged skill fails closed on dirty product state" "$rc"
 
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
@@ -122,6 +146,14 @@ check "uninstall cleans up the now-empty skill directory" "$?"
 # and preserves canonical source on uninstall.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
+if [ ! -d "$COPY/.git" ]; then
+  rm -f "$COPY/.git"
+  git -C "$COPY" init -q
+  git -C "$COPY" config user.email "test@local"
+  git -C "$COPY" config user.name "test"
+  git -C "$COPY" add -A
+  git -C "$COPY" commit -qm init
+fi
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-onboard.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-onboard.sh --uninstall >/dev/null 2>&1) && rc=0 || rc=$?

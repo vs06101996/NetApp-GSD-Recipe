@@ -74,7 +74,7 @@ It looks only at generic files (`docs/PRD.md`, `.planning/ROADMAP.md`, `STATE.md
 
 | You have | It suggests |
 |----------|-------------|
-| No PRD | `recipe-onboard` (Jira/Confluence export, file, paste, or describe). No Jira: `--skip-tracker` |
+| No PRD | `recipe-onboard` (Jira key/URL, Jira/Confluence export, file, paste, or describe). No Jira writes: `--skip-tracker` |
 | PRD, no ROADMAP | `recipe-onboard` |
 | ROADMAP, no Epic | `recipe-onboard` |
 | Onboarded (knowledge included) | `recipe-plan-phase N` |
@@ -82,9 +82,14 @@ It looks only at generic files (`docs/PRD.md`, `.planning/ROADMAP.md`, `STATE.md
 
 After Yes on onboard, it asks whether to create Jira tickets. Sequence page (gitignored): `docs/RECIPE-SEQUENCE.md`.
 
+Jira issue keys and browse URLs are fetched via Atlassian MCP (`getJiraIssue`). File-shaped
 Jira/Confluence PRD exports use `.templates/JIRA-PRD.input.template.md` as an
-**input-only** shape. Pass one with `recipe-onboard @path/to/file.md`; intake maps it
+**input-only** shape. Pass a file with `recipe-onboard @path/to/file.md`; intake maps it
 to canonical `docs/PRD.md` using `.templates/JIRA-PRD.input.MAPPING.md`.
+
+Passing any explicit source to `recipe-onboard` starts a fresh cycle on a clean
+`gsd/<slug>` initiative branch. Planning, PRDs, tracker queue/ledger, and readiness state
+remain with the previous branch. Calling it with no source resumes the current cycle.
 
 Full catalog: `recipe-help`  
 Snapshot + next step (read-only): `recipe-status`  

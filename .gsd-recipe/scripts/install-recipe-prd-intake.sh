@@ -154,9 +154,9 @@ install() {
   echo "recipe-prd-intake installer: staged. Files tracked in $LEDGER:"
   ledger_files | sed 's/^/  - /'
   echo
-  echo "Invoke 'recipe-prd-intake' by name with a Jira/Confluence PRD export, PRD file,"
-  echo "pasted text, or a freeform description. It maps Jira-shaped input via"
-  echo ".templates/JIRA-PRD.input.MAPPING.md and writes canonical docs/PRD.md."
+  echo "Invoke 'recipe-prd-intake' by name with a Jira issue key or browse URL,"
+  echo "a Jira/Confluence PRD export, PRD file, pasted text, or a freeform description."
+  echo "It maps Jira-shaped input via .templates/JIRA-PRD.input.MAPPING.md and writes canonical docs/PRD.md."
   echo "Remove entirely: $0 --uninstall --target $TARGET"
 }
 

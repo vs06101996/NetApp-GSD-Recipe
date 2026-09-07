@@ -23,8 +23,16 @@ Optional inputs:
 ```text
 recipe-onboard @path/to/jira-or-confluence-prd.md
 recipe-onboard docs/PRD.md
+recipe-onboard docs/PRD.md --branch gsd/my-initiative
+recipe-onboard docs/PRD.md --no-branch
 recipe-onboard --project KEY
 ```
+
+An explicit source (`KAN-53`, URL, file, paste, or description) starts a **fresh**
+onboarding cycle on a new `gsd/<slug>` branch: the previous initiative's planning,
+tracker queue/ledger, and readiness state are snapshotted before intake. `--branch NAME`
+overrides the name; `--no-branch` archives in place. `recipe-onboard` with no source
+resumes the active cycle. Branch checkout swaps context automatically (`recipe-workspace status`).
 
 For a NetApp 15-section Jira/Confluence PRD, start from
 `.templates/JIRA-PRD.input.template.md`. It is **input only**; intake maps it via

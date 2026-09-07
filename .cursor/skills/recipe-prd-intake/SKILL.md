@@ -1,20 +1,25 @@
 ---
 name: recipe-prd-intake
-description: "Recipe: PRD intake for the NetApp GSD recipe (TASK-016). Accepts Jira/Confluence PRD exports (.templates/JIRA-PRD.input.template.md shape), canonical PRD files, pasted text, or freeform description; maps input to .templates/PRD.template.md; writes docs/PRD.md; invokes fotw-observer-bootstrap as its final step."
+description: "Recipe: PRD intake for the NetApp GSD recipe (TASK-016). Accepts a Jira issue key or browse URL (fetched via Atlassian MCP), Jira/Confluence PRD exports, canonical PRD files, pasted text, or freeform description; maps input to .templates/PRD.template.md; writes docs/PRD.md; invokes fotw-observer-bootstrap as its final step."
 ---
 
 <cursor_skill_adapter>
 ## A. Skill Invocation
 
 Invoke by name (`recipe-prd-intake`) with one of:
+- a **Jira issue key or browse URL** (e.g. `KAN-53` or
+  `https://netapp.atlassian.net/browse/KAN-53`) — fetched via Atlassian MCP,
 - a path to an existing PRD file to ingest (Jira/Confluence export, canonical PRD, or
   a draft following `.templates/JIRA-PRD.input.template.md`),
 - PRD text pasted directly into the conversation, or
 - a freeform description of the feature/project to turn into a PRD.
 
-No arguments are required to invoke it, but at least one of the three inputs
+No arguments are required to invoke it, but at least one of the inputs
 above must be available by the time step 2 of Tool Usage runs, or the skill
 falls back to the "no PRD" path (see Do NOT).
+If the argument is an existing file path, treat it as a file even if the name
+looks like a Jira key. Otherwise, if it matches a Jira key or issue URL,
+fetch it (do not treat the URL string as the PRD body).
 
 ## B. Prerequisites
 
@@ -27,6 +32,8 @@ falls back to the "no PRD" path (see Do NOT).
   staged by the same installer). If missing, still run intake using
   `PRD.template.md` only; mention the Jira input templates are optional.
 - `docs/` directory may or may not exist yet — create it if needed.
+- Atlassian MCP enabled and authenticated — required only when the input is a
+  Jira issue key or browse URL.
 
 ## C. Tool Usage
 
@@ -35,8 +42,27 @@ falls back to the "no PRD" path (see Do NOT).
    Questions is optional).
 2. `Read`: load `.templates/JIRA-PRD.input.MAPPING.md` when present — it defines
    how NetApp Jira/Confluence PRD exports map into the canonical sections.
-3. Resolve the input source:
-   - File path given → `Read` it.
+3. Resolve the input source (first match wins):
+   - Argument is an existing file path → `Read` it.
+   - Argument is a Jira issue key (`[A-Z][A-Z0-9]+-\\d+`) or a Jira issue URL
+     (`/browse/KEY`, `/issues/KEY`, or `selectedIssue=KEY`) → **fetch, do not
+     paste the URL as the PRD.** Resolve `bench/lib/parse-jira-issue-ref.sh`
+     via `.gsd-recipe/scripts/recipe-paths.sh resolve` when that helper exists;
+     otherwise apply the same parse rules. Then:
+     1. Discover MCP tools (`GetDynamicTools` / `GetMcpTools`) for the
+        Atlassian Jira namespace.
+     2. `getAccessibleAtlassianResources` if `cloudId` is not already known;
+        use the site hostname from the browse URL when present
+        (e.g. `netapp.atlassian.net`).
+     3. `getJiraIssue` with `issueIdOrKey` = the parsed key,
+        `responseContentFormat` = `markdown`, fields at least
+        `summary`, `description`, `issuetype`, `status`.
+     4. Build intake text: title from `summary`, body from `description`
+        (markdown). If description is empty, use summary only and ask
+        clarifying questions for required PRD sections.
+     5. Fetch failure (no MCP, 404, auth) → **stop**. Do not invent a PRD
+        from the key/URL string. Tell the operator to paste the description
+        or authenticate Atlassian MCP.
    - PRD text pasted inline → use it directly.
    - Freeform description only → draft a first-pass PRD against the
      template sections from that description.
@@ -88,6 +114,9 @@ falls back to the "no PRD" path (see Do NOT).
 - Do not write Jira/Confluence 15-section PRD structure to `docs/PRD.md` —
   that input shape is for intake only; output is always canonical
   `PRD.template.md`.
+- Do not invent a PRD from a Jira key or browse URL string. Fetch via
+  `getJiraIssue` or stop. Do not treat a URL as file contents unless that
+  path exists on disk.
 </cursor_skill_adapter>
 
 # recipe-prd-intake — PRD intake (TASK-016)
@@ -107,8 +136,8 @@ not require `install.sh`; it has its own installer,
 
 ## Workflow
 
-1. Get a PRD from the operator (Jira/Confluence export, file, pasted text, or
-   freeform description).
+1. Get a PRD from the operator (Jira issue key or browse URL via Atlassian MCP,
+   Jira/Confluence export, file, pasted text, or freeform description).
 2. If input matches the NetApp Jira/Confluence PRD shape, map it using
    `.templates/JIRA-PRD.input.MAPPING.md`; otherwise fill
    `.templates/PRD.template.md`'s sections directly.

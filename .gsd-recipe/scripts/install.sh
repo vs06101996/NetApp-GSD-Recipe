@@ -81,7 +81,8 @@
 #     "recipe-review-ship"/"recipe-settle"/"gsd-jira-sync"/"recipe-sync"/
 #     "recipe-pr-comment"/"recipe-install"/"recipe-observe"/
 #     "recipe-create-epic"/"recipe-create-phase-tasks"/"recipe-help"/
-#     "recipe-new-project"/"recipe-onboard"/"recipe-start"/"recipe-status"/"recipe-update"/"recipe-command-surface", which the sub-installers/skills track under their
+#     "recipe-new-project"/"recipe-onboard"/"recipe-start"/"recipe-status"/
+#     "recipe-workspace"/"recipe-update"/"recipe-command-surface", which the sub-installers/skills track under their
 #     own component names.
 set -euo pipefail
 
@@ -166,6 +167,7 @@ RECIPE_NEW_PROJECT_INSTALLER="$SCRIPT_DIR/install-recipe-new-project.sh"
 RECIPE_ONBOARD_INSTALLER="$SCRIPT_DIR/install-recipe-onboard.sh"
 RECIPE_START_INSTALLER="$SCRIPT_DIR/install-recipe-start.sh"
 RECIPE_STATUS_INSTALLER="$SCRIPT_DIR/install-recipe-status.sh"
+RECIPE_WORKSPACE_INSTALLER="$SCRIPT_DIR/install-recipe-workspace.sh"
 RECIPE_UPDATE_INSTALLER="$SCRIPT_DIR/install-recipe-update.sh"
 RECIPE_COMMAND_SURFACE_INSTALLER="$SCRIPT_DIR/install-recipe-command-surface.sh"
 CAPABILITY_SCHEMA_LIB="$SCRIPT_DIR/../../bench/lib/capability-schema.sh"
@@ -714,7 +716,7 @@ install() {
   fi
 
   if [ "$YES" -ne 1 ]; then
-    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status + recipe-update + recipe-command-surface) into $TARGET? [y/N] " reply
+    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status + recipe-workspace + recipe-update + recipe-command-surface) into $TARGET? [y/N] " reply
     case "$reply" in
       [yY]|[yY][eE][sS]) : ;;
       *) echo "install.sh: aborted, no consent given."; exit 0 ;;
@@ -866,7 +868,7 @@ GITIGNORE_LINES
     fi
   done
 
-  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start, recipe-status, recipe-update, recipe-command-surface)..."
+  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start, recipe-status, recipe-workspace, recipe-update, recipe-command-surface)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
   "$TRACKER_SYNC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PLANNING_POLICY_INSTALLER" --yes --target "$TARGET"
@@ -892,6 +894,7 @@ GITIGNORE_LINES
   "$RECIPE_ONBOARD_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_START_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_STATUS_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_WORKSPACE_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_UPDATE_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_COMMAND_SURFACE_INSTALLER" --yes --target "$TARGET"
 
@@ -1218,6 +1221,12 @@ if o['enabled']:
     echo "    recipe-status composed — FAIL (recipe-status ledger component absent)"
     ok=0
   fi
+  if ledger_has_component "recipe-workspace"; then
+    echo "    recipe-workspace composed — pass"
+  else
+    echo "    recipe-workspace composed — FAIL (recipe-workspace ledger component absent)"
+    ok=0
+  fi
   if ledger_has_component "recipe-update"; then
     echo "    recipe-update composed — pass"
   else
@@ -1341,6 +1350,7 @@ PY
   "$RECIPE_ONBOARD_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_START_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_STATUS_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_WORKSPACE_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_UPDATE_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_COMMAND_SURFACE_INSTALLER" --uninstall --target "$TARGET"
 
