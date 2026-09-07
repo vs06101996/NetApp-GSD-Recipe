@@ -106,9 +106,13 @@ copy_recipe_state() {
     mkdir -p "$destination/.gsd-recipe"
     printf '%s\n' '{"skip_tracker":true}' > "$destination/.gsd-recipe/onboard-state.json"
   fi
+  if [ -d "$TARGET/.gsd" ]; then
+    cp -r "$TARGET/.gsd" "$destination/.gsd"
+  fi
 }
 
 clear_recipe_state() {
+  rm -rf "$TARGET/.gsd"
   rm -f \
     "$TARGET/.gsd-recipe/phase-tasks-queue.jsonl" \
     "$TARGET/.gsd-recipe/sync-ledger.jsonl" \
@@ -161,6 +165,10 @@ with open(tmp, "w", encoding="utf-8") as f:
 os.replace(tmp, path)
 PY
   fi
+  if [ -d "$source/.gsd" ]; then
+    rm -rf "$TARGET/.gsd"
+    cp -r "$source/.gsd" "$TARGET/.gsd"
+  fi
 }
 
 # ── subcommands ───────────────────────────────────────────────────────────────
@@ -186,6 +194,7 @@ cmd_snapshot() {
   for state_file in phase-tasks-queue.jsonl sync-ledger.jsonl KNOWLEDGE-BOOTSTRAPPED; do
     [ -f "$TARGET/.gsd-recipe/$state_file" ] && has_recipe_state=1
   done
+  [ -d "$TARGET/.gsd" ] && has_recipe_state=1
   has_skip_tracker && has_recipe_state=1
 
   # Include docs/PRD.md only if it is untracked/gitignored (not committed)
@@ -333,6 +342,10 @@ cmd_archive() {
   local found=0
   if [ -d "$TARGET/.planning" ]; then
     cp -r "$TARGET/.planning" "$tmp_dir/.planning"
+    found=1
+  fi
+
+  if [ -d "$TARGET/.gsd" ]; then
     found=1
   fi
 

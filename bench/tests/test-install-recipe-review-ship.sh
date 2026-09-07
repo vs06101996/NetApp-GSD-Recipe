@@ -94,12 +94,10 @@ grep -q "TASK-027\|recipe-settle" "$STAGED" && rc=0 || rc=$?
 check "staged skill names recipe-settle/TASK-027 as the owner of the settled event" "$rc"
 grep -q "draft-github-pr-comment.sh" "$STAGED" && rc=0 || rc=$?
 check "staged skill disclaims bundling draft-github-pr-comment.sh" "$rc"
-grep -qi "never auto-invoke\|Do not auto-invoke\|do not auto-invoke" "$STAGED" && rc=0 || rc=$?
-check "staged skill disclaims auto-invoking gsd-review/gsd-ui-review" "$rc"
-grep -q "gsd-review" "$STAGED" && rc=0 || rc=$?
-check "staged skill mentions gsd-review as an informational-only suggestion" "$rc"
-grep -q "gsd-ui-review" "$STAGED" && rc=0 || rc=$?
-check "staged skill mentions gsd-ui-review N as an informational-only suggestion" "$rc"
+grep -q "Do not auto-invoke or print optional native review commands" "$STAGED" && rc=0 || rc=$?
+check "staged skill suppresses native optional-review handoffs" "$rc"
+grep -q 'Print only recipe-surface handoff commands: `recipe-status`, then `recipe-settle`' "$STAGED" && rc=0 || rc=$?
+check "staged skill keeps next actions on the recipe command surface" "$rc"
 grep -q "recipe-verify-feature\|TASK-025" "$STAGED" && rc=0 || rc=$?
 check "staged skill defers gsd-verify-work re-checking to recipe-verify-feature (TASK-025)" "$rc"
 grep -qi "never silently bypass\|never bypass" "$STAGED" && rc=0 || rc=$?
@@ -130,6 +128,14 @@ check "uninstall cleans up the now-empty skill directory" "$?"
 # and preserves canonical source on uninstall.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
+if [ ! -d "$COPY/.git" ]; then
+  rm -f "$COPY/.git"
+  git -C "$COPY" init -q
+  git -C "$COPY" config user.email "test@local"
+  git -C "$COPY" config user.name "test"
+  git -C "$COPY" add -A
+  git -C "$COPY" commit -qm init
+fi
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-review-ship.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-review-ship.sh --uninstall >/dev/null 2>&1) && rc=0 || rc=$?

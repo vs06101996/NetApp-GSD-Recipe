@@ -1,6 +1,6 @@
 ---
 name: recipe-workspace
-description: "Recipe: per-branch initiative workspace swap (TASK-059/061). Manual save/restore/status plus archive. Planning, PRDs, tracker queue/ledger, and readiness state follow their initiative branch."
+description: "Recipe: per-branch initiative workspace swap (TASK-059/061). Manual save/restore/status plus archive. Planning, GSD runtime, PRDs, tracker queue/ledger, and readiness state follow their initiative branch."
 ---
 
 <cursor_skill_adapter>
@@ -11,7 +11,7 @@ Invoke by name: `recipe-workspace <save|restore|archive|status>`
 - `recipe-workspace save` — snapshot current branch's initiative-local recipe state to `.gsd-recipe/workspaces/<branch>/`
 - `recipe-workspace restore` — restore snapshot for current branch (no-op if none exists)
 - `recipe-workspace archive` — archive and clear the current branch's active onboarding
-  context (`.planning/`, untracked `docs/PRD*.md`, tracker queue/ledger, knowledge-ready
+  context (`.planning/`, `.gsd/`, untracked `docs/PRD*.md`, tracker queue/ledger, knowledge-ready
   marker). This is the `recipe-onboard <source> --no-branch` switch-out primitive.
 - `recipe-workspace status` — list all branch snapshots and show current branch
 

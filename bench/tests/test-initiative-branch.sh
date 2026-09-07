@@ -76,8 +76,11 @@ git -C "$T5" add .gitignore
 git -C "$T5" commit -qm ignore
 mkdir -p "$T5/.planning"
 echo "old" > "$T5/.planning/ROADMAP.md"
+mkdir -p "$T5/docs" "$T5/.gsd"
+echo "generated prd" > "$T5/docs/PRD.md"
+echo '{"phase":"1"}' > "$T5/.gsd/dispatch-isolation-sentinel.json"
 bash "$LIB" validate gsd/clean --target "$T5" >/dev/null
-check "validate: permits gitignored initiative state" "$?"
+check "validate: permits gitignored and generated initiative state" "$?"
 rm -rf "$T5"
 
 # 6. Tracked planning is never deleted or treated as swappable state.
@@ -106,8 +109,10 @@ git -C "$T7" add .gitignore
 git -C "$T7" commit -qm ignore
 OLD_BRANCH="$(git -C "$T7" branch --show-current)"
 mkdir -p "$T7/.planning" "$T7/docs" "$T7/.gsd-recipe"
+mkdir -p "$T7/.gsd"
 echo "old roadmap" > "$T7/.planning/ROADMAP.md"
 echo "old prd" > "$T7/docs/PRD.md"
+echo '{"phase":"1"}' > "$T7/.gsd/dispatch-isolation-sentinel.json"
 echo "old queue" > "$T7/.gsd-recipe/phase-tasks-queue.jsonl"
 echo "old ledger" > "$T7/.gsd-recipe/sync-ledger.jsonl"
 echo '{"status":"ready"}' > "$T7/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
@@ -123,14 +128,16 @@ SNAPSHOT="$T7/.gsd-recipe/workspaces/$OLD_BRANCH"
   [ -f "$SNAPSHOT/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
   [ -f "$SNAPSHOT/.gsd-recipe/sync-ledger.jsonl" ] &&
   [ -f "$SNAPSHOT/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
-  [ -f "$SNAPSHOT/.gsd-recipe/onboard-state.json" ]
-check "create: snapshots planning, PRD, tracker queue/ledger, and readiness state" "$?"
+  [ -f "$SNAPSHOT/.gsd-recipe/onboard-state.json" ] &&
+  [ -f "$SNAPSHOT/.gsd/dispatch-isolation-sentinel.json" ]
+check "create: snapshots planning, PRD, GSD runtime, tracker queue/ledger, and readiness state" "$?"
 
 [ ! -d "$T7/.planning" ] &&
   [ ! -f "$T7/docs/PRD.md" ] &&
   [ ! -f "$T7/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
   [ ! -f "$T7/.gsd-recipe/sync-ledger.jsonl" ] &&
-  [ ! -f "$T7/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ]
+  [ ! -f "$T7/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
+  [ ! -d "$T7/.gsd" ]
 check "create: new initiative branch starts without prior initiative files" "$?"
 python3 - "$T7/.gsd-recipe/config.json" <<'PY'
 import json, sys
