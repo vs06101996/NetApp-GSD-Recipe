@@ -144,11 +144,15 @@ check "create: clears initiative-scoped config but preserves shared config" "$?"
 mkdir -p "$T7/.planning" "$T7/.gsd-recipe"
 echo "initiative one" > "$T7/.planning/ROADMAP.md"
 echo "initiative one queue" > "$T7/.gsd-recipe/phase-tasks-queue.jsonl"
+echo "initiative one product change" > "$T7/initiative-one-product.txt"
+git -C "$T7" add initiative-one-product.txt
+git -C "$T7" commit -qm "initiative one product change"
 bash "$LIB" create gsd/initiative-two --target "$T7" >/dev/null
 [ "$(git -C "$T7" branch --show-current)" = "gsd/initiative-two" ] &&
   [ -f "$T7/.gsd-recipe/workspaces/gsd__initiative-one/.planning/ROADMAP.md" ] &&
-  [ ! -d "$T7/.planning" ]
-check "create: consecutive initiative starts remain isolated" "$?"
+  [ ! -d "$T7/.planning" ] &&
+  [ ! -f "$T7/initiative-one-product.txt" ]
+check "create: initiative two starts from base, excluding initiative one's product commit and recipe state" "$?"
 
 # 10. Switching back restores the exact first initiative.
 bash "$WORKSPACE_LIB" snapshot gsd/initiative-two --target "$T7" >/dev/null

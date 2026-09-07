@@ -52,10 +52,39 @@ validate_branch() {
   fi
 }
 
+resolve_base_ref() {
+  local current="$1"
+
+  case "$current" in
+    main|master)
+      printf '%s\n' "$current"
+      return 0
+      ;;
+  esac
+
+  local remote_head
+  remote_head="$(git -C "$TARGET" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  if [ -n "$remote_head" ] && git -C "$TARGET" rev-parse --verify --quiet "$remote_head^{commit}" >/dev/null; then
+    printf '%s\n' "$remote_head"
+    return 0
+  fi
+
+  local candidate
+  for candidate in main master; do
+    if git -C "$TARGET" rev-parse --verify --quiet "refs/heads/$candidate^{commit}" >/dev/null; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "initiative-branch.sh: cannot determine a base branch (origin/HEAD, main, or master)" >&2
+  return 1
+}
+
 preflight() {
   local branch="$1"
   resolve_target
-  validate_branch "$branch"
+  validate_branch "$branch" || return 1
 
   local current
   current="$(git -C "$TARGET" symbolic-ref --quiet --short HEAD 2>/dev/null)" || {
@@ -98,8 +127,14 @@ cmd_validate() {
     echo "initiative-branch.sh: validate requires exactly one branch" >&2
     exit 2
   }
-  preflight "${POSITIONAL[0]}" >/dev/null
-  echo "initiative-branch.sh: ready to create '${POSITIONAL[0]}'"
+  local current base
+  if ! current="$(preflight "${POSITIONAL[0]}")"; then
+    exit 1
+  fi
+  if ! base="$(resolve_base_ref "$current")"; then
+    exit 1
+  fi
+  echo "initiative-branch.sh: ready to create '${POSITIONAL[0]}' from '$base'"
 }
 
 cmd_create() {
@@ -109,14 +144,19 @@ cmd_create() {
   }
 
   local branch="${POSITIONAL[0]}"
-  local current workspace_lib
-  current="$(preflight "$branch")"
+  local current base workspace_lib
+  if ! current="$(preflight "$branch")"; then
+    exit 1
+  fi
+  if ! base="$(resolve_base_ref "$current")"; then
+    exit 1
+  fi
   workspace_lib="$TARGET/.gsd-recipe/lib/workspace-swap.sh"
 
   # Disable the installed post-checkout hook for this switch because this
   # helper performs the same sequence explicitly and can roll it back.
   bash "$workspace_lib" snapshot "$current" --target "$TARGET"
-  if ! RECIPE_WORKSPACE_SWAP=0 git -C "$TARGET" switch -q -c "$branch"; then
+  if ! RECIPE_WORKSPACE_SWAP=0 git -C "$TARGET" switch -q -c "$branch" "$base"; then
     echo "initiative-branch.sh: failed to create '$branch'; current initiative remains on '$current'" >&2
     exit 1
   fi
@@ -129,7 +169,7 @@ cmd_create() {
     exit 1
   fi
 
-  echo "initiative-branch.sh: created clean initiative branch '$branch' from '$current'"
+  echo "initiative-branch.sh: created clean initiative branch '$branch' from '$base' (previous initiative: '$current')"
 }
 
 case "$SUBCOMMAND" in

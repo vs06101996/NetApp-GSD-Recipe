@@ -69,7 +69,10 @@ Examples:
        pasted/freeform input. Slugs are lowercase ASCII letters/digits/hyphens, with repeated
        separators collapsed and leading/trailing separators removed.
      - Run `.gsd-recipe/lib/initiative-branch.sh validate <branch> --target <root>` during
-       reconnaissance. A dirty product worktree, tracked initiative-local artifacts, detached
+       reconnaissance and retain the base ref it reports. From `main`/`master`, the base is the
+       current branch; from an initiative branch, it resolves `origin/HEAD`, then local
+       `main`/`master`. This prevents initiative 2 / PR 2 from inheriting initiative 1 / PR 1.
+       A dirty product worktree, tracked initiative-local artifacts, detached
        HEAD, existing local/remote branch, invalid branch name, or missing workspace runtime is
        a hard pre-preview failure. Do not stash, discard, reuse an existing branch, or invent
        a suffix.
@@ -113,7 +116,7 @@ Examples:
 2. **Single soft preview-then-confirm gate — before invoking anything.**
    In fresh-onboarding mode, begin the preview with:
    - current branch;
-   - in initiative-branch mode, the exact new branch and prior active paths that will be
+   - in initiative-branch mode, the exact new branch, resolved base ref, and prior active paths that will be
      snapshotted under `.gsd-recipe/workspaces/<current-branch>/` before the new branch starts
      clean;
    - in `--no-branch` mode, prior active paths that will be archived under

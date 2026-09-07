@@ -133,6 +133,8 @@ An explicit source means **fresh onboarding**, never resume:
 2. **Yes** snapshots `.planning/`, untracked `docs/PRD*.md`, phase-task queue, sync ledger,
    knowledge marker, and `onboard.skip_tracker` under
    `.gsd-recipe/workspaces/<current-branch>/`, then creates the clean branch.
+   From an existing initiative branch, the new branch is based on `origin/HEAD` (then local
+   `main`/`master`) so a second PR never contains the first PR's product commits.
 3. Intake and project bootstrap always run from the new source. The old ROADMAP, STATE, plans,
    summaries, Epic, and phase-task keys are not reused.
 4. **No** changes nothing.
