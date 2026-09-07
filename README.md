@@ -99,8 +99,8 @@ On an interactive install, the runner may open Cursor with `recipe-start` prefil
 ## Onboarding chain (`recipe-onboard`)
 
 One preview-then-confirm gate. With no new PRD source, it resumes and chains whichever steps
-are missing. An explicit source starts fresh: prior branch-local recipe context is archived
-and cleared first, so an old ROADMAP/STATE can never drive the new work.
+are missing. An explicit source starts fresh on a new `gsd/<slug>` initiative branch by default,
+so an old ROADMAP/STATE/tracker queue can never drive the new work.
 
 ```text
 recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-create-phase-tasks
@@ -118,11 +118,12 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 
 `--skip-tracker` skips only Epic/tasks; intake, planning, and knowledge bootstrap still run, then it sets `onboard.skip_tracker`. After Yes on onboard, it asks whether to create Jira. `recipe-start` opens gitignored `docs/RECIPE-SEQUENCE.md`.
 
-`recipe-onboard <source>` always means a new cycle. It archives `.planning/`, untracked
-`docs/PRD*.md`, and the knowledge-ready marker under `.gsd-recipe/workspace-archives/`, clears
-stale `onboard.skip_tracker`, then rebuilds intake/planning from that source. `recipe-onboard`
-with no source remains resume mode. Installed branch-switch hooks separately save/restore active
-recipe context per branch; a branch with no snapshot starts clean.
+`recipe-onboard <source>` always means a new cycle. Before intake it snapshots the current
+initiative and creates `gsd/<slug>` (`--branch NAME` overrides). The new branch starts without
+the prior `.planning/`, untracked PRDs, phase-task queue, sync ledger, knowledge marker, or
+`onboard.skip_tracker`. `--no-branch` explicitly stays on the current branch and archives that
+state under `.gsd-recipe/workspace-archives/`. `recipe-onboard` with no source remains resume
+mode. Branch switching saves/restores each initiative automatically.
 
 Variants:
 
@@ -132,6 +133,8 @@ recipe-onboard KAN-53
 recipe-onboard https://netapp.atlassian.net/browse/KAN-53
 recipe-onboard @docs/input/my-feature-prd.md
 recipe-onboard docs/PRD.md
+recipe-onboard docs/PRD.md --branch gsd/object-store-reconcile
+recipe-onboard docs/PRD.md --no-branch
 recipe-onboard --skip-tracker
 recipe-onboard --project KAN
 ```
@@ -157,8 +160,8 @@ Do not write the 15-section form to `docs/PRD.md`. Discover this path with `reci
 | `recipe-validate-tokens` | Check GitHub + Jira/Atlassian credentials/scopes before doing recipe work. |
 | `recipe-prd-intake KAN-53` | Fetch a Jira issue (or map a file/paste) → canonical `docs/PRD.md` (+ FOTW observer). |
 | `recipe-new-project` | Bootstrap `.planning/*` via native `gsd-new-project` (first-init vs re-init gate; prefers `docs/PRD.md` as input). |
-| `recipe-onboard [source]` | Resume with no source; with a source, archive/switch out the old cycle and onboard fresh. |
-| `recipe-workspace status` | Show per-branch planning snapshots; branch checkout swaps them automatically. |
+| `recipe-onboard [source]` | Resume with no source; with a source, create a clean initiative branch and onboard fresh. |
+| `recipe-workspace status` | Show per-branch initiative snapshots; branch checkout swaps planning and tracker state automatically. |
 | `recipe-bootstrap-knowledge` | Build/refresh `.knowledge/` + `/gsd-map-codebase` + **`/gsd-graphify build`** — automatic during onboard; run manually to refresh. |
 | `recipe-plan-phase 1` | Write Phase 1 `PLAN.md`. |
 | `recipe-run-phase 1` | Execute Phase 1 plans. |

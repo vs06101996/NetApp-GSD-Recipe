@@ -257,8 +257,10 @@ fi
 if [ -f "$TARGET1/.cursor/skills/recipe-status/SKILL.md" ]; then
   check "install.sh composes install-recipe-status.sh (skill staged)" "0"
 fi
-if [ -f "$TARGET1/.cursor/skills/recipe-workspace/SKILL.md" ] && [ -f "$TARGET1/.gsd-recipe/lib/workspace-swap.sh" ]; then
-  check "install.sh composes install-recipe-workspace.sh (skill + lib staged)" "0"
+if [ -f "$TARGET1/.cursor/skills/recipe-workspace/SKILL.md" ] &&
+   [ -f "$TARGET1/.gsd-recipe/lib/workspace-swap.sh" ] &&
+   [ -f "$TARGET1/.gsd-recipe/lib/initiative-branch.sh" ]; then
+  check "install.sh composes install-recipe-workspace.sh (skill + workspace/initiative libs staged)" "0"
 fi
 if [ -f "$TARGET1/.cursor/skills/recipe-update/SKILL.md" ] && [ -f "$TARGET1/.gsd-recipe/lib/recipe-update.sh" ] && [ -f "$TARGET1/.gsd-recipe/lib/recipe-update-nudge.sh" ]; then
   check "install.sh composes install-recipe-update.sh (skill + lib + nudge staged)" "0"
@@ -544,7 +546,9 @@ check "uninstall cascades to install-recipe-create-phase-tasks.sh --uninstall" "
 check "uninstall cascades to install-recipe-help.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-prd-intake/SKILL.md" ]
 check "uninstall cascades to install-recipe-prd-intake.sh --uninstall" "$?"
-[ ! -f "$TARGET3/.cursor/skills/recipe-workspace/SKILL.md" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/workspace-swap.sh" ]
+[ ! -f "$TARGET3/.cursor/skills/recipe-workspace/SKILL.md" ] &&
+  [ ! -f "$TARGET3/.gsd-recipe/lib/workspace-swap.sh" ] &&
+  [ ! -f "$TARGET3/.gsd-recipe/lib/initiative-branch.sh" ]
 check "uninstall cascades to install-recipe-workspace.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-update/SKILL.md" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-update.sh" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-update-nudge.sh" ]
 check "uninstall cascades to install-recipe-update.sh --uninstall" "$?"

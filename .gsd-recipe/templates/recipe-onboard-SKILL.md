@@ -1,6 +1,6 @@
 ---
 name: recipe-onboard
-description: "Recipe: single onboarding orchestrator. An explicit new PRD source starts a fresh onboarding cycle: archive and clear the prior branch-local PRD/planning context before intake, never reuse it. Without a new source, resume artifact-aware onboarding. Accepts Jira key/URL, file, paste, or description."
+description: "Recipe: single onboarding orchestrator. An explicit PRD source starts a fresh cycle on a new initiative branch by default, isolating all prior planning and tracker state. Use --no-branch for archive-in-place. Without a source, resume artifact-aware onboarding."
 ---
 
 <cursor_skill_adapter>
@@ -13,6 +13,12 @@ Invoke by name (`recipe-onboard`) with:
   intake; it is never used to decide or build the new roadmap. An existing file is read into
   memory before switch-out so it remains valid even when it is under `docs/`.
   A Jira key/URL that is also an existing file path is a **file**.
+- `--branch NAME` — optional fresh-onboarding override for the new initiative branch.
+  Without it, derive `gsd/<slug>` from the Jira key, source filename, or concise initiative
+  title. Validate with `git check-ref-format`; never silently add a numeric suffix.
+- `--no-branch` — optional fresh-onboarding escape hatch. Stay on the current branch and
+  archive the prior initiative in place before intake. This retains TASK-054 behavior for
+  operators who deliberately do not want an initiative branch.
 - `--project KEY` / `--issue-type NAME` / `--assignee NAME` / `--force` — optional. Forwarded
   verbatim to `recipe-create-epic` (and `--assignee` also to `recipe-create-phase-tasks`) when
   those steps actually **create** issues. `--force` is also forwarded to `init-tracker` on the
@@ -32,6 +38,8 @@ Examples:
   that key into STATE (do not create a second Epic). Skip automatic phase-task creation.
 - `recipe-onboard docs/PRD.md` — already-written PRD file; skips intake's own file/paste/freeform
   question if that step runs.
+- `recipe-onboard docs/PRD.md --branch gsd/object-store-reconcile` — choose the initiative branch.
+- `recipe-onboard docs/PRD.md --no-branch` — archive and restart on the current branch.
 - `recipe-onboard --skip-tracker` — PRD + `.planning/` + knowledge; no Jira Epic, link, or phase tasks.
 - `recipe-onboard --project KAN --assignee "Ada Lovelace"` — skips the live Jira-project question if the Epic **create** step runs; assigns created tickets.
 
@@ -45,9 +53,9 @@ Examples:
 - Atlassian MCP enabled and authenticated — needed if the PRD source is a Jira issue key/URL
   (intake fetch), or if Epic **create** / phase-task steps actually run. Not needed for
   `--skip-tracker` unless the PRD source is a live Jira ticket.
-- `recipe-workspace` runtime staged at `.gsd-recipe/lib/workspace-swap.sh` when an explicit
-  PRD source is supplied and prior active context exists. Re-run `recipe-update` / recipe
-  install if missing; never fall back to deleting prior planning directly.
+- `recipe-workspace` runtimes staged at `.gsd-recipe/lib/workspace-swap.sh` and
+  `.gsd-recipe/lib/initiative-branch.sh` when an explicit PRD source is supplied. Re-run
+  `recipe-update` / recipe install if missing; never fall back to deleting prior state directly.
 
 ## C. Tool Usage
 
@@ -55,6 +63,16 @@ Examples:
    - If the operator supplied a PRD source, set **fresh-onboarding mode**. For a file source,
      `Read` and retain its contents now, before any switch-out. Do not classify recipe flags
      (`--skip-tracker`, `--project`, etc.) as a PRD source.
+     - Unless `--no-branch` was passed, set **initiative-branch mode**. Resolve a branch:
+       use `--branch NAME` verbatim when present; otherwise use `gsd/<jira-key-lowercase>` for
+       Jira input, `gsd/<source-basename-slug>` for a file, or `gsd/<concise-title-slug>` for
+       pasted/freeform input. Slugs are lowercase ASCII letters/digits/hyphens, with repeated
+       separators collapsed and leading/trailing separators removed.
+     - Run `.gsd-recipe/lib/initiative-branch.sh validate <branch> --target <root>` during
+       reconnaissance. A dirty product worktree, tracked initiative-local artifacts, detached
+       HEAD, existing local/remote branch, invalid branch name, or missing workspace runtime is
+       a hard pre-preview failure. Do not stash, discard, reuse an existing branch, or invent
+       a suffix.
    - If no PRD source was supplied, set **resume mode**. Existing artifacts may be skipped
      idempotently as documented below.
    - `Glob`/`Read` for `docs/PRD.md`. Present → step 2 ("PRD intake") will be **skipped**. Missing →
@@ -82,21 +100,26 @@ Examples:
      and it parses as a Jira issue key or browse URL (run `bench/lib/parse-jira-issue-ref.sh`
      via `recipe-paths.sh resolve` when possible; else the same regex rules as that script),
      set existing-ticket mode with `KEY` and optional browse `URL`. File paths win over keys.
-   - In fresh-onboarding mode, if any prior active context exists (`.planning/`, untracked
-     `docs/PRD.md` / `docs/PRD-*.md`, `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`, or
-     `onboard.skip_tracker`), mark **workspace switch-out** to run after confirmation. All
-     artifact-derived skip decisions above belong to the old cycle and must not be used for
-     the new cycle.
+   - In fresh-onboarding mode, prior active context includes `.planning/`, untracked
+     `docs/PRD.md` / `docs/PRD-*.md`, `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`,
+     `.gsd-recipe/phase-tasks-queue.jsonl`, `.gsd-recipe/sync-ledger.jsonl`, and
+     `onboard.skip_tracker`. All artifact-derived skip decisions belong to the old cycle and
+     must not be used for the new cycle. In `--no-branch` mode, mark **archive-in-place** when
+     any prior context exists. Initiative-branch mode snapshots the current branch even when
+     there is no prior context and never also invokes archive.
    - This step never writes anything and never asks the operator anything yet — it is purely
      read-only reconnaissance for the single preview gate in step 2 below.
 
 2. **Single soft preview-then-confirm gate — before invoking anything.**
    In fresh-onboarding mode, begin the preview with:
    - current branch;
-   - prior active paths that will be archived under
+   - in initiative-branch mode, the exact new branch and prior active paths that will be
+     snapshotted under `.gsd-recipe/workspaces/<current-branch>/` before the new branch starts
+     clean;
+   - in `--no-branch` mode, prior active paths that will be archived under
      `.gsd-recipe/workspace-archives/<branch>/<run-id>/` and cleared;
    - explicit statement that the prior PRD, ROADMAP, STATE, plans, summaries, phase keys, and
-     knowledge-ready marker will **not** be reused.
+     tracker queue/ledger and knowledge-ready marker will **not** be reused.
    Then print, plainly, all five
    steps in their fixed order (PRD intake → project bootstrap → Epic creation → phase-task
    creation → knowledge bootstrap) and, for each, whether it will **run** or **skip** (and why — e.g. "skip: docs/PRD.md
@@ -113,13 +136,23 @@ Examples:
    mode PRD intake and project bootstrap show **run (new cycle)** regardless of old artifacts.
    - **Decline** → stop here entirely. Nothing has been invoked. Report "operator declined —
      onboarding not run" as the final summary.
-   - **Confirm** → if workspace switch-out was marked, resolve
+   - **Confirm, initiative-branch mode** → run:
+     ```
+     "$ROOT/.gsd-recipe/lib/initiative-branch.sh" create "$BRANCH" --target "$ROOT"
+     ```
+     A non-zero result is a hard failure: stop before intake. This helper explicitly snapshots
+     the current branch, creates the branch, restores/clears its independent initiative state,
+     and rolls back if initialization fails. Verify `git branch --show-current` equals the
+     requested branch and that none of the old initiative-local paths remain active. Never also
+     run `archive` in this mode.
+   - **Confirm, `--no-branch` mode** → if archive-in-place was marked, resolve
      `.gsd-recipe/lib/workspace-swap.sh` and run:
      ```
      "$LIB" archive "$(git rev-parse --abbrev-ref HEAD)" --target "$(git rev-parse --show-toplevel)"
      ```
      A missing lib or non-zero archive is a hard failure: stop before intake. Never `rm` the
-     old context as a fallback. The archive command also removes stale `onboard.skip_tracker`.
+     old context as a fallback. The archive command also removes stale tracker queue/ledger and
+     `onboard.skip_tracker`.
      Then continue to step 3. Also note in the preview (not a sixth confirmable step):
      once `docs/PRD.md` exists, this chain will invoke `fotw-observer-bootstrap` even if PRD
      intake is skipped.
@@ -288,7 +321,8 @@ operator still had to know and manually sequence all five.
 ## Workflow
 
 1. Select mode. Explicit PRD source → fresh onboarding: preload file input, inspect prior
-   active context, then archive/switch it out after confirmation. No source → resume:
+   active context, then create a clean initiative branch after confirmation (`--no-branch`
+   explicitly archives in place instead). No source → resume:
    read-only check of existing PRD, ROADMAP, tracker, phase tasks, and knowledge marker.
 2. One preview-then-confirm gate showing all five steps and their run/skip determination. With
    `--skip-tracker`, Epic and phase-task steps show **skip (flag)**. Without it, mention
@@ -359,6 +393,8 @@ the five steps documented above, no more.
 
 ## What this does NOT do
 
+- **No development on `main`/`master` by default.** Fresh onboarding creates an initiative
+  branch before intake. Only explicit `--no-branch` keeps the new cycle on the current branch.
 - **No planning/execution step.** `recipe-plan-phase`/`recipe-run-phase`/`recipe-run-phases` starts
   only after onboarding has completed mandatory knowledge bootstrap (and, unless
   `--skip-tracker`, created the Epic and phase tasks).

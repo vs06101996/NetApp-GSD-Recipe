@@ -18,6 +18,6 @@ printf '%s\n' "$CURRENT" > "$SENTINEL"
 
 if [ -n "$OLD" ] && [ "$OLD" != "$CURRENT" ]; then
   bash "$LIB" snapshot "$OLD"     --target "$ROOT"
-  bash "$LIB" restore  "$CURRENT" --target "$ROOT"
+  bash "$LIB" restore  "$CURRENT" --target "$ROOT" --clear
 fi
 exit 0

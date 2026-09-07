@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-09-06T12:41:42Z_
+_Generated: 2026-09-07T04:52:21Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
@@ -11,7 +11,7 @@ In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use
 ```text
 After bash install:  recipe-start     (or recipe-status / recipe-help --next)
 recipe-onboard (or step-by-step intake/epic/tasks)
-recipe-onboard <new source>  (archives prior branch context; starts fresh)
+recipe-onboard <new source>  (creates clean gsd/<slug> initiative branch)
 recipe-onboard --skip-tracker  (skip Jira only; knowledge still runs)
   → knowledge is verified during onboard
   → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)
@@ -26,8 +26,8 @@ Enable planning policy: add `"agent_skills": {"gsd-planner": ["skills/recipe-pla
 `recipe-prd-intake` and `recipe-onboard` accept a Jira issue key or browse URL (fetched via Atlassian MCP), a Jira/Confluence PRD export, an already-canonical PRD, pasted text, or a freeform description.
 
 - Existing ticket: `recipe-onboard KAN-53` or `recipe-onboard https://example.atlassian.net/browse/KAN-53`. Intake fetches summary/description; onboard **links** that key (does not create a second Epic). `--skip-tracker` still fetches for the PRD but does not write STATE.
-- Fresh vs resume: any explicit source archives and switches out the prior active PRD/planning context before intake. `recipe-onboard` with no source resumes artifact-aware onboarding.
-- Branch isolation: git checkout/switch saves and restores branch-local context automatically. Inspect with `recipe-workspace status`.
+- Fresh vs resume: any explicit source creates a clean initiative branch before intake. `--branch NAME` overrides; `--no-branch` archives in place. `recipe-onboard` with no source resumes artifact-aware onboarding.
+- Branch isolation: git checkout/switch saves and restores planning, PRDs, tracker queue/ledger, and readiness state automatically. Inspect with `recipe-workspace status`.
 - For the official NetApp 15-section Jira/Confluence shape, start from `.templates/JIRA-PRD.input.template.md`.
 - Mapping rules are documented in `.templates/JIRA-PRD.input.MAPPING.md`.
 - The Jira/Confluence shape is **input only**. Intake always creates canonical `docs/PRD.md` using `.templates/PRD.template.md`.

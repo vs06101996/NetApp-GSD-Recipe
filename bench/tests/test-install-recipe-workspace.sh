@@ -43,6 +43,7 @@ T2="$(new_repo)"
 EXPECTED=(
   ".cursor/skills/recipe-workspace/SKILL.md"
   ".gsd-recipe/lib/workspace-swap.sh"
+  ".gsd-recipe/lib/initiative-branch.sh"
   ".cursor/hooks/workspace-swap-cursor-fallback.sh"
   ".cursor/hooks.json"
   ".gsd-recipe/workspaces/.gitkeep"
@@ -77,6 +78,7 @@ files = data.get("recipe-workspace", [])
 expected = [
     ".cursor/skills/recipe-workspace/SKILL.md",
     ".gsd-recipe/lib/workspace-swap.sh",
+    ".gsd-recipe/lib/initiative-branch.sh",
     ".cursor/hooks/workspace-swap-cursor-fallback.sh",
     ".cursor/hooks.json",
     ".gsd-recipe/workspaces/.gitkeep",
@@ -101,7 +103,7 @@ check "--verify passes after fresh install" "$?"
 T8="$(new_repo)"
 "$INSTALLER" --yes --target "$T8" >/dev/null
 "$INSTALLER" --uninstall --target "$T8" >/dev/null
-LEDGER_FILES="$T8/.gsd-recipe/lib/workspace-swap.sh $T8/.cursor/skills/recipe-workspace/SKILL.md $T8/.cursor/hooks/workspace-swap-cursor-fallback.sh"
+LEDGER_FILES="$T8/.gsd-recipe/lib/workspace-swap.sh $T8/.gsd-recipe/lib/initiative-branch.sh $T8/.cursor/skills/recipe-workspace/SKILL.md $T8/.cursor/hooks/workspace-swap-cursor-fallback.sh"
 removed_ok=0
 for f in $LEDGER_FILES; do
   [ -f "$f" ] && { echo "  still present: $f"; removed_ok=1; }
@@ -143,6 +145,9 @@ T11="$(new_repo)"
 DEFAULT_BRANCH="$(git -C "$T11" branch --show-current)"
 mkdir -p "$T11/.planning"
 echo "main roadmap" > "$T11/.planning/ROADMAP.md"
+mkdir -p "$T11/.gsd-recipe"
+echo "main queue" > "$T11/.gsd-recipe/phase-tasks-queue.jsonl"
+echo "main ledger" > "$T11/.gsd-recipe/sync-ledger.jsonl"
 git -C "$T11" branch feat/fresh
 git -C "$T11" switch -q feat/fresh
 [ -f "$T11/.gsd-recipe/workspaces/master/.planning/ROADMAP.md" ] ||
@@ -150,11 +155,18 @@ git -C "$T11" switch -q feat/fresh
 check "post-checkout: snapshots the branch being left" "$?"
 [ ! -d "$T11/.planning" ]
 check "post-checkout: fresh branch cannot inherit previous planning" "$?"
+[ ! -f "$T11/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
+  [ ! -f "$T11/.gsd-recipe/sync-ledger.jsonl" ]
+check "post-checkout: fresh branch cannot inherit previous tracker state" "$?"
 mkdir -p "$T11/.planning"
 echo "feature roadmap" > "$T11/.planning/ROADMAP.md"
+echo "feature queue" > "$T11/.gsd-recipe/phase-tasks-queue.jsonl"
 git -C "$T11" switch -q "$DEFAULT_BRANCH"
 grep -q "main roadmap" "$T11/.planning/ROADMAP.md"
 check "post-checkout: returning restores the branch-specific snapshot" "$?"
+grep -q "main queue" "$T11/.gsd-recipe/phase-tasks-queue.jsonl" &&
+  grep -q "main ledger" "$T11/.gsd-recipe/sync-ledger.jsonl"
+check "post-checkout: returning restores branch-specific tracker state" "$?"
 rm -rf "$T11"
 
 rm -rf "$T2"

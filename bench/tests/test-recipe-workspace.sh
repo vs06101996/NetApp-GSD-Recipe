@@ -180,18 +180,24 @@ echo "old roadmap" > "$T16/.planning/ROADMAP.md"
 echo "old prd" > "$T16/docs/PRD.md"
 echo "new source" > "$T16/docs/PRD-next.md"
 echo '{"status":"ready"}' > "$T16/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
+echo '{"phase":"old"}' > "$T16/.gsd-recipe/phase-tasks-queue.jsonl"
+echo '{"event":"old"}' > "$T16/.gsd-recipe/sync-ledger.jsonl"
 echo '{"tracker":"jira","onboard":{"skip_tracker":true}}' > "$T16/.gsd-recipe/config.json"
 RECIPE_WORKSPACE_ARCHIVE_ID=test-run bash "$LIB" archive feat/current \
   --target "$T16" --preserve "$T16/docs/PRD-next.md" >/dev/null
 ARCHIVE="$T16/.gsd-recipe/workspace-archives/feat__current/test-run"
 [ -f "$ARCHIVE/.planning/ROADMAP.md" ] &&
   [ -f "$ARCHIVE/docs/PRD.md" ] &&
-  [ -f "$ARCHIVE/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ]
-check "archive: preserves prior planning, PRD, and knowledge marker" "$?"
+  [ -f "$ARCHIVE/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
+  [ -f "$ARCHIVE/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
+  [ -f "$ARCHIVE/.gsd-recipe/sync-ledger.jsonl" ]
+check "archive: preserves prior planning, PRD, tracker state, and knowledge marker" "$?"
 [ ! -d "$T16/.planning" ] &&
   [ ! -f "$T16/docs/PRD.md" ] &&
-  [ ! -f "$T16/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ]
-check "archive: clears active prior-cycle context" "$?"
+  [ ! -f "$T16/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
+  [ ! -f "$T16/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
+  [ ! -f "$T16/.gsd-recipe/sync-ledger.jsonl" ]
+check "archive: clears active prior-cycle planning and tracker context" "$?"
 [ -f "$T16/docs/PRD-next.md" ]
 check "archive: --preserve keeps the incoming PRD source" "$?"
 python3 - "$T16/.gsd-recipe/config.json" <<'PY'
@@ -208,10 +214,16 @@ T17="$(new_repo)"
 mkdir -p "$T17/.planning" "$T17/docs"
 echo "branch-a" > "$T17/.planning/ROADMAP.md"
 echo "branch-a" > "$T17/docs/PRD.md"
+mkdir -p "$T17/.gsd-recipe"
+echo "branch-a" > "$T17/.gsd-recipe/phase-tasks-queue.jsonl"
+echo "branch-a" > "$T17/.gsd-recipe/sync-ledger.jsonl"
 bash "$LIB" snapshot branch-a --target "$T17" >/dev/null
 bash "$LIB" restore branch-b --target "$T17" --clear >/dev/null
-[ ! -d "$T17/.planning" ] && [ ! -f "$T17/docs/PRD.md" ]
-check "restore --clear: new branch cannot inherit previous branch context" "$?"
+[ ! -d "$T17/.planning" ] &&
+  [ ! -f "$T17/docs/PRD.md" ] &&
+  [ ! -f "$T17/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
+  [ ! -f "$T17/.gsd-recipe/sync-ledger.jsonl" ]
+check "restore --clear: new branch cannot inherit previous planning or tracker context" "$?"
 rm -rf "$T17"
 
 # ── 18. archive: stale skip_tracker alone is archived and cleared ─────────────
@@ -237,6 +249,49 @@ bash "$LIB" archive main --target "$T19" >/dev/null 2>&1 && rc=0 || rc=$?
 [ "$rc" != "0" ] && [ -f "$T19/.planning/ROADMAP.md" ]
 check "archive: invalid config fails closed before active context is cleared" "$?"
 rm -rf "$T19"
+
+# ── 20. snapshot/restore round-trips all initiative-local recipe state ────────
+T20="$(new_repo)"
+mkdir -p "$T20/.gsd-recipe"
+echo "queue-a" > "$T20/.gsd-recipe/phase-tasks-queue.jsonl"
+echo "ledger-a" > "$T20/.gsd-recipe/sync-ledger.jsonl"
+echo '{"status":"ready"}' > "$T20/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
+echo '{"tracker":"jira","onboard":{"skip_tracker":true}}' > "$T20/.gsd-recipe/config.json"
+bash "$LIB" snapshot branch-a --target "$T20" >/dev/null
+rm -f "$T20/.gsd-recipe/"{phase-tasks-queue.jsonl,sync-ledger.jsonl,KNOWLEDGE-BOOTSTRAPPED}
+echo '{"tracker":"jira"}' > "$T20/.gsd-recipe/config.json"
+bash "$LIB" restore branch-a --target "$T20" --clear >/dev/null
+grep -q "queue-a" "$T20/.gsd-recipe/phase-tasks-queue.jsonl" &&
+  grep -q "ledger-a" "$T20/.gsd-recipe/sync-ledger.jsonl" &&
+  [ -f "$T20/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ]
+check "snapshot/restore: tracker queue, sync ledger, and readiness marker round-trip" "$?"
+python3 - "$T20/.gsd-recipe/config.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert d["tracker"] == "jira"
+assert d["onboard"]["skip_tracker"] is True
+PY
+check "snapshot/restore: onboard.skip_tracker round-trips without replacing shared config" "$?"
+rm -rf "$T20"
+
+# ── 21. PRD-*.md alone is enough to create a snapshot ────────────────────────
+T21="$(new_repo)"
+mkdir -p "$T21/docs"
+echo "source only" > "$T21/docs/PRD-next.md"
+bash "$LIB" snapshot main --target "$T21" >/dev/null
+[ -f "$T21/.gsd-recipe/workspaces/main/docs/PRD-next.md" ]
+check "snapshot: untracked PRD-*.md alone is captured" "$?"
+rm -rf "$T21"
+
+# ── 22. malformed config blocks snapshot before any later clear can occur ────
+T22="$(new_repo)"
+mkdir -p "$T22/.planning" "$T22/.gsd-recipe"
+echo "keep me" > "$T22/.planning/ROADMAP.md"
+echo '{bad json' > "$T22/.gsd-recipe/config.json"
+bash "$LIB" snapshot main --target "$T22" >/dev/null 2>&1 && rc=0 || rc=$?
+[ "$rc" != "0" ] && [ -f "$T22/.planning/ROADMAP.md" ]
+check "snapshot: invalid config fails closed without touching active context" "$?"
+rm -rf "$T22"
 
 # ── summary ───────────────────────────────────────────────────────────────────
 echo

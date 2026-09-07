@@ -2,7 +2,7 @@
 
 Single Cursor skill that runs the full NetApp GSD onboarding chain in one invocation: PRD intake →
 project bootstrap → Jira Epic/link → phase tasks → knowledge. With no new source it resumes and
-skips completed artifacts. With an explicit source it starts fresh and archives the prior cycle.
+skips completed artifacts. With an explicit source it starts fresh on an isolated initiative branch.
 
 For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMANDS.md](RECIPE-COMMANDS.md). After a first install, type **`recipe-start`** (or **`recipe-help --next`**) to see the next command in plain language.
 
@@ -10,7 +10,7 @@ For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMA
 
 | Requirement | Why |
 |-------------|-----|
-| **Git repo root** | Recipe installers fail closed outside a git repository. |
+| **Clean Git repo root** | Fresh onboarding creates an initiative branch and fails closed on dirty product files, detached HEAD, or a branch-name collision. Gitignored recipe state may exist. |
 | **GSD for Cursor (full)** | Installed and verified by recipe install. Manual repair: `npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full` |
 | **Recipe skills staged** | At minimum: `recipe-onboard` plus the four skills it chains (see Install below). Full recipe: `recipe-install` or `./.gsd-recipe/scripts/install.sh --yes` |
 | **Atlassian MCP** | Authenticated Jira access to fetch a ticket, create an Epic, or link. `--skip-tracker` still needs MCP when the PRD source is a live ticket. |
@@ -68,6 +68,7 @@ With a PRD file already on disk:
 
 ```text
 recipe-onboard docs/PRD.md
+recipe-onboard docs/PRD.md --branch gsd/kb-evaluations
 ```
 
 With Jira project pre-selected (skips live project picker when Epic step runs):
@@ -90,8 +91,11 @@ knowledge bootstrap still runs. After PRD + `.planning/` succeed, the skill sets
 ### What happens
 
 1. **Read-only check** — PRD, ROADMAP, Epic, phase tasks, and knowledge-ready marker.
-2. **One preview-then-confirm gate** — shows which of the five steps will **run** vs **skip**.
-3. **Chain** (only missing steps):
+2. **One preview-then-confirm gate** — shows the new initiative branch and which of the five
+   steps will **run** vs **skip**.
+3. **Initiative boundary** — snapshots the current branch's `.planning/`, untracked PRDs,
+   tracker queue/ledger, and readiness state; creates `gsd/<slug>`; starts it clean.
+4. **Chain** (only missing steps):
    - `recipe-prd-intake` → writes `docs/PRD.md` (skipped if that file already exists)
    - `fotw-observer-bootstrap` → starts the fly-on-the-wall observer once `docs/PRD.md` exists,
      including when intake was skipped. No-op if disabled or already active; never blocks onboard.
@@ -100,8 +104,8 @@ knowledge bootstrap still runs. After PRD + `.planning/` succeed, the skill sets
    - `recipe-create-phase-tasks` → Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker` or existing-ticket onboard)
    - `recipe-bootstrap-knowledge` → mandatory map + graph; verifies and writes
      `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`
-4. **Stops the whole chain** on the first step that fails or is declined.
-5. **Final summary** — skipped / completed / failed per step. Knowledge failure fails onboarding.
+5. **Stops the whole chain** on the first step that fails or is declined.
+6. **Final summary** — skipped / completed / failed per step. Knowledge failure fails onboarding.
 
 ### After onboarding
 
@@ -125,10 +129,10 @@ recipe-onboard KAN-53
 
 An explicit source means **fresh onboarding**, never resume:
 
-1. The preview lists the old branch-local PRD/planning context.
-2. **Yes** archives `.planning/`, untracked `docs/PRD*.md`, and the knowledge-ready marker under
-   `.gsd-recipe/workspace-archives/<branch>/<run-id>/`, then clears them and stale
-   `onboard.skip_tracker`.
+1. The preview lists the old initiative state and proposed `gsd/<slug>` branch.
+2. **Yes** snapshots `.planning/`, untracked `docs/PRD*.md`, phase-task queue, sync ledger,
+   knowledge marker, and `onboard.skip_tracker` under
+   `.gsd-recipe/workspaces/<current-branch>/`, then creates the clean branch.
 3. Intake and project bootstrap always run from the new source. The old ROADMAP, STATE, plans,
    summaries, Epic, and phase-task keys are not reused.
 4. **No** changes nothing.
@@ -136,9 +140,12 @@ An explicit source means **fresh onboarding**, never resume:
 File input is read before switch-out, so a source under `docs/` remains available to intake.
 Calling `recipe-onboard` with **no source** is still resume/idempotent mode.
 
-Branch switching is automatic: the installed `post-checkout` hook snapshots the branch being
-left and restores the branch being entered. A new branch with no snapshot is cleared rather than
-inheriting the previous branch's recipe context. Use `recipe-workspace status` to inspect snapshots.
+Use `--branch NAME` to override the derived branch. Use `--no-branch` only when you deliberately
+want to stay on the current branch; that path archives the same initiative state under
+`.gsd-recipe/workspace-archives/<branch>/<run-id>/` before intake.
+
+Later branch switching is automatic: the installed `post-checkout` hook snapshots the branch
+being left and restores the branch being entered. Use `recipe-workspace status` to inspect snapshots.
 
 ## Step-by-step alternative
 

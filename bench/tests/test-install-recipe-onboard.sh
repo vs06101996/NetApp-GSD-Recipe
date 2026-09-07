@@ -110,6 +110,18 @@ grep -qi "must not be used\|will not be reused\|do not reuse" "$STAGED" && rc=0 
 check "staged skill forbids reusing prior-cycle recipe artifacts" "$rc"
 grep -qi "preload.*before.*switch-out\|read.*before.*switch-out" "$STAGED" && rc=0 || rc=$?
 check "staged skill preserves incoming file source before switch-out" "$rc"
+grep -q "initiative-branch.sh.*validate" "$STAGED" &&
+  grep -q "initiative-branch.sh.*create" "$STAGED" && rc=0 || rc=$?
+check "staged skill validates and creates an initiative branch before intake" "$rc"
+grep -q -- "--branch NAME" "$STAGED" && grep -q -- "--no-branch" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents branch override and explicit no-branch escape hatch" "$rc"
+grep -qi "Never also.*archive\|never also.*archive" "$STAGED" && rc=0 || rc=$?
+check "staged skill keeps branch creation and archive-in-place mutually exclusive" "$rc"
+grep -q "phase-tasks-queue.jsonl" "$STAGED" &&
+  grep -q "sync-ledger.jsonl" "$STAGED" && rc=0 || rc=$?
+check "staged skill treats tracker queue and sync ledger as prior initiative state" "$rc"
+grep -qi "dirty product worktree\\|tracked/untracked product changes" "$STAGED" && rc=0 || rc=$?
+check "staged skill fails closed on dirty product state" "$rc"
 
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null

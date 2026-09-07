@@ -1,6 +1,6 @@
 ---
 name: recipe-workspace
-description: "Recipe: per-branch workspace swap (TASK-059). Manual save/restore/status plus archive for starting a fresh onboarding context. The post-checkout hook runs automatically on git switch."
+description: "Recipe: per-branch initiative workspace swap (TASK-059/061). Manual save/restore/status plus archive. Planning, PRDs, tracker queue/ledger, and readiness state follow their initiative branch."
 ---
 
 <cursor_skill_adapter>
@@ -8,11 +8,11 @@ description: "Recipe: per-branch workspace swap (TASK-059). Manual save/restore/
 
 Invoke by name: `recipe-workspace <save|restore|archive|status>`
 
-- `recipe-workspace save` — snapshot current branch's gitignored planning files to `.gsd-recipe/workspaces/<branch>/`
+- `recipe-workspace save` — snapshot current branch's initiative-local recipe state to `.gsd-recipe/workspaces/<branch>/`
 - `recipe-workspace restore` — restore snapshot for current branch (no-op if none exists)
 - `recipe-workspace archive` — archive and clear the current branch's active onboarding
-  context (`.planning/`, untracked `docs/PRD*.md`, knowledge-ready marker). This is the
-  same switch-out primitive used by `recipe-onboard <new PRD source>`.
+  context (`.planning/`, untracked `docs/PRD*.md`, tracker queue/ledger, knowledge-ready
+  marker). This is the `recipe-onboard <source> --no-branch` switch-out primitive.
 - `recipe-workspace status` — list all branch snapshots and show current branch
 
 ## B. Prerequisites
@@ -65,7 +65,7 @@ bash "$LIB" status --target "$ROOT"
 - If `workspace-swap.sh` is missing: print `recipe-workspace: workspace-swap.sh not found — re-run install` and stop.
 - If `RECIPE_WORKSPACE_SWAP=0`: the lib prints a disabled message and exits 0 — relay that to the operator.
 - If `restore` finds no snapshot: lib prints `no snapshot for '<branch>' — nothing to restore` and exits 0 — relay that.
-- If `save` finds nothing to snapshot (no `.planning/`, no untracked `docs/PRD.md`): lib prints `nothing to snapshot` and exits 0 — relay that.
+- If `save` finds no initiative-local state: lib prints `nothing to snapshot` and exits 0 — relay that.
 - Never run `archive` without the operator's explicit confirmation. It preserves the
   previous context under `.gsd-recipe/workspace-archives/` before clearing active files.
 </cursor_skill_adapter>

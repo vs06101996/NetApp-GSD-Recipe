@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # workspace-swap.sh — per-branch snapshot/restore of gitignored recipe files.
-# Part of TASK-059 (OD-22): post-checkout hook swaps .planning/ + docs/PRD.md
-# between branches so each branch carries its own independent planning context.
+# Part of TASK-059/061 (OD-22/23): swap all initiative-local recipe state
+# between branches so each branch carries an independent delivery context.
 #
 # Subcommands:
 #   snapshot <branch> [--target <root>]  — save current working-tree state for branch
@@ -75,6 +75,94 @@ is_preserved() {
   [ -n "$PRESERVE" ] && [ "$candidate" = "$PRESERVE" ]
 }
 
+validate_config() {
+  if [ -f "$TARGET/.gsd-recipe/config.json" ] &&
+     ! python3 -m json.tool "$TARGET/.gsd-recipe/config.json" >/dev/null 2>&1; then
+    echo "workspace-swap.sh: invalid .gsd-recipe/config.json — refusing to snapshot, restore, archive, or clear" >&2
+    return 1
+  fi
+}
+
+has_skip_tracker() {
+  [ -f "$TARGET/.gsd-recipe/config.json" ] || return 1
+  python3 - "$TARGET/.gsd-recipe/config.json" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+raise SystemExit(0 if (data.get("onboard") or {}).get("skip_tracker") is True else 1)
+PY
+}
+
+copy_recipe_state() {
+  local destination="$1"
+  local state_file
+  for state_file in phase-tasks-queue.jsonl sync-ledger.jsonl KNOWLEDGE-BOOTSTRAPPED; do
+    if [ -f "$TARGET/.gsd-recipe/$state_file" ]; then
+      mkdir -p "$destination/.gsd-recipe"
+      cp "$TARGET/.gsd-recipe/$state_file" "$destination/.gsd-recipe/$state_file"
+    fi
+  done
+  if has_skip_tracker; then
+    mkdir -p "$destination/.gsd-recipe"
+    printf '%s\n' '{"skip_tracker":true}' > "$destination/.gsd-recipe/onboard-state.json"
+  fi
+}
+
+clear_recipe_state() {
+  rm -f \
+    "$TARGET/.gsd-recipe/phase-tasks-queue.jsonl" \
+    "$TARGET/.gsd-recipe/sync-ledger.jsonl" \
+    "$TARGET/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
+
+  [ -f "$TARGET/.gsd-recipe/config.json" ] || return 0
+  python3 - "$TARGET/.gsd-recipe/config.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as f:
+    data = json.load(f)
+onboard = data.get("onboard")
+if isinstance(onboard, dict):
+    onboard.pop("skip_tracker", None)
+    if not onboard:
+        data.pop("onboard", None)
+tmp = f"{path}.tmp-{os.getpid()}"
+with open(tmp, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+os.replace(tmp, path)
+PY
+}
+
+restore_recipe_state() {
+  local source="$1"
+  local state_file
+  for state_file in phase-tasks-queue.jsonl sync-ledger.jsonl KNOWLEDGE-BOOTSTRAPPED; do
+    if [ -f "$source/.gsd-recipe/$state_file" ]; then
+      mkdir -p "$TARGET/.gsd-recipe"
+      cp "$source/.gsd-recipe/$state_file" "$TARGET/.gsd-recipe/$state_file"
+    fi
+  done
+
+  if [ -f "$source/.gsd-recipe/onboard-state.json" ]; then
+    mkdir -p "$TARGET/.gsd-recipe"
+    python3 - "$TARGET/.gsd-recipe/config.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except FileNotFoundError:
+    data = {}
+data.setdefault("onboard", {})["skip_tracker"] = True
+tmp = f"{path}.tmp-{os.getpid()}"
+with open(tmp, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+os.replace(tmp, path)
+PY
+  fi
+}
+
 # ── subcommands ───────────────────────────────────────────────────────────────
 
 cmd_sanitize() {
@@ -86,14 +174,19 @@ cmd_snapshot() {
   [ "${#POSITIONAL[@]}" -ge 1 ] || { echo "workspace-swap.sh: snapshot requires <branch>" >&2; exit 2; }
   local branch="${POSITIONAL[0]}"
   resolve_target
+  validate_config
 
   if [ "${RECIPE_WORKSPACE_SWAP:-1}" = "0" ]; then
     echo "workspace-swap.sh: swap disabled (RECIPE_WORKSPACE_SWAP=0) — skipping snapshot for '$branch'"
     exit 0
   fi
 
-  local has_planning=0 has_prd=0
+  local has_planning=0 has_prd=0 has_recipe_state=0
   [ -d "$TARGET/.planning" ] && has_planning=1
+  for state_file in phase-tasks-queue.jsonl sync-ledger.jsonl KNOWLEDGE-BOOTSTRAPPED; do
+    [ -f "$TARGET/.gsd-recipe/$state_file" ] && has_recipe_state=1
+  done
+  has_skip_tracker && has_recipe_state=1
 
   # Include docs/PRD.md only if it is untracked/gitignored (not committed)
   if [ -f "$TARGET/docs/PRD.md" ]; then
@@ -101,9 +194,16 @@ cmd_snapshot() {
       has_prd=1
     fi
   fi
+  if [ -d "$TARGET/docs" ]; then
+    while IFS= read -r rel_path; do
+      case "$(basename "$rel_path")" in
+        PRD-*.md) has_prd=1 ;;
+      esac
+    done < <(git -C "$TARGET" ls-files --others --exclude-standard -- "docs/" 2>/dev/null || true)
+  fi
 
-  if [ "$has_planning" -eq 0 ] && [ "$has_prd" -eq 0 ]; then
-    echo "workspace-swap.sh: nothing to snapshot for '$branch' (no .planning/ or untracked docs/PRD.md)"
+  if [ "$has_planning" -eq 0 ] && [ "$has_prd" -eq 0 ] && [ "$has_recipe_state" -eq 0 ]; then
+    echo "workspace-swap.sh: nothing to snapshot for '$branch' (no initiative-local recipe state)"
     exit 0
   fi
 
@@ -119,7 +219,7 @@ cmd_snapshot() {
   fi
 
   # Copy docs/PRD.md
-  if [ "$has_prd" -eq 1 ]; then
+  if [ "$has_prd" -eq 1 ] && [ -f "$TARGET/docs/PRD.md" ]; then
     mkdir -p "$tmp_dir/docs"
     cp "$TARGET/docs/PRD.md" "$tmp_dir/docs/PRD.md"
   fi
@@ -138,6 +238,8 @@ cmd_snapshot() {
     done < <(git -C "$TARGET" ls-files --others --exclude-standard -- "docs/" 2>/dev/null || true)
   fi
 
+  copy_recipe_state "$tmp_dir"
+
   # Record original branch name
   printf '%s\n' "$branch" > "$tmp_dir/.branch-name"
 
@@ -152,6 +254,7 @@ cmd_restore() {
   [ "${#POSITIONAL[@]}" -ge 1 ] || { echo "workspace-swap.sh: restore requires <branch>" >&2; exit 2; }
   local branch="${POSITIONAL[0]}"
   resolve_target
+  validate_config
 
   if [ "${RECIPE_WORKSPACE_SWAP:-1}" = "0" ]; then
     echo "workspace-swap.sh: swap disabled (RECIPE_WORKSPACE_SWAP=0) — skipping restore for '$branch'"
@@ -167,6 +270,7 @@ cmd_restore() {
   # Manual `recipe-workspace restore` does NOT pass --clear for safety.
   if [ "$CLEAR" -eq 1 ]; then
     rm -rf "$TARGET/.planning"
+    clear_recipe_state
     # Remove untracked docs/PRD*.md (never touch committed files)
     if [ -d "$TARGET/docs" ]; then
       for prd in "$TARGET/docs/PRD.md" "$TARGET/docs"/PRD-*.md; do
@@ -198,6 +302,8 @@ cmd_restore() {
     done
   fi
 
+  restore_recipe_state "$sdir"
+
   echo "workspace-swap.sh: restored snapshot for '$branch' from $(workspaces_dir)/$(sanitize_branch "$branch")"
 }
 
@@ -215,11 +321,7 @@ cmd_archive() {
     PRESERVE="$TARGET/$PRESERVE"
   fi
 
-  if [ -f "$TARGET/.gsd-recipe/config.json" ] &&
-     ! python3 -m json.tool "$TARGET/.gsd-recipe/config.json" >/dev/null 2>&1; then
-    echo "workspace-swap.sh: invalid .gsd-recipe/config.json — refusing to archive or clear" >&2
-    exit 1
-  fi
+  validate_config
 
   local archive_id
   archive_id="${RECIPE_WORKSPACE_ARCHIVE_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
@@ -255,19 +357,11 @@ cmd_archive() {
     found=1
   fi
 
-  if [ -f "$TARGET/.gsd-recipe/config.json" ]; then
-    if python3 - "$TARGET/.gsd-recipe/config.json" <<'PY'
-import json, sys
-with open(sys.argv[1], encoding="utf-8") as f:
-    data = json.load(f)
-raise SystemExit(0 if (data.get("onboard") or {}).get("skip_tracker") is True else 1)
-PY
-    then
-      mkdir -p "$tmp_dir/.gsd-recipe"
-      printf '%s\n' '{"skip_tracker":true}' > "$tmp_dir/.gsd-recipe/onboard-state.json"
-      found=1
-    fi
-  fi
+  for state_file in phase-tasks-queue.jsonl sync-ledger.jsonl; do
+    [ -f "$TARGET/.gsd-recipe/$state_file" ] && found=1
+  done
+  has_skip_tracker && found=1
+  copy_recipe_state "$tmp_dir"
 
   if [ "$found" -eq 0 ]; then
     rm -rf "$tmp_dir"
@@ -291,26 +385,7 @@ PY
       fi
     done
   fi
-  rm -f "$TARGET/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
-
-  if [ -f "$TARGET/.gsd-recipe/config.json" ]; then
-    python3 - "$TARGET/.gsd-recipe/config.json" <<'PY'
-import json, os, sys
-path = sys.argv[1]
-with open(path, encoding="utf-8") as f:
-    data = json.load(f)
-onboard = data.get("onboard")
-if isinstance(onboard, dict):
-    onboard.pop("skip_tracker", None)
-    if not onboard:
-        data.pop("onboard", None)
-tmp = f"{path}.tmp-{os.getpid()}"
-with open(tmp, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=2)
-    f.write("\n")
-os.replace(tmp, path)
-PY
-  fi
+  clear_recipe_state
 
   echo "workspace-swap.sh: archived active onboarding context for '$branch' → $adir; working tree cleared"
 }
