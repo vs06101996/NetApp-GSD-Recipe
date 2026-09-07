@@ -1,6 +1,6 @@
 ---
 name: recipe-review-ship
-description: "Recipe: gated single-phase review-and-ship wrapper for the NetApp GSD recipe (TASK-026). Calls native gsd-code-review N directly, syncs review_complete via gsd-jira-sync (required In Review transition), then calls native gsd-ship N [--draft] and surfaces the resulting PR link — printing gsd-review/gsd-ui-review N as informational-only suggestions, never auto-invoking either."
+description: "Recipe: gated single-phase review-and-ship wrapper for the NetApp GSD recipe (TASK-026). Calls native gsd-code-review N directly, syncs review_complete via gsd-jira-sync (required In Review transition), then calls native gsd-ship N [--draft], surfaces the PR link, and keeps operator handoff on recipe commands."
 ---
 
 <cursor_skill_adapter>
@@ -69,10 +69,9 @@ Examples:
    it reports to the operator. Do not fabricate a URL if `gsd-ship` didn't produce one — report
    plainly that no PR link was returned.
 
-6. **Print informational-only suggestions** for the two optional review paths `RUNTIME-LLD.md`
-   §4.a also lists: `gsd-review` (optional cross-AI peer review of plans) and `gsd-ui-review N`
-   (if the phase is front-end-facing, paired with browser MCP). Print both as plain suggestions the
-   operator can run themselves — **never auto-invoke either.**
+6. **Keep the operator handoff on the recipe command surface.** Do not print native optional
+   review commands as operator next steps. Print `recipe-status`; once PO acceptance and green CI
+   are available, print `recipe-settle`.
 
 7. **Summarize**, in one final line to the operator: phase number, resolved issue key (or "none
    linked"), the `review_complete` post result (`posted` / `duplicate_skipped` /
@@ -90,8 +89,8 @@ Examples:
 - Do not bundle `bench/runners/draft-github-pr-comment.sh` (TASK-006) posting into this skill's own
   flow. That stays a separate, standalone tool an operator can run independently — this skill never
   invokes it.
-- Do not auto-invoke `gsd-review` (optional cross-AI peer review) or `gsd-ui-review N` on the
-  operator's behalf. Both are print-only informational suggestions in this skill's own output.
+- Do not auto-invoke or print optional native review commands as operator next steps. They have no
+  dedicated recipe wrapper; keep the handoff on `recipe-status` / `recipe-settle`.
 - Do not inline Jira drafting/posting/stamping logic (`draft-jira-comment.sh`'s steps) directly —
   always call into `gsd-jira-sync`'s documented workflow instead for `review_complete`.
 - Do not transition the Jira issue directly from this skill (e.g. calling `transitionJiraIssue`
@@ -135,8 +134,7 @@ tasks (TASK-018/025/027) are being built concurrently against the same shared fi
    own documented prerequisite (`gsd-verify-work` passed) — surfaces whatever native GSD reports if
    unmet.
 5. Surface the resulting PR URL/link to the operator (or report plainly that none was returned).
-6. Print `gsd-review`/`gsd-ui-review N` as informational-only suggestions — never auto-invoke
-   either.
+6. Print only recipe-surface handoff commands: `recipe-status`, then `recipe-settle` when ready.
 7. Summarize phase/issue/post-result/ship-result in one line.
 
 ## Why Option B (direct same-turn call), not a background/async trigger
@@ -168,9 +166,8 @@ that `gsd-ship` itself returns.
 - **No bundled GitHub PR comment posting.** `bench/runners/draft-github-pr-comment.sh` (TASK-006)
   stays a separate, standalone tool an operator can run independently; this skill's own flow never
   invokes it.
-- **No auto-invocation of `gsd-review` or `gsd-ui-review N`.** Both are optional per
-  `RUNTIME-LLD.md` §4.a; this skill only prints them as informational suggestions in its own
-  output, never calls either on the operator's behalf.
+- **No native optional-review handoff.** Optional native review workflows are neither invoked nor
+  printed as operator next steps; the output remains on `recipe-status` / `recipe-settle`.
 - **No new sync event.** See "Why there is no `ship_complete`/`pr_opened` sync event" above.
 - **No inlined Jira posting logic.** `review_complete` is emitted by invoking `gsd-jira-sync`'s
   documented workflow, not by calling `draft-jira-comment.sh` and the Atlassian MCP directly from

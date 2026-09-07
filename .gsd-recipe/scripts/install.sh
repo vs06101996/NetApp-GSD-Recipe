@@ -819,6 +819,7 @@ EOF
 .env
 .env.*
 .learnings/
+.gsd/
 .gsd-codebase/
 .gsd-recipe/
 .knowledge/

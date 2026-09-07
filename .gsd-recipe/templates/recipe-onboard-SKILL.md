@@ -103,7 +103,7 @@ Examples:
      and it parses as a Jira issue key or browse URL (run `bench/lib/parse-jira-issue-ref.sh`
      via `recipe-paths.sh resolve` when possible; else the same regex rules as that script),
      set existing-ticket mode with `KEY` and optional browse `URL`. File paths win over keys.
-   - In fresh-onboarding mode, prior active context includes `.planning/`, untracked
+   - In fresh-onboarding mode, prior active context includes `.planning/`, `.gsd/`, untracked
      `docs/PRD.md` / `docs/PRD-*.md`, `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`,
      `.gsd-recipe/phase-tasks-queue.jsonl`, `.gsd-recipe/sync-ledger.jsonl`, and
      `onboard.skip_tracker`. All artifact-derived skip decisions belong to the old cycle and
@@ -122,7 +122,7 @@ Examples:
    - in `--no-branch` mode, prior active paths that will be archived under
      `.gsd-recipe/workspace-archives/<branch>/<run-id>/` and cleared;
    - explicit statement that the prior PRD, ROADMAP, STATE, plans, summaries, phase keys, and
-     tracker queue/ledger and knowledge-ready marker will **not** be reused.
+     GSD runtime state, tracker queue/ledger, and knowledge-ready marker will **not** be reused.
    Then print, plainly, all five
    steps in their fixed order (PRD intake → project bootstrap → Epic creation → phase-task
    creation → knowledge bootstrap) and, for each, whether it will **run** or **skip** (and why — e.g. "skip: docs/PRD.md

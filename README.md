@@ -120,7 +120,7 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 
 `recipe-onboard <source>` always means a new cycle. Before intake it snapshots the current
 initiative and creates `gsd/<slug>` (`--branch NAME` overrides). The new branch starts without
-the prior `.planning/`, untracked PRDs, phase-task queue, sync ledger, knowledge marker, or
+the prior `.planning/`, `.gsd/` runtime state, untracked PRDs, phase-task queue, sync ledger, knowledge marker, or
 `onboard.skip_tracker`. `--no-branch` explicitly stays on the current branch and archives that
 state under `.gsd-recipe/workspace-archives/`. `recipe-onboard` with no source remains resume
 mode. When starting from another initiative branch, the new branch is based on `origin/HEAD`

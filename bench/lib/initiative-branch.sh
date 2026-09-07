@@ -92,8 +92,22 @@ preflight() {
     exit 1
   }
 
-  if [ -n "$(git -C "$TARGET" status --porcelain --untracked-files=normal)" ]; then
+  local dirty_product_state
+  dirty_product_state="$(
+    git -C "$TARGET" status --porcelain --untracked-files=all |
+      while IFS= read -r status_line; do
+        if [[ "$status_line" == "?? docs/PRD.md" ||
+              "$status_line" == "?? docs/PRD-"*.md ||
+              "$status_line" == "?? .gsd/"* ]]; then
+          # Generated initiative state; workspace-swap owns it.
+          continue
+        fi
+        printf '%s\n' "$status_line"
+      done
+  )"
+  if [ -n "$dirty_product_state" ]; then
     echo "initiative-branch.sh: tracked/untracked product changes are present; commit or stash them before fresh onboarding" >&2
+    printf '%s\n' "$dirty_product_state" | sed 's/^/  - /' >&2
     exit 1
   fi
 
@@ -101,6 +115,7 @@ preflight() {
   tracked_initiative_state="$(
     git -C "$TARGET" ls-files -- \
       ".planning/" \
+      ".gsd/" \
       "docs/PRD.md" \
       "docs/PRD-*.md" \
       ".gsd-recipe/phase-tasks-queue.jsonl" \

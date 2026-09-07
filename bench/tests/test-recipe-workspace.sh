@@ -176,7 +176,9 @@ rm -rf "$T15"
 # ── 16. archive: preserves old cycle, clears active context, keeps source ─────
 T16="$(new_repo)"
 mkdir -p "$T16/.planning" "$T16/docs" "$T16/.gsd-recipe"
+mkdir -p "$T16/.gsd"
 echo "old roadmap" > "$T16/.planning/ROADMAP.md"
+echo '{"phase":"old"}' > "$T16/.gsd/dispatch-isolation-sentinel.json"
 echo "old prd" > "$T16/docs/PRD.md"
 echo "new source" > "$T16/docs/PRD-next.md"
 echo '{"status":"ready"}' > "$T16/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
@@ -190,13 +192,15 @@ ARCHIVE="$T16/.gsd-recipe/workspace-archives/feat__current/test-run"
   [ -f "$ARCHIVE/docs/PRD.md" ] &&
   [ -f "$ARCHIVE/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
   [ -f "$ARCHIVE/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
-  [ -f "$ARCHIVE/.gsd-recipe/sync-ledger.jsonl" ]
-check "archive: preserves prior planning, PRD, tracker state, and knowledge marker" "$?"
+  [ -f "$ARCHIVE/.gsd-recipe/sync-ledger.jsonl" ] &&
+  [ -f "$ARCHIVE/.gsd/dispatch-isolation-sentinel.json" ]
+check "archive: preserves prior planning, PRD, GSD runtime, tracker state, and knowledge marker" "$?"
 [ ! -d "$T16/.planning" ] &&
   [ ! -f "$T16/docs/PRD.md" ] &&
   [ ! -f "$T16/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
   [ ! -f "$T16/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
-  [ ! -f "$T16/.gsd-recipe/sync-ledger.jsonl" ]
+  [ ! -f "$T16/.gsd-recipe/sync-ledger.jsonl" ] &&
+  [ ! -d "$T16/.gsd" ]
 check "archive: clears active prior-cycle planning and tracker context" "$?"
 [ -f "$T16/docs/PRD-next.md" ]
 check "archive: --preserve keeps the incoming PRD source" "$?"
@@ -212,17 +216,20 @@ rm -rf "$T16"
 # ── 17. branch restore --clear prevents old planning leakage ─────────────────
 T17="$(new_repo)"
 mkdir -p "$T17/.planning" "$T17/docs"
+mkdir -p "$T17/.gsd"
 echo "branch-a" > "$T17/.planning/ROADMAP.md"
 echo "branch-a" > "$T17/docs/PRD.md"
 mkdir -p "$T17/.gsd-recipe"
 echo "branch-a" > "$T17/.gsd-recipe/phase-tasks-queue.jsonl"
 echo "branch-a" > "$T17/.gsd-recipe/sync-ledger.jsonl"
+echo "branch-a" > "$T17/.gsd/dispatch-isolation-sentinel.json"
 bash "$LIB" snapshot branch-a --target "$T17" >/dev/null
 bash "$LIB" restore branch-b --target "$T17" --clear >/dev/null
 [ ! -d "$T17/.planning" ] &&
   [ ! -f "$T17/docs/PRD.md" ] &&
   [ ! -f "$T17/.gsd-recipe/phase-tasks-queue.jsonl" ] &&
-  [ ! -f "$T17/.gsd-recipe/sync-ledger.jsonl" ]
+  [ ! -f "$T17/.gsd-recipe/sync-ledger.jsonl" ] &&
+  [ ! -d "$T17/.gsd" ]
 check "restore --clear: new branch cannot inherit previous planning or tracker context" "$?"
 rm -rf "$T17"
 
@@ -253,18 +260,22 @@ rm -rf "$T19"
 # ── 20. snapshot/restore round-trips all initiative-local recipe state ────────
 T20="$(new_repo)"
 mkdir -p "$T20/.gsd-recipe"
+mkdir -p "$T20/.gsd"
 echo "queue-a" > "$T20/.gsd-recipe/phase-tasks-queue.jsonl"
 echo "ledger-a" > "$T20/.gsd-recipe/sync-ledger.jsonl"
 echo '{"status":"ready"}' > "$T20/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
 echo '{"tracker":"jira","onboard":{"skip_tracker":true}}' > "$T20/.gsd-recipe/config.json"
+echo "sentinel-a" > "$T20/.gsd/dispatch-isolation-sentinel.json"
 bash "$LIB" snapshot branch-a --target "$T20" >/dev/null
 rm -f "$T20/.gsd-recipe/"{phase-tasks-queue.jsonl,sync-ledger.jsonl,KNOWLEDGE-BOOTSTRAPPED}
+rm -rf "$T20/.gsd"
 echo '{"tracker":"jira"}' > "$T20/.gsd-recipe/config.json"
 bash "$LIB" restore branch-a --target "$T20" --clear >/dev/null
 grep -q "queue-a" "$T20/.gsd-recipe/phase-tasks-queue.jsonl" &&
   grep -q "ledger-a" "$T20/.gsd-recipe/sync-ledger.jsonl" &&
-  [ -f "$T20/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ]
-check "snapshot/restore: tracker queue, sync ledger, and readiness marker round-trip" "$?"
+  [ -f "$T20/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ] &&
+  grep -q "sentinel-a" "$T20/.gsd/dispatch-isolation-sentinel.json"
+check "snapshot/restore: GSD runtime, tracker queue, sync ledger, and readiness marker round-trip" "$?"
 python3 - "$T20/.gsd-recipe/config.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))

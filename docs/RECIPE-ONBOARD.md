@@ -130,7 +130,7 @@ recipe-onboard KAN-53
 An explicit source means **fresh onboarding**, never resume:
 
 1. The preview lists the old initiative state and proposed `gsd/<slug>` branch.
-2. **Yes** snapshots `.planning/`, untracked `docs/PRD*.md`, phase-task queue, sync ledger,
+2. **Yes** snapshots `.planning/`, `.gsd/` runtime state, untracked `docs/PRD*.md`, phase-task queue, sync ledger,
    knowledge marker, and `onboard.skip_tracker` under
    `.gsd-recipe/workspaces/<current-branch>/`, then creates the clean branch.
    From an existing initiative branch, the new branch is based on `origin/HEAD` (then local

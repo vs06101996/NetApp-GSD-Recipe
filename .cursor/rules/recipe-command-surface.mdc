@@ -31,6 +31,10 @@ If the correct next command is unclear, run
 `.gsd-recipe/scripts/recipe-next.sh` and print its output verbatim rather than
 guessing.
 
+If a native workflow suggests an optional `gsd-*` action with no recipe wrapper
+(for example, an auxiliary peer/UI review), omit that suggestion and recommend
+`recipe-status`. Never expose an unmapped native command as the operator handoff.
+
 ## When `gsd-*` is still correct
 
 - The operator explicitly asked about or for a native GSD command.
