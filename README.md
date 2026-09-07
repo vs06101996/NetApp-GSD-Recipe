@@ -123,7 +123,9 @@ initiative and creates `gsd/<slug>` (`--branch NAME` overrides). The new branch 
 the prior `.planning/`, untracked PRDs, phase-task queue, sync ledger, knowledge marker, or
 `onboard.skip_tracker`. `--no-branch` explicitly stays on the current branch and archives that
 state under `.gsd-recipe/workspace-archives/`. `recipe-onboard` with no source remains resume
-mode. Branch switching saves/restores each initiative automatically.
+mode. When starting from another initiative branch, the new branch is based on `origin/HEAD`
+(falling back to local `main`/`master`), so PR 2 cannot inherit PR 1. Branch switching
+saves/restores each initiative automatically.
 
 Variants:
 
