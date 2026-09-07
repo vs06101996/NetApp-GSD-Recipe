@@ -27,6 +27,7 @@ Type these by name in Cursor Agent (not `/slash`).
 | You have | Type this |
 |----------|-----------|
 | A Jira/Confluence PRD export | `recipe-onboard @docs/input/my-feature-prd.md` |
+| An existing Jira ticket | `recipe-onboard KAN-53` or a browse URL (links the ticket; does not create a second Epic) |
 | A bug or small fix, no Jira | `recipe-onboard --skip-tracker` |
 | A feature and you want Jira Epic + tasks | `recipe-onboard` |
 | Nothing written yet | `recipe-onboard` (it asks you to paste or describe) |
@@ -51,7 +52,7 @@ Or run a range end-to-end: `recipe-run-phases 1 5 --full`
 | `python3`, `git` | Hard requirement |
 | GSD for Cursor (full profile) | Installed automatically; install fails if it can't verify |
 | `graphify` | Required to finish onboard — fix with `./.gsd-recipe/scripts/install-graphify.sh`. `install.sh` prepends `$HOME/bin` for the rest of that process after auto-install; new shells still need that PATH. |
-| Atlassian MCP | Only for the Jira path (`recipe-create-epic`, sync) |
+| Atlassian MCP | Jira ticket fetch, Epic create, and sync |
 | `gh` + `gh auth login` | Only for PR / ship |
 
 Stuck? `recipe-help --stuck` · Health check: `recipe-install-verify` · Snapshot: `recipe-status`
@@ -97,7 +98,9 @@ On an interactive install, the runner may open Cursor with `recipe-start` prefil
 
 ## Onboarding chain (`recipe-onboard`)
 
-One preview-then-confirm gate, then chains whichever steps are still missing:
+One preview-then-confirm gate. With no new PRD source, it resumes and chains whichever steps
+are missing. An explicit source starts fresh: prior branch-local recipe context is archived
+and cleared first, so an old ROADMAP/STATE can never drive the new work.
 
 ```text
 recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-create-phase-tasks
@@ -106,7 +109,7 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 
 | Step | Skill | Artifact |
 |------|-------|----------|
-| 1 | `recipe-prd-intake` | `docs/PRD.md` (from Jira/Confluence export, canonical PRD, or freeform) |
+| 1 | `recipe-prd-intake` | `docs/PRD.md` (from Jira issue key/URL, Jira/Confluence export, canonical PRD, or freeform) |
 | 1b | `fotw-observer-bootstrap` | Starts the observer once a PRD exists (also when intake is skipped; no-op if already active) |
 | 2 | `recipe-new-project` | `.planning/PROJECT.md`, `ROADMAP.md`, `STATE.md` |
 | 3 | `recipe-create-epic` | Jira Epic + `intake_started` sync (skipped with `--skip-tracker`) |
@@ -115,10 +118,18 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 
 `--skip-tracker` skips only Epic/tasks; intake, planning, and knowledge bootstrap still run, then it sets `onboard.skip_tracker`. After Yes on onboard, it asks whether to create Jira. `recipe-start` opens gitignored `docs/RECIPE-SEQUENCE.md`.
 
+`recipe-onboard <source>` always means a new cycle. It archives `.planning/`, untracked
+`docs/PRD*.md`, and the knowledge-ready marker under `.gsd-recipe/workspace-archives/`, clears
+stale `onboard.skip_tracker`, then rebuilds intake/planning from that source. `recipe-onboard`
+with no source remains resume mode. Installed branch-switch hooks separately save/restore active
+recipe context per branch; a branch with no snapshot starts clean.
+
 Variants:
 
 ```text
 recipe-onboard
+recipe-onboard KAN-53
+recipe-onboard https://netapp.atlassian.net/browse/KAN-53
 recipe-onboard @docs/input/my-feature-prd.md
 recipe-onboard docs/PRD.md
 recipe-onboard --skip-tracker
@@ -144,9 +155,10 @@ Do not write the 15-section form to `docs/PRD.md`. Discover this path with `reci
 | Command | One-liner use case |
 |---------|-------------------|
 | `recipe-validate-tokens` | Check GitHub + Jira/Atlassian credentials/scopes before doing recipe work. |
-| `recipe-prd-intake @docs/input/my-feature-prd.md` | Map Jira/Confluence PRD input → canonical `docs/PRD.md` (+ bootstrap FOTW observer). |
+| `recipe-prd-intake KAN-53` | Fetch a Jira issue (or map a file/paste) → canonical `docs/PRD.md` (+ FOTW observer). |
 | `recipe-new-project` | Bootstrap `.planning/*` via native `gsd-new-project` (first-init vs re-init gate; prefers `docs/PRD.md` as input). |
-| `recipe-onboard` | Full onboarding chain in one command — skips steps whose artifacts already exist. |
+| `recipe-onboard [source]` | Resume with no source; with a source, archive/switch out the old cycle and onboard fresh. |
+| `recipe-workspace status` | Show per-branch planning snapshots; branch checkout swaps them automatically. |
 | `recipe-bootstrap-knowledge` | Build/refresh `.knowledge/` + `/gsd-map-codebase` + **`/gsd-graphify build`** — automatic during onboard; run manually to refresh. |
 | `recipe-plan-phase 1` | Write Phase 1 `PLAN.md`. |
 | `recipe-run-phase 1` | Execute Phase 1 plans. |

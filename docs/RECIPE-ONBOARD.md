@@ -1,7 +1,8 @@
 # recipe-onboard — quick start
 
 Single Cursor skill that runs the full NetApp GSD onboarding chain in one invocation: PRD intake →
-project bootstrap → Jira Epic → phase tasks. Skips any step whose artifact already exists.
+project bootstrap → Jira Epic/link → phase tasks → knowledge. With no new source it resumes and
+skips completed artifacts. With an explicit source it starts fresh and archives the prior cycle.
 
 For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMANDS.md](RECIPE-COMMANDS.md). After a first install, type **`recipe-start`** (or **`recipe-help --next`**) to see the next command in plain language.
 
@@ -12,8 +13,8 @@ For the full command catalog, invoke **`recipe-help`** or see [docs/RECIPE-COMMA
 | **Git repo root** | Recipe installers fail closed outside a git repository. |
 | **GSD for Cursor (full)** | Installed and verified by recipe install. Manual repair: `npx -y --package=@opengsd/gsd-core@latest -- gsd-core --cursor --global --profile=full` |
 | **Recipe skills staged** | At minimum: `recipe-onboard` plus the four skills it chains (see Install below). Full recipe: `recipe-install` or `./.gsd-recipe/scripts/install.sh --yes` |
-| **Atlassian MCP** (Epic + phase tasks only) | Authenticated Jira access when steps 4–5 of the chain actually run. Not needed if you only need PRD + `.planning/` bootstrap. |
-| **PRD input** (optional) | Jira/Confluence export (`.templates/JIRA-PRD.input.template.md` shape), file path, pasted text, or freeform description. Output is always canonical `docs/PRD.md`. If `docs/PRD.md` already exists, the intake step is skipped. |
+| **Atlassian MCP** | Authenticated Jira access to fetch a ticket, create an Epic, or link. `--skip-tracker` still needs MCP when the PRD source is a live ticket. |
+| **PRD input** (optional) | Jira issue key or browse URL (Atlassian MCP), Jira/Confluence export (`.templates/JIRA-PRD.input.template.md` shape), file path, pasted text, or freeform description. Output is always canonical `docs/PRD.md`. If `docs/PRD.md` already exists, the intake step is skipped. |
 
 ## Install
 
@@ -56,6 +57,13 @@ Open your repo in Cursor. In Agent chat, invoke by **name** (not `/slash`):
 recipe-onboard
 ```
 
+With an existing Jira ticket (fetch description; **link** the key — do not create a second Epic):
+
+```text
+recipe-onboard KAN-53
+recipe-onboard https://netapp.atlassian.net/browse/KAN-53
+```
+
 With a PRD file already on disk:
 
 ```text
@@ -88,8 +96,8 @@ knowledge bootstrap still runs. After PRD + `.planning/` succeed, the skill sets
    - `fotw-observer-bootstrap` → starts the fly-on-the-wall observer once `docs/PRD.md` exists,
      including when intake was skipped. No-op if disabled or already active; never blocks onboard.
    - `recipe-new-project` → creates `.planning/*` via native `gsd-new-project --auto` when `docs/PRD.md` (or another file brief) exists. The wrapper answers native config in-turn (`commit_docs: false`, no `git commit` of gitignored `.planning/`). Missing GSD research agents is a warning plus native's inline roadmap — not a hard stop. Fail closed only if the `gsd-new-project` skill file is missing.
-   - `recipe-create-epic` → Jira Epic + `intake_started` sync (skipped with `--skip-tracker`)
-   - `recipe-create-phase-tasks` → Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker`)
+   - `recipe-create-epic` → Jira Epic + `intake_started` sync (skipped with `--skip-tracker`, or when the PRD source was an existing ticket — that path runs `init-tracker` + `gsd-jira-sync intake_started` instead)
+   - `recipe-create-phase-tasks` → Jira sub-tasks per ROADMAP phase (skipped with `--skip-tracker` or existing-ticket onboard)
    - `recipe-bootstrap-knowledge` → mandatory map + graph; verifies and writes
      `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED`
 4. **Stops the whole chain** on the first step that fails or is declined.
@@ -108,23 +116,29 @@ Or loop multiple phases: `recipe-run-phases` (optionally `--full` for verify/rev
 
 ### Second PRD / new initiative in the same repo
 
-Today `recipe-onboard` **silently skips** when `docs/PRD.md`, `.planning/ROADMAP.md`, Epic, or phase-task keys already exist — so a second feature PRD cannot become the active cycle via onboard alone.
-
-**Planned (TASK-054 / [OD-17](netapp-recipe/DECISIONS.md)):** same command, with a warn + Yes/No gate when planning already exists and you pass a new PRD source:
+Pass the new source to the same command:
 
 ```text
 recipe-onboard docs/PRD-kb-compare-metrics-backend.md
+recipe-onboard KAN-53
 ```
 
-- **Yes** → overwrite PRD + re-init `.planning/` + force-relink Epic/phase tasks  
-- **No** → keep current planning; agent suggests continuing on the existing ROADMAP (`recipe-bootstrap-knowledge` → `recipe-plan-phase N` …) or settling the current Epic first  
+An explicit source means **fresh onboarding**, never resume:
 
-**Until TASK-054 ships**, do it manually:
+1. The preview lists the old branch-local PRD/planning context.
+2. **Yes** archives `.planning/`, untracked `docs/PRD*.md`, and the knowledge-ready marker under
+   `.gsd-recipe/workspace-archives/<branch>/<run-id>/`, then clears them and stale
+   `onboard.skip_tracker`.
+3. Intake and project bootstrap always run from the new source. The old ROADMAP, STATE, plans,
+   summaries, Epic, and phase-task keys are not reused.
+4. **No** changes nothing.
 
-1. Promote the new PRD into `docs/PRD.md` (`recipe-prd-intake <path>` — confirm overwrite).
-2. `recipe-new-project docs/PRD.md` — confirm **re-init**.
-3. `recipe-create-epic --force` then `recipe-create-phase-tasks`.
-4. Continue with bootstrap → plan → run as usual.
+File input is read before switch-out, so a source under `docs/` remains available to intake.
+Calling `recipe-onboard` with **no source** is still resume/idempotent mode.
+
+Branch switching is automatic: the installed `post-checkout` hook snapshots the branch being
+left and restores the branch being entered. A new branch with no snapshot is cleared rather than
+inheriting the previous branch's recipe context. Use `recipe-workspace status` to inspect snapshots.
 
 ## Step-by-step alternative
 

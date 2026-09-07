@@ -120,7 +120,9 @@ def phase_has_summary(n):
                     return True
     return False
 
-ONBOARD_INPUT = """  Jira/Confluence PRD input: recipe-onboard @docs/input/my-feature-prd.md
+ONBOARD_INPUT = """  Existing Jira ticket: recipe-onboard KAN-53
+  (or a browse URL; links the ticket, does not create a second Epic)
+  Jira/Confluence PRD file: recipe-onboard @docs/input/my-feature-prd.md
   Template: .templates/JIRA-PRD.input.template.md (input only)
 """
 ONBOARD_SKIP = """  No Jira: recipe-onboard --skip-tracker

@@ -98,6 +98,18 @@ grep -qi "recipe-discuss-phase" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents recipe-discuss-phase as explicitly deferred" "$rc"
 grep -qi "recipe-complete-milestone" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents recipe-complete-milestone as explicitly deferred" "$rc"
+grep -q "getJiraIssue\|parse-jira-issue-ref\|browse/" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents Jira ticket / browse URL onboard" "$rc"
+grep -q "init-tracker" "$STAGED" && rc=0 || rc=$?
+check "staged skill links existing tickets via init-tracker" "$rc"
+grep -qi "do not invoke \`recipe-create-epic\` when" "$STAGED" && rc=0 || rc=$?
+check "staged skill does not create a second Epic for an existing ticket" "$rc"
+grep -q 'workspace-swap.sh.*archive\|"$LIB" archive' "$STAGED" && rc=0 || rc=$?
+check "staged skill archives prior context for explicit new onboarding" "$rc"
+grep -qi "must not be used\|will not be reused\|do not reuse" "$STAGED" && rc=0 || rc=$?
+check "staged skill forbids reusing prior-cycle recipe artifacts" "$rc"
+grep -qi "preload.*before.*switch-out\|read.*before.*switch-out" "$STAGED" && rc=0 || rc=$?
+check "staged skill preserves incoming file source before switch-out" "$rc"
 
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null

@@ -63,6 +63,9 @@ check "staged skill references Jira PRD input mapping" "$rc"
 grep -q "Never write the 15-section Jira/Confluence form" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
 check "staged skill forbids writing Jira shape to docs/PRD.md" "$rc"
 
+grep -q "getJiraIssue" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
+check "staged skill fetches Jira issues via getJiraIssue" "$rc"
+
 # 4. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
 LEDGER_COUNT2="$(python3 -c "import json; print(len(json.load(open('$TARGET1/.gsd-recipe/ledger.json'))['recipe-prd-intake']))")"

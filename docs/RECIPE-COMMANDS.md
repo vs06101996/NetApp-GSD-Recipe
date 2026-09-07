@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-08-28T04:43:16Z_
+_Generated: 2026-09-06T12:41:42Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
@@ -11,6 +11,7 @@ In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use
 ```text
 After bash install:  recipe-start     (or recipe-status / recipe-help --next)
 recipe-onboard (or step-by-step intake/epic/tasks)
+recipe-onboard <new source>  (archives prior branch context; starts fresh)
 recipe-onboard --skip-tracker  (skip Jira only; knowledge still runs)
   → knowledge is verified during onboard
   → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)
@@ -22,12 +23,15 @@ Enable planning policy: add `"agent_skills": {"gsd-planner": ["skills/recipe-pla
 
 ## PRD input formats
 
-`recipe-prd-intake` and `recipe-onboard` accept a Jira/Confluence PRD export, an already-canonical PRD, pasted text, or a freeform description.
+`recipe-prd-intake` and `recipe-onboard` accept a Jira issue key or browse URL (fetched via Atlassian MCP), a Jira/Confluence PRD export, an already-canonical PRD, pasted text, or a freeform description.
 
+- Existing ticket: `recipe-onboard KAN-53` or `recipe-onboard https://example.atlassian.net/browse/KAN-53`. Intake fetches summary/description; onboard **links** that key (does not create a second Epic). `--skip-tracker` still fetches for the PRD but does not write STATE.
+- Fresh vs resume: any explicit source archives and switches out the prior active PRD/planning context before intake. `recipe-onboard` with no source resumes artifact-aware onboarding.
+- Branch isolation: git checkout/switch saves and restores branch-local context automatically. Inspect with `recipe-workspace status`.
 - For the official NetApp 15-section Jira/Confluence shape, start from `.templates/JIRA-PRD.input.template.md`.
 - Mapping rules are documented in `.templates/JIRA-PRD.input.MAPPING.md`.
 - The Jira/Confluence shape is **input only**. Intake always creates canonical `docs/PRD.md` using `.templates/PRD.template.md`.
-- Examples: `recipe-prd-intake @path/to/jira-prd.md` or `recipe-onboard @path/to/jira-prd.md`.
+- File examples: `recipe-prd-intake @path/to/jira-prd.md` or `recipe-onboard @path/to/jira-prd.md`.
 
 ## Jira tickets (assign + status)
 
@@ -55,6 +59,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 |---------|--------|---------|
 | `recipe-start` | built | First-run coach: after install, prints the next friendly Cursor command (how to onboard a PRD, then bootstrap/plan/ru... |
 | `recipe-status` | built | Read-only status snapshot: branch, PRD/ROADMAP/Epic/phase keys, PLAN/SUMMARY, install and sync hints, then the same n... |
+| `recipe-workspace` | built | Per-branch recipe workspace isolation: git post-checkout snapshots/restores .planning and untracked PRD files. Also a... |
 | `recipe-update` | built | In-place recipe upgrade: fetch recipe_source, preview incoming commits, Yes/No, restage via install.sh --yes without ... |
 | `recipe-install` | built | Thin, invoke-by-name end-to-end install orchestrator: chains recipe-validate-tokens (informational) -> a live, non-sk... |
 | `recipe-validate-tokens` | built | Standalone, re-invokable GitHub + Jira/Atlassian credential/scope check (real --check-github probe; agent-mediated Ji... |
@@ -65,7 +70,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 | Command | Status | Purpose |
 |---------|--------|---------|
 | `recipe-onboard` | built | Single onboarding orchestrator closing the 'no single on-ramp' SDLC coverage gap. Chains, in order, whichever of reci... |
-| `recipe-prd-intake` | built | PRD intake wrapper: fills .templates/PRD.template.md, writes docs/PRD.md, invokes fotw-observer-bootstrap as its fina... |
+| `recipe-prd-intake` | built | PRD intake wrapper: fills .templates/PRD.template.md from a Jira issue key/URL (Atlassian MCP getJiraIssue), Jira/Con... |
 | `recipe-new-project` | built | Gated repo-bootstrap wrapper closing the 'make my current repo ready' SDLC coverage gap. Determines first-init vs re-... |
 | `recipe-create-epic` | built | PRD -> Jira Epic bridge: drafts summary/description from docs/PRD.md, resolves project/issue type, looks up assignee ... |
 | `recipe-create-phase-tasks` | built | Agent-mediated phase-task creation: detect then list, resolve issue type, assign via lookupJiraAccountId, confirm, th... |

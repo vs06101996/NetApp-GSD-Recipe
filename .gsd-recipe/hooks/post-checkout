@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# post-checkout hook: per-branch workspace swap (TASK-059 / OD-22).
+# Installed to $TARGET/.git/hooks/post-checkout by install-recipe-workspace.sh.
+# Args: $1=prev-SHA  $2=new-SHA  $3=branch-flag (1=branch checkout, 0=file-only)
+set -euo pipefail
+
+[ "$3" = "1" ] || exit 0                             # skip file-only checkouts
+[ "${RECIPE_WORKSPACE_SWAP:-1}" != "0" ] || exit 0   # opt-out
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+LIB="$ROOT/.gsd-recipe/lib/workspace-swap.sh"
+[ -f "$LIB" ] || exit 0  # recipe not installed in this repo
+
+# Resolve old branch from reflog (git writes the reflog entry before this hook fires).
+# Format: "checkout: moving from <old> to <new>"
+OLD_BRANCH="$(git reflog -1 HEAD --format='%gs' 2>/dev/null | sed -n 's/.*moving from \(.*\) to .*/\1/p')"
+NEW_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+
+[ -n "$OLD_BRANCH" ] || exit 0
+[ -n "$NEW_BRANCH" ] || exit 0
+[ "$OLD_BRANCH" != "$NEW_BRANCH" ] || exit 0
+
+bash "$LIB" snapshot "$OLD_BRANCH" --target "$ROOT"
+bash "$LIB" restore  "$NEW_BRANCH" --target "$ROOT" --clear

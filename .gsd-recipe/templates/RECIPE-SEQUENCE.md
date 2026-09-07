@@ -26,6 +26,11 @@ recipe-onboard docs/PRD.md
 recipe-onboard --project KEY
 ```
 
+An explicit source (`KAN-53`, URL, file, paste, or description) starts a **fresh**
+onboarding cycle: the previous branch-local recipe context is archived and switched
+out before intake. `recipe-onboard` with no source resumes the active cycle. Git branch
+checkout also swaps active recipe context automatically (`recipe-workspace status`).
+
 For a NetApp 15-section Jira/Confluence PRD, start from
 `.templates/JIRA-PRD.input.template.md`. It is **input only**; intake maps it via
 `.templates/JIRA-PRD.input.MAPPING.md` and writes canonical `docs/PRD.md`.
