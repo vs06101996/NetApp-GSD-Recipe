@@ -146,6 +146,14 @@ check "uninstall cleans up the now-empty skill directory" "$?"
 # and preserves canonical source on uninstall.
 COPY="$(mktemp -d)/gsd-benchmark-copy"
 cp -R "$REPO_ROOT" "$COPY"
+if [ ! -d "$COPY/.git" ]; then
+  rm -f "$COPY/.git"
+  git -C "$COPY" init -q
+  git -C "$COPY" config user.email "test@local"
+  git -C "$COPY" config user.name "test"
+  git -C "$COPY" add -A
+  git -C "$COPY" commit -qm init
+fi
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-onboard.sh --yes >/dev/null 2>&1) && rc=0 || rc=$?
 check "self-install into a copy of this repo does not error (src==dest collision handled)" "$rc"
 (cd "$COPY" && ./.gsd-recipe/scripts/install-recipe-onboard.sh --uninstall >/dev/null 2>&1) && rc=0 || rc=$?
