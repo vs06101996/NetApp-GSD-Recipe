@@ -110,3 +110,47 @@ coverage lives in `bench/tests/test-recipe-workspace.sh`.
 
 **Retest verdict: PASS.** AC-2 is closed; the original observations remain above as the
 defect history.
+
+---
+
+## AgentStudio two-initiative / two-PR pilot — 2026-09-07
+
+An unbiased agent used only public `recipe-*` lifecycle commands in one fresh
+AgentStudio checkout. Jira was disabled with `--skip-tracker`; direct native
+GSD, internal recipe scripts, manual branch switching/committing/pushing, and
+manual PR creation were prohibited.
+
+### Results
+
+- [AgentStudio PR #703](https://github.com/NetApp-Nemo/AgentStudio/pull/703):
+  one commit and one intended file, `docs/README.md` (+1).
+- The first attempt to start initiative 2 correctly failed closed, but exposed
+  generated `docs/PRD.md` and `.gsd/dispatch-isolation-sentinel.json` being
+  misclassified as dirty product work.
+- Remediation now classifies those paths as initiative-local, snapshots/restores
+  `.gsd/`, and bases consecutive initiatives on trunk rather than the preceding
+  initiative.
+- [AgentStudio PR #704](https://github.com/NetApp-Nemo/AgentStudio/pull/704):
+  one commit and one intended file,
+  `docs/testing/integration-emulators.md` (+41). It contains neither PR #703's
+  commit nor its `docs/README.md` change.
+- Review/ship output no longer prints optional native commands as operator next
+  steps; unmapped native suggestions resolve to `recipe-status`.
+
+### Remaining friction
+
+- Several Cursor CLI confirmation/continuation runs hung after producing some or
+  all expected artifacts. Public `recipe-status` and a retry recovered the runs.
+- One execute run produced its summary and edit before the commit; retrying
+  `recipe-run-phase 1` committed it.
+- Under the tester's strict ban on all native command invocation, verification
+  skipped delegated native audits. The public PR boundary was still verified,
+  but this means the complete end-to-end pilot is not fully clean.
+- `--skip-tracker` behaved correctly, although status still reports Jira install
+  verification as pending.
+
+**Final pilot verdict: PARTIAL.** The initiative-isolation objective passes:
+two public-command-only initiatives produced two independent PRs without stale
+planning, tracker, runtime, or product changes crossing the boundary. The
+remaining failures are command-continuation and verification-surface friction,
+not cross-initiative leakage.
