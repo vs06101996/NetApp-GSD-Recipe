@@ -126,6 +126,7 @@ fi
 # a target that doesn't have the whole harness duplicated into it.
 SELF_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RECIPE_PATHS_SRC="$SELF_ROOT/bench/lib/recipe-paths.sh"
+RECIPE_GITIGNORE_SRC="$SELF_ROOT/bench/lib/recipe-gitignore.sh"
 
 GSD_RECIPE_DIR="$TARGET/.gsd-recipe"
 LEDGER="$GSD_RECIPE_DIR/ledger.json"
@@ -535,15 +536,6 @@ with open(path, "w") as f:
 PY
 }
 
-gitignore_ensure() {
-  # $1 = line to ensure is present (as a whole line, not a substring probe).
-  mkdir -p "$(dirname "$GITIGNORE")"
-  touch "$GITIGNORE"
-  if ! grep -qxF "$1" "$GITIGNORE"; then
-    printf '%s\n' "$1" >> "$GITIGNORE"
-  fi
-}
-
 install_report_write() {
   # $1 = github_check result (pass|fail|skipped)
   # $2..$7 = prereqs.{python3,git,node,gh,gsd_core,graphify} (pass|fail|auto_installed)
@@ -792,51 +784,13 @@ EOF
     ledger_record "code_base_details/README.md"
   fi
 
-  # Additive-only entries — must stay in sync with bench/tests/test-install.sh
-  # and the --verify gitignore check below.
-  #
-  # Policy (INSTALL-LLD § .gitignore additions): on *external* targets the
-  # recipe scaffold is local-only — not committed with product/feature work.
-  # Self-install into this source repo skips `.gsd-recipe/` so we never hide
-  # the canonical recipe tree that install.sh itself lives in.
-  local self_install=0
+  # Additive-only entries. Canonical list lives in recipe-gitignore.sh so
+  # recipe-onboard can re-apply it after cutting an initiative from trunk.
+  local gitignore_flags=(ensure --target "$TARGET")
   if [ "$(cd "$TARGET" && pwd)" = "$SELF_ROOT" ]; then
-    self_install=1
+    gitignore_flags+=(--self-install)
   fi
-  local gitignore_line
-  while IFS= read -r gitignore_line; do
-    [ -n "$gitignore_line" ] || continue
-    if [ "$self_install" -eq 1 ] && [ "$gitignore_line" = ".gsd-recipe/" ]; then
-      continue
-    fi
-    gitignore_ensure "$gitignore_line"
-  done <<'GITIGNORE_LINES'
-/bin/
-/dist/
-*.exe
-.idea/
-.vscode/
-.env
-.env.*
-.learnings/
-.gsd/
-.gsd-codebase/
-.gsd-recipe/
-.knowledge/
-.templates/
-.planning/
-code_base_details/
-skills/
-docs/RECIPE-COMMANDS.md
-docs/RECIPE-BENCHMARKS.md
-docs/RECIPE-SEQUENCE.md
-bench/
-.cursor/get-shit-done/
-.cursor/gsd-install-state.json
-.cursor/gsd-file-manifest.json
-.cursor/.gsd-profile
-graphify-out/
-GITIGNORE_LINES
+  bash "$RECIPE_GITIGNORE_SRC" "${gitignore_flags[@]}"
 
   config_json_merge
 
@@ -977,43 +931,15 @@ for k in ('python3', 'git', 'node', 'gh', 'gsd_core', 'graphify'):
   fi
 
   local missing_gitignore=""
-  local self_install=0
+  local gitignore_missing_flags=(missing --target "$TARGET")
   if [ "$(cd "$TARGET" && pwd)" = "$SELF_ROOT" ]; then
-    self_install=1
+    gitignore_missing_flags+=(--self-install)
   fi
-  while IFS= read -r line; do
-    [ -n "$line" ] || continue
-    if [ "$self_install" -eq 1 ] && [ "$line" = ".gsd-recipe/" ]; then
-      continue
-    fi
-    if [ ! -f "$GITIGNORE" ] || ! grep -qxF "$line" "$GITIGNORE"; then
-      missing_gitignore="$missing_gitignore [$line]"
-    fi
-  done <<'GITIGNORE_VERIFY'
-/bin/
-/dist/
-*.exe
-.idea/
-.vscode/
-.env
-.env.*
-.learnings/
-.gsd-codebase/
-.gsd-recipe/
-.knowledge/
-.templates/
-.planning/
-code_base_details/
-skills/
-docs/RECIPE-COMMANDS.md
-docs/RECIPE-BENCHMARKS.md
-docs/RECIPE-SEQUENCE.md
-bench/
-.cursor/get-shit-done/
-.cursor/gsd-install-state.json
-.cursor/gsd-file-manifest.json
-.cursor/.gsd-profile
-GITIGNORE_VERIFY
+  local missing_line
+  while IFS= read -r missing_line; do
+    [ -n "$missing_line" ] || continue
+    missing_gitignore="$missing_gitignore [$missing_line]"
+  done < <(bash "$RECIPE_GITIGNORE_SRC" "${gitignore_missing_flags[@]}" || true)
   if [ -x "$GSD_RECIPE_DIR/scripts/recipe-paths.sh" ]; then
     echo "[C] recipe-paths.sh staged — pass"
   else

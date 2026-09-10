@@ -14,8 +14,10 @@ Invoke by name (`recipe-onboard`) with:
   memory before switch-out so it remains valid even when it is under `docs/`.
   A Jira key/URL that is also an existing file path is a **file**.
 - `--branch NAME` — optional fresh-onboarding override for the new initiative branch.
-  Without it, derive `gsd/<slug>` from the Jira key, source filename, or concise initiative
-  title. Validate with `git check-ref-format`; never silently add a numeric suffix.
+  Without it, derive `feat/<feature-title>[-<Ticket>]` (or `fix/...` with `--fix`) via
+  `.gsd-recipe/lib/derive-initiative-branch.sh`. Validate with `git check-ref-format`;
+  never silently add a numeric suffix.
+- `--fix` — optional. Use the `fix/` prefix instead of `feat/` when deriving the branch.
 - `--no-branch` — optional fresh-onboarding escape hatch. Stay on the current branch and
   archive the prior initiative in place before intake. This retains TASK-054 behavior for
   operators who deliberately do not want an initiative branch.
@@ -38,7 +40,8 @@ Examples:
   that key into STATE (do not create a second Epic). Skip automatic phase-task creation.
 - `recipe-onboard docs/PRD.md` — already-written PRD file; skips intake's own file/paste/freeform
   question if that step runs.
-- `recipe-onboard docs/PRD.md --branch gsd/object-store-reconcile` — choose the initiative branch.
+- `recipe-onboard docs/PRD.md --branch feat/object-store-reconcile-KAN-53` — choose the initiative branch.
+- `recipe-onboard "Null pointer in ingest" --fix --skip-tracker` — derive `fix/<title>`.
 - `recipe-onboard docs/PRD.md --no-branch` — archive and restart on the current branch.
 - `recipe-onboard --skip-tracker` — PRD + `.planning/` + knowledge; no Jira Epic, link, or phase tasks.
 - `recipe-onboard --project KAN --assignee "Ada Lovelace"` — skips the live Jira-project question if the Epic **create** step runs; assigns created tickets.
@@ -53,8 +56,9 @@ Examples:
 - Atlassian MCP enabled and authenticated — needed if the PRD source is a Jira issue key/URL
   (intake fetch), or if Epic **create** / phase-task steps actually run. Not needed for
   `--skip-tracker` unless the PRD source is a live Jira ticket.
-- `recipe-workspace` runtimes staged at `.gsd-recipe/lib/workspace-swap.sh` and
-  `.gsd-recipe/lib/initiative-branch.sh` when an explicit PRD source is supplied. Re-run
+- `recipe-workspace` runtimes staged at `.gsd-recipe/lib/workspace-swap.sh`,
+  `.gsd-recipe/lib/initiative-branch.sh`, `.gsd-recipe/lib/derive-initiative-branch.sh`,
+  and `.gsd-recipe/lib/recipe-gitignore.sh` when an explicit PRD source is supplied. Re-run
   `recipe-update` / recipe install if missing; never fall back to deleting prior state directly.
 
 ## C. Tool Usage
@@ -64,10 +68,11 @@ Examples:
      `Read` and retain its contents now, before any switch-out. Do not classify recipe flags
      (`--skip-tracker`, `--project`, etc.) as a PRD source.
      - Unless `--no-branch` was passed, set **initiative-branch mode**. Resolve a branch:
-       use `--branch NAME` verbatim when present; otherwise use `gsd/<jira-key-lowercase>` for
-       Jira input, `gsd/<source-basename-slug>` for a file, or `gsd/<concise-title-slug>` for
-       pasted/freeform input. Slugs are lowercase ASCII letters/digits/hyphens, with repeated
-       separators collapsed and leading/trailing separators removed.
+       use `--branch NAME` verbatim when present; otherwise run
+       `.gsd-recipe/lib/derive-initiative-branch.sh` with `--kind feat` (or `--kind fix` when
+       `--fix` was passed), `--ticket <KEY>` for Jira input, `--file <path>` for a file, and/or
+       `--title <concise-title>` for pasted/freeform input. The derived name is
+       `feat|fix/<feature-title>[-<Ticket>]`. Do not invent a `gsd/` prefix.
      - Run `.gsd-recipe/lib/initiative-branch.sh validate <branch> --target <root>` during
        reconnaissance and retain the base ref it reports. From `main`/`master`, the base is the
        current branch; from an initiative branch, it resolves `origin/HEAD`, then local
@@ -121,6 +126,9 @@ Examples:
      clean;
    - in `--no-branch` mode, prior active paths that will be archived under
      `.gsd-recipe/workspace-archives/<branch>/<run-id>/` and cleared;
+   - that recipe `.gitignore` entries will be re-applied **after** the initiative
+     boundary (additive). Do not treat the current branch's `.gitignore` as proof the
+     new trunk-based branch has them — last PR's ignore updates may be unmerged.
    - explicit statement that the prior PRD, ROADMAP, STATE, plans, summaries, phase keys, and
      GSD runtime state, tracker queue/ledger, and knowledge-ready marker will **not** be reused.
    Then print, plainly, all five
@@ -147,7 +155,7 @@ Examples:
      the current branch, creates the branch, restores/clears its independent initiative state,
      and rolls back if initialization fails. Verify `git branch --show-current` equals the
      requested branch and that none of the old initiative-local paths remain active. Never also
-     run `archive` in this mode.
+     run `archive` in this mode. Then continue to step 2c.
    - **Confirm, `--no-branch` mode** → if archive-in-place was marked, resolve
      `.gsd-recipe/lib/workspace-swap.sh` and run:
      ```
@@ -156,7 +164,19 @@ Examples:
      A missing lib or non-zero archive is a hard failure: stop before intake. Never `rm` the
      old context as a fallback. The archive command also removes stale tracker queue/ledger and
      `onboard.skip_tracker`.
-     Then continue to step 3. Also note in the preview (not a sixth confirmable step):
+     Then continue to step 2c.
+   - **Confirm, resume mode** → continue to step 2c.
+
+2c. **Recipe `.gitignore` ensure — every onboard, after the initiative boundary.**
+    The new branch is based on trunk, so ignore lines from an unmerged previous initiative
+    PR will not be present. Run:
+    ```
+    "$ROOT/.gsd-recipe/lib/recipe-gitignore.sh" ensure --target "$ROOT"
+    ```
+    Additive only: append missing recipe lines, never delete or rewrite existing ignores.
+    Missing helper is a hard failure: stop before intake. Do not commit `.gitignore` here;
+    it rides with the initiative's later commits/PR. Then continue to step 3. Also note in
+    the preview (not a sixth confirmable step):
      once `docs/PRD.md` exists, this chain will invoke `fotw-observer-bootstrap` even if PRD
      intake is skipped.
 

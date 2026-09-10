@@ -45,6 +45,10 @@ LIB_SRC="$SELF_ROOT/bench/lib/workspace-swap.sh"
 LIB_DEST="$GSD_RECIPE_DIR/lib/workspace-swap.sh"
 INITIATIVE_LIB_SRC="$SELF_ROOT/bench/lib/initiative-branch.sh"
 INITIATIVE_LIB_DEST="$GSD_RECIPE_DIR/lib/initiative-branch.sh"
+DERIVE_LIB_SRC="$SELF_ROOT/bench/lib/derive-initiative-branch.sh"
+DERIVE_LIB_DEST="$GSD_RECIPE_DIR/lib/derive-initiative-branch.sh"
+GITIGNORE_LIB_SRC="$SELF_ROOT/bench/lib/recipe-gitignore.sh"
+GITIGNORE_LIB_DEST="$GSD_RECIPE_DIR/lib/recipe-gitignore.sh"
 
 HOOK_SRC="$SCRIPT_DIR/../hooks/post-checkout"
 HOOK_DEST="$TARGET/.git/hooks/post-checkout"
@@ -168,7 +172,7 @@ install() {
     esac
   fi
 
-  for src_file in "$SKILL_SRC" "$LIB_SRC" "$INITIATIVE_LIB_SRC" "$HOOK_SRC" "$CURSOR_FALLBACK_SRC"; do
+  for src_file in "$SKILL_SRC" "$LIB_SRC" "$INITIATIVE_LIB_SRC" "$DERIVE_LIB_SRC" "$GITIGNORE_LIB_SRC" "$HOOK_SRC" "$CURSOR_FALLBACK_SRC"; do
     if [ ! -f "$src_file" ]; then
       echo "recipe-workspace installer: missing source file: $src_file" >&2
       exit 1
@@ -189,6 +193,14 @@ install() {
   safe_copy "$INITIATIVE_LIB_SRC" "$INITIATIVE_LIB_DEST"
   chmod +x "$INITIATIVE_LIB_DEST"
   ledger_record ".gsd-recipe/lib/initiative-branch.sh"
+
+  safe_copy "$DERIVE_LIB_SRC" "$DERIVE_LIB_DEST"
+  chmod +x "$DERIVE_LIB_DEST"
+  ledger_record ".gsd-recipe/lib/derive-initiative-branch.sh"
+
+  safe_copy "$GITIGNORE_LIB_SRC" "$GITIGNORE_LIB_DEST"
+  chmod +x "$GITIGNORE_LIB_DEST"
+  ledger_record ".gsd-recipe/lib/recipe-gitignore.sh"
 
   # git post-checkout hook (NOT ledger-tracked — .git/ is outside the tracked tree)
   safe_copy "$HOOK_SRC" "$HOOK_DEST"
@@ -227,7 +239,7 @@ uninstall() {
     if [ -f "$abs" ]; then
       # Check if this is a canonical source we must not delete
       local skip=0
-      for canon in "$SKILL_SRC" "$LIB_SRC" "$INITIATIVE_LIB_SRC" "$CURSOR_FALLBACK_SRC"; do
+      for canon in "$SKILL_SRC" "$LIB_SRC" "$INITIATIVE_LIB_SRC" "$DERIVE_LIB_SRC" "$GITIGNORE_LIB_SRC" "$CURSOR_FALLBACK_SRC"; do
         if [ -e "$canon" ] && [ -e "$abs" ]; then
           local canon_real abs_real
           canon_real="$(cd "$(dirname "$canon")" && pwd)/$(basename "$canon")"

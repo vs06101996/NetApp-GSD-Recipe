@@ -88,7 +88,7 @@ Jira/Confluence PRD exports use `.templates/JIRA-PRD.input.template.md` as an
 to canonical `docs/PRD.md` using `.templates/JIRA-PRD.input.MAPPING.md`.
 
 Passing any explicit source to `recipe-onboard` starts a fresh cycle on a clean
-`gsd/<slug>` initiative branch. Planning, PRDs, tracker queue/ledger, and readiness state
+`feat/<feature-title>[-<Ticket>]` initiative branch (`--fix` uses `fix/`). Planning, PRDs, tracker queue/ledger, and readiness state
 remain with the previous branch. Calling it with no source resumes the current cycle.
 
 Full catalog: `recipe-help`  

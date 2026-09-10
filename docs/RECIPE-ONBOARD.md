@@ -68,7 +68,7 @@ With a PRD file already on disk:
 
 ```text
 recipe-onboard docs/PRD.md
-recipe-onboard docs/PRD.md --branch gsd/kb-evaluations
+recipe-onboard docs/PRD.md --branch feat/kb-evaluations-KAN-53
 ```
 
 With Jira project pre-selected (skips live project picker when Epic step runs):
@@ -94,7 +94,8 @@ knowledge bootstrap still runs. After PRD + `.planning/` succeed, the skill sets
 2. **One preview-then-confirm gate** — shows the new initiative branch and which of the five
    steps will **run** vs **skip**.
 3. **Initiative boundary** — snapshots the current branch's `.planning/`, untracked PRDs,
-   tracker queue/ledger, and readiness state; creates `gsd/<slug>`; starts it clean.
+   tracker queue/ledger, and readiness state; creates `feat/<title>[-<Ticket>]` (or `fix/...`); starts it clean.
+   Then re-applies recipe `.gitignore` lines additively on that branch (trunk may lack last PR's ignores).
 4. **Chain** (only missing steps):
    - `recipe-prd-intake` → writes `docs/PRD.md` (skipped if that file already exists)
    - `fotw-observer-bootstrap` → starts the fly-on-the-wall observer once `docs/PRD.md` exists,
@@ -129,7 +130,7 @@ recipe-onboard KAN-53
 
 An explicit source means **fresh onboarding**, never resume:
 
-1. The preview lists the old initiative state and proposed `gsd/<slug>` branch.
+1. The preview lists the old initiative state and proposed `feat|fix/<title>[-<Ticket>]` branch.
 2. **Yes** snapshots `.planning/`, `.gsd/` runtime state, untracked `docs/PRD*.md`, phase-task queue, sync ledger,
    knowledge marker, and `onboard.skip_tracker` under
    `.gsd-recipe/workspaces/<current-branch>/`, then creates the clean branch.
