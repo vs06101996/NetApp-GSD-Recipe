@@ -113,6 +113,12 @@ check "staged skill preserves incoming file source before switch-out" "$rc"
 grep -q "initiative-branch.sh.*validate" "$STAGED" &&
   grep -q "initiative-branch.sh.*create" "$STAGED" && rc=0 || rc=$?
 check "staged skill validates and creates an initiative branch before intake" "$rc"
+grep -q "derive-initiative-branch.sh" "$STAGED" &&
+  grep -q "feat|fix" "$STAGED" && rc=0 || rc=$?
+check "staged skill derives feat/fix feature-title-Ticket branch names" "$rc"
+grep -q "recipe-gitignore.sh" "$STAGED" &&
+  grep -qi "additive" "$STAGED" && rc=0 || rc=$?
+check "staged skill re-applies recipe gitignore after the initiative boundary" "$rc"
 grep -q -- "--branch NAME" "$STAGED" && grep -q -- "--no-branch" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents branch override and explicit no-branch escape hatch" "$rc"
 grep -qi "Never also.*archive\|never also.*archive" "$STAGED" && rc=0 || rc=$?

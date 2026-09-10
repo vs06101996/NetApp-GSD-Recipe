@@ -11,7 +11,7 @@ In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use
 ```text
 After bash install:  recipe-start     (or recipe-status / recipe-help --next)
 recipe-onboard (or step-by-step intake/epic/tasks)
-recipe-onboard <new source>  (creates clean gsd/<slug> initiative branch)
+recipe-onboard <new source>  (creates feat/<title>[-<Ticket>] or fix/... branch)
 recipe-onboard --skip-tracker  (skip Jira only; knowledge still runs)
   → knowledge is verified during onboard
   → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)

@@ -44,6 +44,8 @@ EXPECTED=(
   ".cursor/skills/recipe-workspace/SKILL.md"
   ".gsd-recipe/lib/workspace-swap.sh"
   ".gsd-recipe/lib/initiative-branch.sh"
+  ".gsd-recipe/lib/derive-initiative-branch.sh"
+  ".gsd-recipe/lib/recipe-gitignore.sh"
   ".cursor/hooks/workspace-swap-cursor-fallback.sh"
   ".cursor/hooks.json"
   ".gsd-recipe/workspaces/.gitkeep"
@@ -79,6 +81,8 @@ expected = [
     ".cursor/skills/recipe-workspace/SKILL.md",
     ".gsd-recipe/lib/workspace-swap.sh",
     ".gsd-recipe/lib/initiative-branch.sh",
+    ".gsd-recipe/lib/derive-initiative-branch.sh",
+    ".gsd-recipe/lib/recipe-gitignore.sh",
     ".cursor/hooks/workspace-swap-cursor-fallback.sh",
     ".cursor/hooks.json",
     ".gsd-recipe/workspaces/.gitkeep",

@@ -129,6 +129,7 @@ done <<'EOF'
 .env
 .env.*
 .learnings/
+.gsd/
 .gsd-codebase/
 .gsd-recipe/
 .knowledge/
@@ -144,6 +145,7 @@ bench/
 .cursor/gsd-install-state.json
 .cursor/gsd-file-manifest.json
 .cursor/.gsd-profile
+graphify-out/
 EOF
 check "fresh install writes standard .gitignore entries" "$rc"
 
@@ -259,7 +261,9 @@ if [ -f "$TARGET1/.cursor/skills/recipe-status/SKILL.md" ]; then
 fi
 if [ -f "$TARGET1/.cursor/skills/recipe-workspace/SKILL.md" ] &&
    [ -f "$TARGET1/.gsd-recipe/lib/workspace-swap.sh" ] &&
-   [ -f "$TARGET1/.gsd-recipe/lib/initiative-branch.sh" ]; then
+   [ -f "$TARGET1/.gsd-recipe/lib/initiative-branch.sh" ] &&
+   [ -f "$TARGET1/.gsd-recipe/lib/derive-initiative-branch.sh" ] &&
+   [ -f "$TARGET1/.gsd-recipe/lib/recipe-gitignore.sh" ]; then
   check "install.sh composes install-recipe-workspace.sh (skill + workspace/initiative libs staged)" "0"
 fi
 if [ -f "$TARGET1/.cursor/skills/recipe-update/SKILL.md" ] && [ -f "$TARGET1/.gsd-recipe/lib/recipe-update.sh" ] && [ -f "$TARGET1/.gsd-recipe/lib/recipe-update-nudge.sh" ]; then
@@ -548,7 +552,9 @@ check "uninstall cascades to install-recipe-help.sh --uninstall" "$?"
 check "uninstall cascades to install-recipe-prd-intake.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-workspace/SKILL.md" ] &&
   [ ! -f "$TARGET3/.gsd-recipe/lib/workspace-swap.sh" ] &&
-  [ ! -f "$TARGET3/.gsd-recipe/lib/initiative-branch.sh" ]
+  [ ! -f "$TARGET3/.gsd-recipe/lib/initiative-branch.sh" ] &&
+  [ ! -f "$TARGET3/.gsd-recipe/lib/derive-initiative-branch.sh" ] &&
+  [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-gitignore.sh" ]
 check "uninstall cascades to install-recipe-workspace.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-update/SKILL.md" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-update.sh" ] && [ ! -f "$TARGET3/.gsd-recipe/lib/recipe-update-nudge.sh" ]
 check "uninstall cascades to install-recipe-update.sh --uninstall" "$?"

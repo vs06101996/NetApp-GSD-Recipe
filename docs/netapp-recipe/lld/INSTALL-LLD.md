@@ -222,7 +222,7 @@ docs/RECIPE-BENCHMARKS.md
 docs/RECIPE-SEQUENCE.md
 ```
 
-**Not** a blanket `docs/*` — that would hide product docs in the target repo. Only recipe-owned doc filenames are ignored. Cursor skills under `.cursor/skills/` follow whatever `.cursor/` policy the target already uses (installer also adds specific `.cursor/gsd-*` ignores). `.planning/` is GSD-native working state (plans, STATE, ROADMAP) — local-only by default so feature PRs stay free of agent planning artifacts.
+**Not** a blanket `docs/*` — that would hide product docs in the target repo. Only recipe-owned doc filenames are ignored. Cursor skills under `.cursor/skills/` follow whatever `.cursor/` policy the target already uses (installer also adds specific `.cursor/gsd-*` ignores). `.planning/` is GSD-native working state (plans, STATE, ROADMAP) — local-only by default so feature PRs stay free of agent planning artifacts. `recipe-onboard` re-runs the same additive list after cutting an initiative branch from trunk, because the previous initiative's `.gitignore` updates may still be sitting in an unmerged PR.
 
 ### OKF convention [E]
 

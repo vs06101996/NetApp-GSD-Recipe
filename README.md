@@ -99,7 +99,8 @@ On an interactive install, the runner may open Cursor with `recipe-start` prefil
 ## Onboarding chain (`recipe-onboard`)
 
 One preview-then-confirm gate. With no new PRD source, it resumes and chains whichever steps
-are missing. An explicit source starts fresh on a new `gsd/<slug>` initiative branch by default,
+are missing. An explicit source starts fresh on a new `feat/<title>[-<Ticket>]` (or `fix/...`)
+initiative branch by default,
 so an old ROADMAP/STATE/tracker queue can never drive the new work.
 
 ```text
@@ -119,12 +120,15 @@ recipe-prd-intake → recipe-new-project → recipe-create-epic → recipe-creat
 `--skip-tracker` skips only Epic/tasks; intake, planning, and knowledge bootstrap still run, then it sets `onboard.skip_tracker`. After Yes on onboard, it asks whether to create Jira. `recipe-start` opens gitignored `docs/RECIPE-SEQUENCE.md`.
 
 `recipe-onboard <source>` always means a new cycle. Before intake it snapshots the current
-initiative and creates `gsd/<slug>` (`--branch NAME` overrides). The new branch starts without
+initiative and creates `feat/<feature-title>[-<Ticket>]` (`--fix` uses `fix/`; `--branch NAME`
+overrides). The new branch starts without
 the prior `.planning/`, `.gsd/` runtime state, untracked PRDs, phase-task queue, sync ledger, knowledge marker, or
 `onboard.skip_tracker`. `--no-branch` explicitly stays on the current branch and archives that
 state under `.gsd-recipe/workspace-archives/`. `recipe-onboard` with no source remains resume
 mode. When starting from another initiative branch, the new branch is based on `origin/HEAD`
-(falling back to local `main`/`master`), so PR 2 cannot inherit PR 1. Branch switching
+(falling back to local `main`/`master`), so PR 2 cannot inherit PR 1. After the branch exists,
+onboard re-applies recipe `.gitignore` lines additively so ignore updates from an unmerged
+previous PR are not lost. Branch switching
 saves/restores each initiative automatically.
 
 Variants:
@@ -135,7 +139,7 @@ recipe-onboard KAN-53
 recipe-onboard https://netapp.atlassian.net/browse/KAN-53
 recipe-onboard @docs/input/my-feature-prd.md
 recipe-onboard docs/PRD.md
-recipe-onboard docs/PRD.md --branch gsd/object-store-reconcile
+recipe-onboard docs/PRD.md --branch feat/object-store-reconcile-KAN-53
 recipe-onboard docs/PRD.md --no-branch
 recipe-onboard --skip-tracker
 recipe-onboard --project KAN
