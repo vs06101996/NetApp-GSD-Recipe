@@ -104,6 +104,10 @@ grep -q "dag" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents .knowledge/dag/ as explicitly out of scope" "$rc"
 grep -q "recipe-verify-knowledge.sh --write-marker" "$STAGED" && rc=0 || rc=$?
 check "staged skill writes marker only via verify guardrail" "$rc"
+grep -q -- "--allow-no-graphify" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents graphify circuit-breaker write-marker fallback" "$rc"
+grep -qi "circuit breaker\|circuit-breaker" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents graphify circuit breaker" "$rc"
 grep -q "recipe-verify-knowledge" "$STAGED" && rc=0 || rc=$?
 check "staged skill references recipe-verify-knowledge guardrail" "$rc"
 

@@ -1,6 +1,6 @@
 ---
 name: recipe-create-phase-tasks
-description: "Recipe: closes TASK-007's documented detect+draft+queue-only gap for the NetApp GSD recipe (TASK-034). Runs create-phase-tasks.sh detect then list (self-heals anything already linked out-of-band, e.g. a stray manual add-phase-task call), resolves one Jira issue type for the whole batch (prefers Task, then Sub-task), shows a soft confirm gate with the full batch, then for each pending phase in ascending phase-id order calls createJiraIssue + links it to the epic (parent field for Sub-task, else createIssueLink) and records the outcome via mark-done/mark-failed — never posts a Jira comment (gsd-jira-sync's job) and never re-runs detect mid-batch."
+description: "Recipe: creates one Jira phase task per ROADMAP phase with verified native Parent hierarchy when the project's Task create metadata supports it; uses the legacy Epic Link custom field only as an explicit compatibility fallback, and never records an orphan as successful."
 ---
 
 <cursor_skill_adapter>
@@ -22,7 +22,7 @@ Invoke by name (`recipe-create-phase-tasks`) with:
 Examples:
 - `recipe-create-phase-tasks`
 - `recipe-create-phase-tasks --assignee "Ada Lovelace"`
-- `recipe-create-phase-tasks --issue-type "Sub-task"`
+- `recipe-create-phase-tasks --issue-type "Task"`
 - `recipe-create-phase-tasks --dry-run`
 
 ## B. Prerequisites
@@ -32,8 +32,10 @@ Examples:
   something this skill re-implements. If it fails, **do not** just surface the raw script error —
   tell the operator plainly to run `recipe-create-epic` (TASK-033) first, then retry.
 - `ROADMAP.md` must have at least one `## Phase N — Title` heading (same `detect` check).
-- Atlassian MCP enabled and authenticated — needed starting at step 4 (issue-type resolution),
-  not before.
+- Atlassian MCP enabled and authenticated — needed starting at step 4. An empty tool-discovery
+  result is **inconclusive** because Cursor may idle-suspend a healthy HTTP transport. Invoke the
+  known `getAccessibleAtlassianResources` operation once as a wake probe, then retry discovery.
+  Only a real invocation/authentication failure counts as unavailable.
 
 ## C. Tool Usage
 
@@ -52,15 +54,27 @@ RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/create-pha
    anything already linked out-of-band and returns the genuinely-pending `work` array.
 3. If `work` is empty: report "nothing to create" (including any `self_healed` count from step 2)
    and **stop cleanly** — no further steps, no MCP calls.
-4. `GetMcpTools` server `plugin-atlassian-atlassian` tool `getJiraProjectIssueTypesMetadata` —
-   read once, for the whole batch, for the project derived from the linked epic's key prefix.
+4. Wake the known `plugin-atlassian-atlassian` transport with a real
+   `getAccessibleAtlassianResources` invocation when discovery is empty, then read the
+   `getJiraProjectIssueTypesMetadata` and `getJiraIssueTypeMetaWithFields` — read once for the
+   project derived from the linked epic's key prefix. Prefer a standard `"Task"` whose create
+   metadata exposes writable field key `parent`; otherwise use another standard level-0 type
+   selected by the operator. Never prefer `"Sub-task"` directly under an Epic: Jira schemes
+   normally require a Sub-task's parent to be a level-0 Task/Story, not an Epic.
    Then `lookupJiraAccountId` for the assignee (see `--assignee` / config / git user.name).
 5. Soft confirm gate — print the full batch, the resolved issue type, and the **assignee**; ask yes/no.
-6. `GetMcpTools` tools `createJiraIssue`, `getTransitionsForJiraIssue`, `transitionJiraIssue`.
+6. `GetMcpTools` tools `createJiraIssue`, `getJiraIssue`,
+   `getTransitionsForJiraIssue`, `transitionJiraIssue`.
 7. For each work item, ascending `phase_id` order: `CallMcpTool createJiraIssue` including
-   `assignee_account_id`, then link it to
-   the epic — either a `parent` field in the same call (Sub-task) or, if unsure which link type to
-   use, `GetMcpTools`/`CallMcpTool getIssueLinkTypes` first, then `CallMcpTool createIssueLink`.
+   `assignee_account_id` and `parent: <epic_key>` in the same create call when metadata exposes
+   the native Parent field. Then call `getJiraIssue` for `parent`; success requires
+   `fields.parent.key == epic_key`.
+   - Compatibility fallback only: if the selected standard issue type has no Parent field but
+     exposes the Jira Epic Link custom field in create metadata, create with
+     `additional_fields: {"<reported-customfield-id>": "<epic_key>"}` and verify that exact
+     custom field after creation. Report this row as `legacy-epic-link`, not native parent.
+   - If neither native Parent nor Epic Link is writable, `mark-failed`; never create or accept a
+     generic `createIssueLink` as hierarchy and never record an orphan as successful.
    Then transition the new issue to **To Do** (Backlog / Open / New aliases) unless already there.
 8. `Shell`: `<resolved> mark-done <phase_id> <issue_key> [--state PATH]
    [--queue PATH]` on success, or `<resolved> mark-failed <phase_id> --error "<reason>" [--queue PATH]` on
@@ -68,8 +82,8 @@ RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/create-pha
 
 ## D. Do NOT
 
-- Never call `mark-done` before **both** the `createJiraIssue` call **and** the link call
-  (`parent` field or `createIssueLink`) have actually succeeded for that row.
+- Never call `mark-done` before `createJiraIssue` succeeds and a follow-up `getJiraIssue`
+  verifies either the native Parent key or the explicit legacy Epic Link fallback.
 - Never skip `mark-failed` on error — an un-marked failure stays stuck as `queued` forever instead
   of being retried on the next `list` call.
 - Never re-run `detect` mid-batch — it runs exactly once, up front (step 1). If the operator wants
@@ -77,10 +91,10 @@ RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/runners/create-pha
   this skill, not a re-run inside the current one.
 - Never call `addCommentToJiraIssue`/post any Jira **comment** from this skill — that stays
   `gsd-jira-sync`. Creating **does** set assignee and transition to **To Do**.
-- Never fabricate an issue type or link type without checking what the target Jira instance
-  actually offers (`getJiraProjectIssueTypesMetadata` / `getIssueLinkTypes`) — if neither "Task"
-  nor "Sub-task" exists on the resolved project, list what IS available and ask the operator to
-  pick, live; never guess.
+- Never fabricate an issue type or hierarchy field without checking what the target Jira instance
+  actually offers (`getJiraProjectIssueTypesMetadata` /
+  `getJiraIssueTypeMetaWithFields`). If no suitable standard issue type exists, list what IS
+  available and ask the operator to pick, live; never guess.
 - Never proceed past the step-5 confirm gate on a decline — stop cleanly, nothing created, nothing
   marked.
 </cursor_skill_adapter>
@@ -135,14 +149,16 @@ concurrently).
    count from step 2 if non-zero (e.g. "0 to create, 2 self-healed-duplicate") — and **stop
    cleanly**. No step 4 onward, no MCP calls at all.
 
-4. **Resolve the batch issue type (once, not per-row).** If `--issue-type NAME` was passed, use it
-   directly and skip the lookup. Otherwise: derive the Jira project key from the linked epic's key
-   prefix (`<PROJECT_KEY>-<number>` — everything before the last `-`, per
-   `docs/netapp-recipe/contracts/DATA-CONTRACTS.md`'s issue-key format), then `GetMcpTools`/
-   `CallMcpTool getJiraProjectIssueTypesMetadata` for that project. Prefer `"Task"` first; if not
-   offered, fall back to `"Sub-task"`. If **neither** exists on that project, list what IS
-   available and ask the operator to pick, live — never guess or fabricate an issue-type name that
-   isn't actually on the target instance.
+4. **Resolve the batch issue type and hierarchy field (once, not per-row).** Derive the Jira
+   project key from the linked epic's key prefix, then call
+   `getJiraProjectIssueTypesMetadata`. If `--issue-type NAME` was passed, validate that it exists;
+   otherwise prefer `"Task"`, then another operator-selected standard level-0 issue type. Never
+   choose `"Sub-task"` as a direct child of an Epic. Call `getJiraIssueTypeMetaWithFields` with
+   `requiredFieldsOnly: false` for the selected type:
+   - writable field key `parent` → native-parent mode (preferred);
+   - otherwise writable Epic Link custom field → legacy-epic-link mode;
+   - neither → stop before creation and explain that the project exposes no supported hierarchy
+     field.
 
 4b. **Resolve assignee (once for the batch).** Same order as `recipe-create-epic`: `--assignee`,
     `.gsd-recipe/config.json` `assignee`, `git config user.name`, else a live question. Then
@@ -152,22 +168,21 @@ concurrently).
    resolved issue type, and the assignee; ask a plain yes/no question before creating anything remote. Decline →
    stop cleanly — nothing created, nothing marked, no further steps.
 
-6. **Read `createJiraIssue`'s schema once.** `GetMcpTools` server `plugin-atlassian-atlassian`
-   tool `createJiraIssue` — read it a single time for the whole batch, not once per row.
+6. **Read MCP schemas once.** Read `createJiraIssue` and `getJiraIssue` once for the batch.
 
 7. **For each work item, ascending `phase_id` order:**
-   - `CallMcpTool createJiraIssue` with the resolved issue type (step 4) + that row's
-     `drafted_summary`/`drafted_description` as `summary`/`description` + `assignee_account_id`.
-   - **Link it to the epic.** If the resolved issue type is literally `"Sub-task"`, prefer setting
-     a `parent` field directly in the same `createJiraIssue` call's `fields` (the standard Jira
-     sub-task pattern) over a separate link call. Otherwise, `GetMcpTools`/`CallMcpTool
-     createIssueLink` — if unsure which link type/direction to use, check `getIssueLinkTypes`
-     first rather than guessing a link-type name that may not exist on the target instance.
+   - `CallMcpTool createJiraIssue` with the resolved issue type + that row's
+     `drafted_summary`/`drafted_description` + `assignee_account_id`. In native-parent mode include
+     top-level `parent: epic_key`; in legacy mode include the metadata-reported Epic Link field
+     under `additional_fields`.
+   - **Verify hierarchy.** Call `getJiraIssue` requesting `parent` and, in legacy mode, the
+     discovered custom field. A native row passes only when `parent.key == epic_key`; a legacy row
+     passes only when its Epic Link value resolves to `epic_key`.
    - **Status:** `getTransitionsForJiraIssue` then `transitionJiraIssue` to **To Do** (or Backlog /
      Open / New). Already there → skip. No match → warn, still `mark-done` if create+link succeeded.
    - **On success:** `create-phase-tasks.sh mark-done <phase_id> <issue_key> [--state PATH]
-     [--queue PATH]` — only once both the create AND the link call have actually succeeded.
-   - **On failure (create or link call):** `create-phase-tasks.sh mark-failed <phase_id> --error
+     [--queue PATH]` — only after create + hierarchy verification.
+   - **On failure (create or hierarchy verification):** `create-phase-tasks.sh mark-failed <phase_id> --error
      "<reason>" [--queue PATH]` — immediately, for that row, then **continue to the next work
      item** in the batch (never abort the whole batch on one row's failure, and never silently
      drop a failure — it must stay retryable via the next invocation's own `list` step, never
@@ -206,9 +221,8 @@ batch (step 4) — the same "resolve once, act many times" shape `recipe-verify-
 - **No mid-batch re-detection.** `detect` runs exactly once, at the very top (step 1) — a fresh
   `ROADMAP.md` phase added mid-session is picked up by the *next* invocation of this skill, not by
   this one re-running itself.
-- **No fabricated issue/link types.** Both are resolved from what the target Jira instance
-  actually reports (`getJiraProjectIssueTypesMetadata`/`getIssueLinkTypes`); if neither of the
-  preferred types exists, the operator is asked live rather than a guess being silently made.
+- **No fabricated issue types or hierarchy fields.** Both are resolved from live project metadata;
+  no generic issue link is treated as Jira parent hierarchy.
 - **No `recipe-create-epic` invocation.** If `detect` fails closed on a missing tracker epic, this
   skill tells the operator to run `recipe-create-epic` (TASK-033) themselves — it never invokes
   that skill (or any other GSD/recipe skill) on the operator's behalf as a silent side effect.

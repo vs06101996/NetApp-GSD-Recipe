@@ -1,18 +1,15 @@
 ---
 name: recipe-settle
-description: "Recipe: quality-floor settle gate for the NetApp GSD recipe (TASK-027). Runs a real, scriptable, testable gh-based CI check (own --check-ci <owner/repo> <ref> installer mode, mirroring recipe-validate-tokens's own --check-github precedent) against the relevant PR/branch, then requires an explicit, non-skippable, interactive PO-accept y/n confirmation from the human operator in this same conversation (mirroring install.sh's own consent-prompt precedent, but deliberately stricter — no --yes equivalent exists for this gate). Only when both CI is green AND the PO explicitly accepts does it sync the settled event via the gsd-jira-sync skill (idempotent via sync-ledger.sh, epic-routed per DATA-CONTRACTS.md rule 7, fail-open when no tracker issue is linked). If CI is not green, blocks clearly and never calls gsd-jira-sync at all — matching FAILURE-MATRIX.md's 'CI red at settle gate' row exactly ('No settled event should be posted')."
+description: "Recipe: quality-floor settle gate. After CI green and explicit PO acceptance, marks phase N's Jira task Done; gsd-jira-sync then closes the Epic only when every phase task recorded in STATE is Done."
 ---
 
 <cursor_skill_adapter>
 ## A. Skill Invocation
 
 Invoke by name (`recipe-settle`) with:
-- `N` — the phase number whose shipped work is being settled (required). Informational only:
-  `settled` is an **epic-routed** event per `docs/netapp-recipe/contracts/DATA-CONTRACTS.md` rule
-  7 (`EPIC_ROUTED_EVENTS = {intake_started, discuss_complete, settled}` in
-  `bench/lib/parse-state.sh`), so `N` is never used to resolve the tracker issue key — only to
-  enrich the human-facing summary and Jira comment with "which phase's shipped work is being
-  accepted right now".
+- `N` — the phase number whose shipped work is being settled (required). `settled` is
+  **phase-routed**: it marks that phase task Done. `gsd-jira-sync` performs a status-only roll-up
+  and marks the Epic Done only when all phase tasks in STATE are Done.
 - `--owner-repo OWNER/REPO` — optional. The GitHub `owner/repo` to check CI against. Default:
   parsed from `git remote get-url origin` (Shell) in step 1 below.
 - `--ref REF` — optional. A PR number, branch name, or commit SHA to check CI against. Default:
@@ -34,9 +31,9 @@ Examples:
   push anything; it only checks CI status on what already exists.
 - `gh` CLI installed and authenticated, for the real CI check in step 2 (a missing/unauthenticated
   `gh` degrades to `CI: FAIL`, per decision #2 below — it does **not** silently skip the gate).
-- `.planning/STATE.md` may or may not have a `## Tracker` section with a non-empty `epic` field.
-  If it doesn't, this skill still runs the CI check and the PO-accept gate, but skips the Jira
-  sync step (fail-open on tracker linkage, warn-and-continue) — see step 5.
+- `.planning/STATE.md` may or may not map phase `N` to a Jira task. If it doesn't, this skill
+  still runs the CI check and PO-accept gate, but skips Jira sync (fail-open on tracker linkage,
+  warn-and-continue) — see step 5.
 
 ## C. Tool Usage
 
@@ -95,16 +92,18 @@ Examples:
    PARSE_STATE="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/parse-state.sh)"
    SYNC_LEDGER="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/sync-ledger.sh)"
    ```
-   Resolve the issue key with `"$PARSE_STATE" resolve-issue settled` (no `--phase` — this is
-   epic-routed). Unresolved (no `## Tracker` section, or empty `epic` field) → do not block;
-   warn the operator ("No tracker epic linked — skipping Jira sync, settle still recorded
+   Resolve the issue key with `"$PARSE_STATE" resolve-issue settled --phase N`.
+   Unresolved (no phase-task row for N) → do not block;
+   warn the operator ("No tracker task linked for phase N — skipping Jira sync, settle still recorded
    locally in this summary") and skip straight to step 6 — same fail-open precedent every prior
    `recipe-*` sync call already uses for a missing tracker linkage. Resolved → compute the
-   idempotency key via `"$SYNC_LEDGER" key settled <issue_key>` and check
+   idempotency key via `"$SYNC_LEDGER" key settled <issue_key> --phase N` and check
    `"$SYNC_LEDGER" has <key>` first. Already present → skip (report
    `duplicate_skipped`, no re-post). Otherwise, invoke the `gsd-jira-sync` skill's own documented
-   single-event workflow (`gsd-jira-sync settled <issue_key> [--transition "Name"]`) — do not
-   inline `draft-jira-comment.sh`'s draft/post/stamp steps here. See "Why Option B" below.
+   single-event workflow (`gsd-jira-sync settled <issue_key> --phase N
+   [--transition "Name"]`) — do not inline `draft-jira-comment.sh`'s
+   draft/post/stamp or Epic roll-up steps here. The child transitions to Done first; the sync
+   skill then transitions the Epic only if every recorded child is Done.
 
 6. **Summarize**, in one final block to the operator: phase `N`, resolved `<owner/repo>@<ref>`,
    the CI result (`PASS`/`FAIL`/`WARN` with the script's own detail), the PO-accept decision
@@ -189,7 +188,7 @@ gate and the PO-accept gate have genuinely passed), but the actual drafting
 Inlining that logic here would create a second, drifting implementation of Jira posting — instead,
 `recipe-settle` composes with `gsd-jira-sync` by name, exactly like every other `recipe-*` skill
 that ever needs to post a lifecycle event. The idempotency mechanism is identical too:
-`bench/lib/sync-ledger.sh key settled <issue_key>` then `sync-ledger.sh has <key>` before ever
+`bench/lib/sync-ledger.sh key settled <issue_key> --phase N` then `sync-ledger.sh has <key>` before ever
 invoking `gsd-jira-sync`, so re-running `recipe-settle` after a crash or an operator re-invocation
 never double-posts the same `settled` comment.
 
@@ -215,7 +214,7 @@ green** before `settled`"), and `docs/netapp-recipe/lld/FAILURE-MATRIX.md`'s "CI
 gate" row ("blocks `recipe-settle` ... No `settled` event should be posted") into its own
 invoke-by-name Cursor skill: a real, scriptable, testable `gh`-based CI check, followed by an
 explicit, non-skippable, interactive human PO-accept confirmation, and only then a sync of the
-`settled` event to the linked Jira epic.
+`settled` event to the linked phase task, followed by aggregate Epic status roll-up.
 
 **Spec:** `docs/netapp-recipe/lld/TRACEABILITY-LLD.md` rule 4 · `docs/netapp-recipe/lld/RUNTIME-LLD.md`
 § 4.c · `docs/netapp-recipe/lld/FAILURE-MATRIX.md` "CI red at settle gate" row ·
@@ -235,9 +234,9 @@ explicit, non-skippable, interactive human PO-accept confirmation, and only then
    `FAILURE-MATRIX.md`'s exact wording.
 4. Ask the operator, in the live conversation, an explicit y/n PO-accept question. Wait for a real
    reply — never fabricated, never auto-answered, never skippable via any flag.
-5. Only when both gates passed: resolve the epic-routed issue key, check idempotency via
-   `sync-ledger.sh`, and sync `settled` via the `gsd-jira-sync` skill (fail-open on missing tracker
-   linkage).
+5. Only when both gates passed: resolve phase N's task key, check idempotency via
+   `sync-ledger.sh`, and sync `settled` via `gsd-jira-sync`; the sync's status-only roll-up closes
+   the Epic only after all recorded phase tasks are Done.
 6. Summarize phase/CI-result/PO-decision/issue/sync-result in one block.
 
 ## Why the CI check is scriptable but the PO-accept gate isn't

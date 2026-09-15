@@ -88,7 +88,7 @@ WORKFLOW_GROUPS = [
         "tracker-sync", "gsd-jira-sync", "recipe-sync", "recipe-pr-comment",
     ]),
     ("Observer", ["recipe-observe", "fotw-observer-bootstrap"]),
-    ("Help", ["recipe-help"]),
+    ("Help and support", ["recipe-help", "recipe-report-issue"]),
 ]
 
 INJECTED = [

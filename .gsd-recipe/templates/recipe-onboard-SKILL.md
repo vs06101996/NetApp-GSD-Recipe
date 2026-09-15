@@ -56,6 +56,9 @@ Examples:
 - Atlassian MCP enabled and authenticated — needed if the PRD source is a Jira issue key/URL
   (intake fetch), or if Epic **create** / phase-task steps actually run. Not needed for
   `--skip-tracker` unless the PRD source is a live Jira ticket.
+  Empty tool discovery is inconclusive for an idle-suspended transport: invoke the known
+  `getAccessibleAtlassianResources` operation once to wake it and retry. Only a real invocation
+  failure means Jira is unavailable.
 - `recipe-workspace` runtimes staged at `.gsd-recipe/lib/workspace-swap.sh`,
   `.gsd-recipe/lib/initiative-branch.sh`, `.gsd-recipe/lib/derive-initiative-branch.sh`,
   and `.gsd-recipe/lib/recipe-gitignore.sh` when an explicit PRD source is supplied. Re-run
@@ -218,13 +221,16 @@ Examples:
      Stop the whole chain immediately: do not invoke tracker or knowledge steps. Record "project bootstrap" as the
      blocking step with reason "neither recipe-new-project nor native gsd-new-project produced
      .planning/ROADMAP.md", then print the final summary.
-   - `.planning/ROADMAP.md` now exists → if `--skip-tracker` was passed, skip re-checking Epic/phase
-     tasks and continue to the skip-tracker persistence step below. Otherwise re-run
-     step 1's Epic/phase-task checks (they were provisional per step 1's own note) before continuing
-     to step 5.
-   - **Resume mode only, if step 1 determined this step should skip:** do not invoke anything; continue straight to
-     step 5 with step 1's original (non-provisional) determination for steps 5/6 (or persistence when
-     `--skip-tracker`).
+   - `.planning/ROADMAP.md` now exists → run
+     `.gsd-recipe/scripts/recipe-enable-defaults.sh --target .` (circuit breaker: tries
+     `workflow.tdd_mode` and `graphify.enabled`; never fail onboard if it cannot set them). Then if
+     `--skip-tracker` was passed, skip re-checking Epic/phase tasks and continue to the skip-tracker
+     persistence step below. Otherwise re-run step 1's Epic/phase-task checks (they were provisional
+     per step 1's own note) before continuing to step 5.
+   - **Resume mode only, if step 1 determined this step should skip:** still run
+     `recipe-enable-defaults.sh` if `.planning/ROADMAP.md` exists (same circuit breaker). Do not
+     invoke `recipe-new-project`; continue straight to step 5 with step 1's original
+     (non-provisional) determination for steps 5/6 (or persistence when `--skip-tracker`).
 
 5. **Step "Epic creation / existing-ticket link"**
    - **`--skip-tracker`:** skip entirely (flag); do not invoke `recipe-create-epic` and do not
@@ -282,7 +288,8 @@ Examples:
    `.gsd-recipe/scripts/recipe-verify-knowledge.sh --target .` (exit 0), skip with reason
    "already ready". Otherwise invoke `recipe-bootstrap-knowledge` by name in this same turn.
    After it returns, **must** run `.gsd-recipe/scripts/recipe-verify-knowledge.sh --target .` again;
-   exit 0 → record knowledge bootstrap **completed**. Non-zero → knowledge bootstrap **failed**;
+   exit 0 → record knowledge bootstrap **completed** (graphify may be `skipped` in the marker —
+   that is success). Non-zero → knowledge bootstrap **failed**;
    report overall onboarding failed. Never treat a hand-written marker as success.
    `--skip-tracker` never skips this step.
 
@@ -356,7 +363,8 @@ operator still had to know and manually sequence all five.
     of intake). No-op if already active/disabled; never fails the chain.
 4. Project bootstrap (always for fresh onboarding; artifact-aware in resume mode) → invoke
    `recipe-new-project` by name, or fall back to native `gsd-new-project` directly if that
-   sibling skill isn't staged.
+   sibling skill isn't staged. After ROADMAP exists, run `recipe-enable-defaults.sh` (TDD +
+   graphify config; circuit breaker, never fails onboard).
 5. Epic: `--skip-tracker` → skip. Existing Jira ticket → `init-tracker` + `gsd-jira-sync
    intake_started` (do **not** `recipe-create-epic`). Else if no Epic linked → invoke
    `recipe-create-epic` by name.

@@ -49,12 +49,14 @@ Examples:
      `N`) → do not block. Warn the operator ("No tracker issue linked for phase N — skipping Jira
      sync, continuing with gsd-plan-phase") and continue straight to step 3.
 
-3. **Call native `gsd-plan-phase N` directly**, in this same turn. Invoking `recipe-plan-phase`
+3. **Call native `gsd-plan-phase N --tdd` directly**, in this same turn. Invoking `recipe-plan-phase`
    was itself the operator's deliberate act of choosing to plan this phase now — that IS the
    manual GSD trigger; this is not an unapproved autonomous invocation (same precedent as
    `recipe-run-phase`'s direct call to `gsd-execute-phase`). Add no spike handling here — if the
    phase needs a `gsd-spike` first, that is the operator's own separate call before planning, not
-   something this skill triggers on their behalf.
+   something this skill triggers on their behalf. `--tdd` plus `workflow.tdd_mode` (set by
+   `recipe-enable-defaults.sh`) is the default. If native cannot honor TDD, **warn and continue**
+   with the plan it produced — never fail planning solely because TDD did not engage.
 
 4. **Re-resolve `PLAN.md` for phase `N`**, using the exact same glob shape as step 1.
    - Not found → native `gsd-plan-phase` produced no plan (aborted, declined, or errored inside
@@ -161,7 +163,7 @@ fifth sub-installer.
    never blocks calling `gsd-plan-phase` either way).
 2. Resolve the phase's tracker issue key via `parse-state.sh resolve-issue plan_complete --phase
    N`. Unresolved → warn and continue (fail-open).
-3. Call native `gsd-plan-phase N` directly, in the same turn (Option B — the operator's own
+3. Call native `gsd-plan-phase N --tdd` directly, in the same turn (Option B — the operator's own
    invocation of `recipe-plan-phase` is the manual GSD trigger).
 4. Re-resolve `PLAN.md` for phase `N`. Not found → native `gsd-plan-phase` produced no plan; stop
    here, report plainly, no fabrication.

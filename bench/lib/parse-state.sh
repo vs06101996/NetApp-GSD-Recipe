@@ -11,10 +11,10 @@
 #                    actually needs to resolve a phase_id (enforced by resolve-issue,
 #                    not by validate).
 #   Event routing (DATA-CONTRACTS.md rule 7 — carried in-code, no separate file):
-#     Epic-routed  : intake_started, discuss_complete, settled
+#     Epic-routed  : intake_started, discuss_complete
 #     Phase-routed : plan_complete, plan_revised, execute_started, execute_wave,
 #                    execute_complete, verify_complete, review_complete,
-#                    learning_stored, reopened
+#                    learning_stored, settled, reopened
 #   Rule 8: resolving a phase-routed event with no matching phase_id fails
 #           non-zero with an actionable error (never silently no-ops).
 #
@@ -179,11 +179,11 @@ OPTIONAL_TRACKER_FIELDS = ["issue"]
 SUPPORTED_SYSTEMS = {"jira"}
 
 # DATA-CONTRACTS.md rule 7 — event routing vocabulary, carried in-code.
-EPIC_ROUTED_EVENTS = {"intake_started", "discuss_complete", "settled"}
+EPIC_ROUTED_EVENTS = {"intake_started", "discuss_complete"}
 PHASE_ROUTED_EVENTS = {
     "plan_complete", "plan_revised", "execute_started", "execute_wave",
     "execute_complete", "verify_complete", "review_complete",
-    "learning_stored", "reopened",
+    "learning_stored", "settled", "reopened",
 }
 
 TRACKER_HEADING = re.compile(r"^##\s+Tracker\s*$")

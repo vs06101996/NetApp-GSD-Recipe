@@ -79,6 +79,8 @@ grep -q "does not inline\|not by inlining\|do not inline\|Do not inline" "$STAGE
 check "staged skill disclaims inlining draft-jira-comment.sh's posting logic" "$rc"
 grep -q "gsd-execute-phase" "$STAGED" && rc=0 || rc=$?
 check "staged skill references calling native gsd-execute-phase directly" "$rc"
+grep -q -- "--tdd" "$STAGED" && rc=0 || rc=$?
+check "staged skill passes --tdd to native gsd-execute-phase" "$rc"
 grep -q "DAG" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents DAG gating as explicitly out of scope" "$rc"
 grep -q "execute_wave" "$STAGED" && rc=0 || rc=$?

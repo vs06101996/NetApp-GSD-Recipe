@@ -66,6 +66,10 @@ check "install never creates .gsd-recipe/sync-ledger.jsonl itself (that's the st
 # in the shipped file.
 STAGED="$TARGET1/.cursor/skills/gsd-jira-sync/SKILL.md"
 
+grep -q "getAccessibleAtlassianResources" "$STAGED" &&
+  grep -qi "discovery.*inconclusive\|discovery is empty" "$STAGED" && rc=0 || rc=$?
+check "staged skill wakes dormant Atlassian transport before declaring it unavailable" "$rc"
+
 grep -q "Single-event mode" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents single-event mode" "$rc"
 grep -q "Drain mode" "$STAGED" && rc=0 || rc=$?
@@ -90,6 +94,14 @@ grep -q "emit-stamp.sh" "$STAGED" && rc=0 || rc=$?
 check "staged skill references emit-stamp.sh" "$rc"
 grep -qi "epic-routed events\|Routing:" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the epic-vs-phase-task routing rule" "$rc"
+grep -q "jira-epic-rollup.py" "$STAGED" && rc=0 || rc=$?
+check "staged skill delegates aggregate status policy to the roll-up helper" "$rc"
+grep -qi "all.*phase tasks.*Done" "$STAGED" && rc=0 || rc=$?
+check "staged skill closes Epic only when all phase tasks are Done" "$rc"
+grep -qi "status-only" "$STAGED" && grep -qi "do not post another Epic comment" "$STAGED" && rc=0 || rc=$?
+check "staged skill keeps Epic roll-up status-only" "$rc"
+grep -qi "single-event step 6" "$STAGED" && rc=0 || rc=$?
+check "drain mode applies the same Epic roll-up policy" "$rc"
 grep -q "Skip Jira comment when recipe arm is active" "$STAGED" && rc=0 || rc=$?
 check "staged skill disclaims skipping the Jira comment when arm is active" "$rc"
 grep -qi "Post empty comments" "$STAGED" && rc=0 || rc=$?

@@ -66,6 +66,8 @@ grep -q "plan_revised" "$STAGED" && rc=0 || rc=$?
 check "staged skill references plan_revised" "$rc"
 grep -q "gsd-plan-phase" "$STAGED" && rc=0 || rc=$?
 check "staged skill references calling native gsd-plan-phase directly" "$rc"
+grep -q -- "--tdd" "$STAGED" && rc=0 || rc=$?
+check "staged skill passes --tdd to native gsd-plan-phase" "$rc"
 grep -qi "soft.*gate\|soft warn-and-confirm" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the compliance check as a soft warn-and-confirm gate" "$rc"
 grep -qi "never fill\|never fill or fabricate" "$STAGED" && rc=0 || rc=$?

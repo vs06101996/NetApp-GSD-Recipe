@@ -27,8 +27,12 @@ Related: [DATA-CONTRACTS.md](../contracts/DATA-CONTRACTS.md) · [FAILURE-MATRIX.
 
 | `event_id` | GSD trigger | Post to |
 |------------|-------------|---------|
-| `intake_started`, `discuss_complete`, `settled` | project / discuss / settle | **Epic** |
-| `plan_complete`, `execute_*`, `verify_complete`, `review_complete`, … | phase milestones | **Phase task** |
+| `intake_started`, `discuss_complete` | project / discuss | **Epic** |
+| `plan_complete`, `execute_*`, `verify_complete`, `review_complete`, `settled`, … | phase milestones | **Phase task** |
+
+Phase-task transitions roll up status-only: active child work starts a To Do Epic; `settled`
+marks its phase task Done; the Epic reaches Done only when every phase task recorded in
+`.planning/STATE.md` is in Jira's Done status category. Roll-up adds no second comment or stamp.
 
 Full table + stamps: see `jira-events.json`.
 

@@ -60,8 +60,8 @@ Net-new work needs a real spec/design record before code, not just a jump straig
 Before drafting a plan, check for relevant prior decisions/learnings so the plan doesn't repeat already-settled ground:
 
 1. Read `.knowledge/log.md` and `.knowledge/index.md` for relevant prior entries.
-2. If `graphify.enabled` is `true` in `.planning/config.json`, also attempt a `gsd-graphify query <topic>` pass for the phase's subject area.
-3. This step is **soft** — if `graphify.enabled` is `false`/absent, or the `graphify` CLI is unavailable, skip step 2 gracefully and proceed with just the `.knowledge/` read. Consistent with graphify's optional/warn-only status established in `install.sh`'s own prerequisite bootstrap — this policy never makes graphify a hard blocker on planning.
+2. Always try a `gsd-graphify query <topic>` pass for the phase's subject area. The recipe enables `graphify.enabled` by default (circuit breaker: config-set failure does not stop onboard).
+3. Step 2 is a **circuit breaker** — if the CLI is unavailable, the query fails, or knowledge bootstrap skipped graphify, continue with just the `.knowledge/` read. This policy never makes graphify a hard blocker on planning.
 
 ---
 

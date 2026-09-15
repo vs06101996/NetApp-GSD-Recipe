@@ -89,7 +89,19 @@ Examples:
    Also `Glob`/`Read` for `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/STATE.md` when
    the script is unavailable (fallback only).
 
-5. **Print the final summary, always.** Note first-init vs re-init, which native command ran
+5. **Enable TDD + graphify defaults (circuit breaker).** After planning artifacts exist, run:
+
+   ```bash
+   .gsd-recipe/scripts/recipe-enable-defaults.sh --target .
+   ```
+
+   This tries `gsd-tools config-set workflow.tdd_mode true` and
+   `gsd-tools config-set graphify.enabled true`. Missing `.planning/config.json`, missing
+   `gsd-tools`, or a failed config-set → **warn and continue**. Never fail this skill on that
+   helper; never hand-merge `.planning/config.json`. If the script itself is missing, warn and
+   continue.
+
+6. **Print the final summary, always.** Note first-init vs re-init, which native command ran
    (`gsd-new-project` vs `gsd-import`), which input source was used (`docs/PRD.md`, explicit path,
    or conversational), and whether all three core files verified. Never invoke `gsd-jira-sync` or
    post `intake_started` from this skill — that event is owned exclusively by `recipe-create-epic`
@@ -129,7 +141,9 @@ so operators following the recipe end-to-end still had to type native GSD direct
    `gsd-new-project --auto` (when a PRD/file exists) or `gsd-import` (`--import`). Always
    `commit_docs: false`; do not commit `.planning/*`. Missing GSD agents → inline roadmap, not fail.
 4. Re-verify `.planning/PROJECT.md`, `ROADMAP.md`, and `STATE.md` exist.
-5. Final summary — never sync tracker events from here.
+5. Circuit-breaker enable of `workflow.tdd_mode` and `graphify.enabled` via
+   `recipe-enable-defaults.sh` — never fail closed.
+6. Final summary — never sync tracker events from here.
 
 ## Why this skill never syncs intake_started itself
 

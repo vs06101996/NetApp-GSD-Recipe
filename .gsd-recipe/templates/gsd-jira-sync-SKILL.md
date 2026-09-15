@@ -24,11 +24,16 @@ Invoke this when `sync-reconcile.sh` (TASK-003) has been run and left rows in
 
 ## B. Prerequisites
 - Atlassian MCP enabled and authenticated (`netapp.atlassian.net` or project's cloudId)
+- Treat an empty discovery result as inconclusive: Cursor can idle-suspend a healthy HTTP
+  transport. Invoke the known `getAccessibleAtlassianResources` operation once to wake it, then
+  retry discovery. Only a real invocation/authentication failure means unavailable.
 - Jira issue exists and user can comment
 - Issue key recorded in `.planning/STATE.md` or passed explicitly
 
 ## C. Tool Usage
-1. Read MCP tool schemas: `addCommentToJiraIssue`, `transitionJiraIssue`, `getJiraIssue`, `getTransitionsForJiraIssue`
+1. If discovery is empty, invoke `getAccessibleAtlassianResources` as a wake probe and retry.
+   Then read MCP tool schemas: `addCommentToJiraIssue`, `transitionJiraIssue`, `getJiraIssue`,
+   `getTransitionsForJiraIssue`. Never skip sync solely because dormant tools were not enumerated.
 2. **Draft comment.** `bench/runners/draft-jira-comment.sh` is not duplicated into every target by
    design (only `gsd-benchmark`, the recipe's own source repo, keeps the full `bench/` tree) —
    resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` (same mechanism
@@ -72,14 +77,31 @@ Post **every GSD lifecycle milestone** to the linked Jira issue as a **comment a
    implementation of the script; not duplicated into every target by design); enrich placeholders
    from `.planning/` artifacts.
 4. **Post to Jira** — Atlassian MCP `addCommentToJiraIssue` with `cloudId` + `issueKey` + comment body (markdown/wiki as supported).
-5. **Required transition** — resolve the status name: `--transition` if passed, else
+5. **Required phase/epic transition** — resolve the status name: `--transition` if passed, else
    ```
    RESOLVED="$(.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/jira-transition-name.sh)"
    "$RESOLVED" <event_id>
    ```
    If the helper prints a name: `getJiraIssue` — if current status already matches (case-insensitive), skip. Else `getTransitionsForJiraIssue`, pick the transition whose **name or to-status** matches (aliases below), then `transitionJiraIssue` with that **id**. No matching transition → **warn and continue** (comment still posted; some boards use different names). Empty helper output → skip (event has `transition: null`).
    Aliases: `To Do` ≈ Backlog / Open / New; `In Progress` ≈ Doing / In-Progress; `In Review` ≈ Review / Code Review; `Done` ≈ Closed / Resolved / Complete.
-6. **Emit stamp** — run `emit-stamp.sh` line printed by draft script (immutable KPI record).
+6. **Status-only Epic roll-up for phase-routed events.** After a phase transition succeeds or
+   is already at its target, resolve `bench/lib/parse-state.sh` and
+   `bench/lib/jira-epic-rollup.py` through `recipe-paths.sh`.
+   - `parse-state.sh get-tracker` supplies the Epic; `parse-state.sh dump` supplies every recorded
+     phase-task key. Missing Epic/phase state → warn and skip roll-up; never undo the child sync.
+   - Fetch the Epic and every recorded child with `getJiraIssue`, using each
+     `status.statusCategory.key` (`new`, `indeterminate`, `done`). An unreadable child is passed as
+     `unknown`, which prevents Epic closure.
+   - Invoke the pure helper with `--event <event_id> --epic-category <key> --children-json <json>`.
+     `no-op` → do nothing. `In Progress` or `Done` → resolve a real Epic transition using the same
+     aliases and `getTransitionsForJiraIssue` rules as step 5, then call `transitionJiraIssue`.
+   - Active/review child work starts a To Do Epic. `settled` first marks its phase task Done, then
+     closes the Epic only when **all** phase tasks recorded in STATE are in Jira's Done category.
+     `reopened` may return a Done Epic to In Progress. Never regress Done for another event.
+   - This roll-up is status-only: do not post another Epic comment, emit another stamp, or invent a
+     lifecycle event. A roll-up lookup/transition failure warns but does not turn a successful
+     child post into failure.
+7. **Emit stamp** — run `emit-stamp.sh` line printed by draft script (immutable KPI record).
 
 <a id="drain-mode-task-005"></a>
 ## Drain mode (TASK-005)
@@ -105,7 +127,9 @@ every target by design) for everything around the actual post:
    **required** catalog transition for that row's `event_id` (same rules as single-event
    step 5 — `jira-transition-name.sh`, match id, warn-and-continue if the board has no match).
    Do not mark the row done after a comment if you skipped a named transition without trying
-   `getTransitionsForJiraIssue`.
+   `getTransitionsForJiraIssue`. After a successful/already-matching phase transition, run the
+   same status-only Epic roll-up from single-event step 6 before continuing. Roll-up failure is a
+   warning and does not cause a duplicate child comment on retry.
 3. **On success** — `sync-drain-queue.sh mark-done <key> --external-id <comment_id> --run <run_id>`.
    This appends `posted` to `sync-ledger.jsonl`, flips the queue row to `done`,
    and emits the KPI stamp configured for that `event_id` in `jira-events.json`
@@ -135,7 +159,7 @@ dropping or mis-posting them.
 | `gsd-verify-work N` | `verify_complete` |
 | `gsd-code-review N` | `review_complete` |
 | `gsd-extract-learnings N` | `learning_stored` |
-| PO accept / grader pass | `settled` |
+| PO accept / grader pass for phase N | `settled` |
 | Rework | `reopened` |
 
 ## Linking Jira to the project
@@ -157,7 +181,9 @@ Add to `.planning/STATE.md` per `docs/netapp-recipe/contracts/DATA-CONTRACTS.md#
 | 1 | PROJ-101 |
 ```
 
-**Routing:** epic-routed events (`discuss_complete`, `settled`, …) → `epic`; phase events (`plan_complete`, `execute_complete`, …) → matching `issue_key` from the phase table.
+**Routing:** epic-routed events (`intake_started`, `discuss_complete`) → `epic`; phase events
+(`plan_complete`, `execute_complete`, `settled`, …) → matching `issue_key` from the phase table.
+Phase event statuses then roll up to the Epic without a second comment/stamp.
 
 ## MCP posting (reference)
 

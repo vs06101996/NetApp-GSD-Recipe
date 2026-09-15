@@ -1,6 +1,6 @@
 ---
 name: recipe-bootstrap-knowledge
-description: "Recipe: mandatory onboard knowledge bootstrap/refresh wrapper (TASK-022). Idempotently scaffolds `.knowledge/`, calls native `/gsd-map-codebase [--fast]`, `/gsd-graphify build`, and optional `/gsd-ingest-docs`, then writes `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED` only after required map + graph steps succeed."
+description: "Recipe: mandatory onboard knowledge bootstrap/refresh wrapper (TASK-022). Idempotently scaffolds `.knowledge/`, calls native `/gsd-map-codebase [--fast]`, always tries `/gsd-graphify build` (circuit breaker: continue without graphify on failure), and optional `/gsd-ingest-docs`, then writes `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED` when the codebase map is ready."
 ---
 
 <cursor_skill_adapter>
@@ -16,12 +16,14 @@ Examples:
 ## B. Prerequisites
 
 - None strictly required for the skeleton or map steps. For `/gsd-graphify build`
-  (step 3), `graphify` must be on PATH. If it is missing, run the recipe's
+  (step 3), **always try** to put `graphify` on PATH first. If it is missing, run the recipe's
   **sudo-free** installer before step 3 — never use `sudo`, never use
   `uv pip install graphifyy` (fails on PEP-668 Homebrew Python and on machines
   where `~/.cache` / `~/.local` are not writable):
   `.gsd-recipe/scripts/install-graphify.sh`
   (requires `uv` first: `brew install uv` — also sudo-free on most Macs).
+  If install or `/gsd-graphify build` still fails, **continue without graphify**
+  (circuit breaker). Do not fail this skill solely because the graph did not build.
 - This skill works whether `.knowledge/` already exists or not, and
   whether `.gsd-recipe/ingest-manifest.yaml` exists or not (see step 4) — both are handled
   idempotently/gracefully, never blocking invocation.
@@ -63,15 +65,16 @@ Examples:
    `gsd-execute-phase` — see "Why Option B" below for the full reasoning, mirrored verbatim from
    those two skills' own explanatory sections).
 
-3. **Call native `/gsd-graphify build` directly**, in this same turn, same Option-B reasoning as
+3. **Always try native `/gsd-graphify build`**, in this same turn, same Option-B reasoning as
    step 2. No flags to forward — `/gsd-graphify build` takes none here. Before calling, run
    `.gsd-recipe/scripts/recipe-verify-knowledge.sh --check-graphify`; when it fails, run
-   `.gsd-recipe/scripts/install-graphify.sh` and re-check. Do not proceed with a no-op stub.
+   `.gsd-recipe/scripts/install-graphify.sh` and re-check. If the CLI is still missing, a no-op
+   stub, or `build` errors, **warn and continue** — do not fabricate graph files and do not fail
+   the skill. Map-only knowledge is a valid outcome of this circuit breaker.
 
-4. **Check for `.gsd-recipe/ingest-manifest.yaml` before calling `/gsd-ingest-docs`.** This is the
-   one step of the three native commands that is conditionally skippable — `/gsd-map-codebase` and
-   `/gsd-graphify build` have no equivalent missing-input condition, so steps 2-3 always run
-   regardless of what this check finds.
+4. **Check for `.gsd-recipe/ingest-manifest.yaml` before calling `/gsd-ingest-docs`.** This is
+   conditionally skippable when the manifest is missing. `/gsd-map-codebase` always runs.
+   `/gsd-graphify build` always **tries** (step 3) and may skip on circuit-breaker failure.
    - Exists → call native `/gsd-ingest-docs --manifest .gsd-recipe/ingest-manifest.yaml` directly,
      in this same turn, same Option-B reasoning as steps 2-3.
    - Missing → **do not hard-fail and do not fabricate a manifest.** Print a plain warning, e.g.:
@@ -81,22 +84,29 @@ Examples:
      native calls or the skeleton scaffolding in step 1 on this file's absence.
 
 5. **Verify and write the readiness marker via the guardrail script only.** After steps 2–3 return,
-   invoke native `/gsd-map-codebase` and `/gsd-graphify build` by skill name — do **not** hand-write
-   `.planning/codebase/*.md` or graph files. Then run:
+   invoke native `/gsd-map-codebase` (and `/gsd-graphify build` when step 3 succeeded) by skill
+   name — do **not** hand-write `.planning/codebase/*.md` or graph files. Then run:
 
    ```bash
    .gsd-recipe/scripts/recipe-verify-knowledge.sh --write-marker --target .
    ```
 
-   Exit 0 → record success. Non-zero → fail this skill; do **not** write
-   `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED` with the Write tool. The script verifies marker inputs,
-   at least two substantive `.planning/codebase/*.md` files, non-empty graph artifacts, and a
-   functional `graphify` CLI (rejects no-op stubs).
+   Exit 0 → graphify succeeded; record success. Non-zero → retry with the circuit breaker:
+
+   ```bash
+   .gsd-recipe/scripts/recipe-verify-knowledge.sh --write-marker --allow-no-graphify --target .
+   ```
+
+   Second command exit 0 → map is ready; graphify was skipped; continue. Still non-zero → fail
+   this skill (codebase map missing). Do **not** write `.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED` with
+   the Write tool. The strict write-marker path requires map + graph + a functional `graphify`
+   CLI (rejects no-op stubs). `--allow-no-graphify` requires only the map.
 
 6. **Summarize**, in one final report to the operator: whether the `.knowledge/` skeleton was
    freshly created, partially filled in (naming which pieces were added), or already complete
-   this run; confirmation that `/gsd-map-codebase [--fast]` and `/gsd-graphify build` were called;
-   the `/gsd-ingest-docs` result (`called` / `skipped-no-manifest`); and the marker path.
+   this run; confirmation that `/gsd-map-codebase [--fast]` ran; the `/gsd-graphify build` result
+   (`built` / `skipped-circuit-breaker`); the `/gsd-ingest-docs` result (`called` /
+   `skipped-no-manifest`); and the marker path.
 
 ## D. Do NOT
 
@@ -120,8 +130,9 @@ Examples:
 - Do not gate this skill behind a tracker/Jira sync step — `bench/recipe/trackers/jira-events.json`
   defines no event for a knowledge bootstrap/refresh (it is not a phase/epic milestone), so this
   skill never calls `gsd-jira-sync` and never touches `sync-ledger.sh`.
-- Do not hard-block on any missing input anywhere in this workflow — the only conditionally
-  skippable step is `/gsd-ingest-docs` (step 4); every other step always proceeds.
+- Do not hard-block on graphify or a missing ingest manifest. `/gsd-graphify build` is a
+  circuit breaker (try, then continue). `/gsd-ingest-docs` warns-and-skips when the manifest is
+  missing. The codebase map from `/gsd-map-codebase` is still required before writing the marker.
 </cursor_skill_adapter>
 
 # recipe-bootstrap-knowledge — knowledge bootstrap/refresh wrapper (TASK-022)
@@ -150,11 +161,13 @@ conflict with sibling tasks editing `install.sh` concurrently).
    anything that already exists. Never touch `.knowledge/dag/` or `code_base_details/`.
 2. Call native `/gsd-map-codebase [--fast]` directly, in the same turn (Option B — the operator's
    own invocation of `recipe-bootstrap-knowledge` is the manual GSD trigger).
-3. Call native `/gsd-graphify build` directly, in the same turn, same reasoning.
+3. Always try native `/gsd-graphify build` in the same turn. Install if missing; if build still
+   fails, warn and continue without graph artifacts.
 4. Check for `.gsd-recipe/ingest-manifest.yaml`. Present → call native `/gsd-ingest-docs
    --manifest .gsd-recipe/ingest-manifest.yaml` directly, same reasoning. Missing → warn and skip
    only this one step, never hard-fail, never fabricate a manifest.
-5. Summarize the skeleton-fill result and all three native-call outcomes in one final report.
+5. Write the marker via `recipe-verify-knowledge.sh --write-marker`, falling back to
+   `--allow-no-graphify` when graphify did not succeed. Summarize map / graphify / ingest outcomes.
 
 ## Why Option B (direct same-turn calls), not a background/async trigger
 
@@ -200,7 +213,7 @@ already-approved pattern to a third distinct trio of native commands.
 
 ## Fail-open behavior
 
-The only condition that changes this skill's behavior mid-run is `.gsd-recipe/ingest-manifest.yaml`
-being absent — that skips step 4 alone, with a warning, and every other step (the skeleton fill,
-`/gsd-map-codebase`, `/gsd-graphify build`) always runs regardless. There is no scenario in this
-skill's documented workflow where it stops before completing all applicable steps.
+`.gsd-recipe/ingest-manifest.yaml` missing skips ingest only. Graphify is a circuit breaker:
+always try install + `/gsd-graphify build`; on failure warn, write a map-only marker with
+`--allow-no-graphify`, and continue. The skill fails only when `/gsd-map-codebase` did not
+produce a usable `.planning/codebase/` map.

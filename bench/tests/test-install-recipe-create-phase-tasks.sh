@@ -80,24 +80,35 @@ grep -q "self_healed\|self-healed\|self-heal" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the self-heal behavior of the list step" "$rc"
 grep -q "getJiraProjectIssueTypesMetadata" "$STAGED" && rc=0 || rc=$?
 check "staged skill references getJiraProjectIssueTypesMetadata for batch issue-type resolution" "$rc"
-grep -qi '"Task"' "$STAGED" && rc=0 || rc=$?
-check "staged skill documents preferring Task first" "$rc"
-grep -qi "Sub-task" "$STAGED" && rc=0 || rc=$?
-check "staged skill documents falling back to Sub-task" "$rc"
+grep -q "getJiraIssueTypeMetaWithFields" "$STAGED" && rc=0 || rc=$?
+check "staged skill reads live create-field metadata" "$rc"
+grep -q "getAccessibleAtlassianResources" "$STAGED" &&
+  grep -qi "discovery.*inconclusive\|discovery is empty" "$STAGED" && rc=0 || rc=$?
+check "staged skill wakes dormant Atlassian transport before declaring it unavailable" "$rc"
+grep -qi '"Task"' "$STAGED" && grep -q "level-0" "$STAGED" && rc=0 || rc=$?
+check "staged skill prefers a standard level-0 Task" "$rc"
+grep -qi "Never.*Sub-task.*Epic\|Never.*Sub-task.*direct child" "$STAGED" && rc=0 || rc=$?
+check "staged skill rejects a Sub-task directly under an Epic" "$rc"
 grep -q "createJiraIssue" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the real createJiraIssue MCP call" "$rc"
+grep -q "getJiraIssue" "$STAGED" && rc=0 || rc=$?
+check "staged skill verifies hierarchy after creation" "$rc"
 grep -q "lookupJiraAccountId" "$STAGED" && rc=0 || rc=$?
 check "staged skill looks up assignee via lookupJiraAccountId" "$rc"
 grep -q "assignee_account_id" "$STAGED" && rc=0 || rc=$?
 check "staged skill assigns on create" "$rc"
 grep -q "To Do" "$STAGED" && rc=0 || rc=$?
 check "staged skill transitions new tasks to To Do" "$rc"
-grep -q "createIssueLink" "$STAGED" && rc=0 || rc=$?
-check "staged skill references the real createIssueLink MCP call" "$rc"
-grep -q "parent" "$STAGED" && rc=0 || rc=$?
-check "staged skill documents the parent-field sub-task linking pattern" "$rc"
-grep -qi "getIssueLinkTypes" "$STAGED" && rc=0 || rc=$?
-check "staged skill references checking getIssueLinkTypes before guessing a link type" "$rc"
+grep -q "parent: <epic_key>" "$STAGED" && rc=0 || rc=$?
+check "staged skill passes the Epic through native parent" "$rc"
+grep -q "fields.parent.key == epic_key" "$STAGED" && rc=0 || rc=$?
+check "staged skill verifies the native parent key" "$rc"
+grep -q "additional_fields" "$STAGED" && grep -q "legacy-epic-link" "$STAGED" && rc=0 || rc=$?
+check "staged skill has an explicit legacy Epic Link fallback" "$rc"
+grep -qi "generic.*createIssueLink.*hierarchy" "$STAGED" && rc=0 || rc=$?
+check "staged skill never accepts a generic issue link as hierarchy" "$rc"
+grep -qi "never record an orphan\|never create.*orphan" "$STAGED" && rc=0 || rc=$?
+check "staged skill prevents orphan phase tasks" "$rc"
 grep -q "mark-done" "$STAGED" && rc=0 || rc=$?
 check "staged skill references mark-done" "$rc"
 grep -q "mark-failed" "$STAGED" && rc=0 || rc=$?

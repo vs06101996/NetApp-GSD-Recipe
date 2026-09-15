@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-09-07T04:52:21Z_
+_Generated: 2026-09-11T05:10:46Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
@@ -73,13 +73,13 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 | `recipe-prd-intake` | built | PRD intake wrapper: fills .templates/PRD.template.md from a Jira issue key/URL (Atlassian MCP getJiraIssue), Jira/Con... |
 | `recipe-new-project` | built | Gated repo-bootstrap wrapper closing the 'make my current repo ready' SDLC coverage gap. Determines first-init vs re-... |
 | `recipe-create-epic` | built | PRD -> Jira Epic bridge: drafts summary/description from docs/PRD.md, resolves project/issue type, looks up assignee ... |
-| `recipe-create-phase-tasks` | built | Agent-mediated phase-task creation: detect then list, resolve issue type, assign via lookupJiraAccountId, confirm, th... |
+| `recipe-create-phase-tasks` | built | Agent-mediated phase-task creation with verified Jira hierarchy: create a standard Task with native Parent when suppo... |
 
 ## Recipe skills — Knowledge bootstrap
 
 | Command | Status | Purpose |
 |---------|--------|---------|
-| `recipe-bootstrap-knowledge` | built | Idempotent .knowledge/ skeleton scaffold + native gsd-map-codebase/gsd-graphify build/gsd-ingest-docs bootstrap-or-re... |
+| `recipe-bootstrap-knowledge` | built | Idempotent .knowledge/ skeleton scaffold + native gsd-map-codebase, always-try gsd-graphify build (circuit breaker), ... |
 
 ## Recipe skills — Plan and run
 
@@ -113,11 +113,12 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 | `recipe-observe` | built | Thin front door for the FOTW observer's operator-facing lifecycle: status/start/stop/enable/disable. status/enable/di... |
 | `fotw-observer-bootstrap` | built | FLY ON THE WALL background observer bootstrap skill + reactive postToolUse hook. |
 
-## Recipe skills — Help
+## Recipe skills — Help and support
 
 | Command | Status | Purpose |
 |---------|--------|---------|
 | `recipe-help` | built | Read-only command reference for the NetApp GSD recipe: recipe skills, native GSD summary, harness CLI, and bench runn... |
+| `recipe-report-issue` | built | Safe GitHub issue reporter for the fixed vs06101996/NetApp-GSD-Recipe repository. Drafts and redacts a structured rep... |
 
 ## Injected planner context (not invoke-by-name)
 
@@ -186,7 +187,7 @@ Recipe skills delegate to these. Run **`gsd-help`** or **`gsd-help --full`** for
 | `bench/runners/draft-jira-comment.sh` | Does NOT post to Jira — use gsd-jira-sync skill + Atlassian MCP to post. |
 | `bench/runners/draft-github-pr-comment.sh` | Does NOT post to GitHub — use `gh pr comment` after reviewing output. |
 | `bench/runners/post-github-pr-comment.sh` | post-github-pr-comment.sh (TASK-030) — the real, scriptable draft -> idempotency-check |
-| `bench/runners/create-phase-tasks.sh` | inferred from the epic key's prefix, parent = epic — either |
+| `bench/runners/create-phase-tasks.sh` | detect       -- (this script, no MCP) enumerate ROADMAP.md phases, skip any |
 
 ### Benchmark-only (optional)
 

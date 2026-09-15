@@ -52,17 +52,17 @@ its own, and is safe to invoke on a repo that hasn't been scaffolded yet.
    Only an agent turn (you, right now) can see this session's real Atlassian MCP auth state. Do
    this directly, in this turn, using your own `GetMcpTools`/`CallMcpTool` access:
    a. Call `GetMcpTools` for the Atlassian server (id `plugin-atlassian-atlassian`, or whichever
-      Atlassian-flavored MCP server is present in this environment's catalog). If no such server
-      exists, or its `serverStatus` is `needsAuth`/`error`/`loading`, that alone is enough to
-      report `Jira/Atlassian: FAIL` — do not proceed to (b) with a server known to be unusable.
-   b. If the server looks usable, call a single **lightweight, read-only** probe —
+      Atlassian-flavored MCP server is present in this environment's catalog). A missing discovery
+      entry is **inconclusive**: Cursor may have idle-suspended a healthy HTTP transport. Continue
+      to the known invocation in (b) to wake it. A returned `needsAuth`/`error` status is evidence
+      of a problem, but still report the invocation's concrete error rather than discovery alone.
+   b. Call a single **lightweight, read-only** wake/probe invocation even when discovery was empty —
       `CallMcpTool` with `server: "plugin-atlassian-atlassian"`, `toolName:
       "getAccessibleAtlassianResources"`, empty `arguments`. A successful call returning at least
       one accessible resource (site `url`/`cloudId`) → report `Jira/Atlassian: PASS`, citing the
       resolved site `url` (never any token/credential value). An error, or a response with zero
-      resources → report `Jira/Atlassian: WARN` (server present and apparently authenticated per
-      `GetMcpTools`, but the live probe didn't confirm real access — could be a stale session,
-      network blip, or an account with genuinely no accessible sites).
+      resources → report `Jira/Atlassian: WARN` (the live probe didn't confirm real access — could
+      be an authentication error, network blip, or an account with genuinely no accessible sites).
    c. Never call `mcp_auth` as *part of* this check — that is a remediation action (it can trigger
       a real OAuth consent flow), not a read-only probe. Only *suggest* it in the summary (step 3)
       when the result isn't `PASS`.

@@ -244,6 +244,13 @@ touches:                             # glob ownership claims
 
 Adapter ops: `create_subissue`, `link` — [TRACEABILITY-LLD.md](TRACEABILITY-LLD.md) § Tracker adapter.
 
+Create standard phase Tasks with the Epic in Jira's native Parent field whenever live create
+metadata exposes it. Use the legacy Epic Link custom field only as an explicit compatibility
+fallback; generic issue links do not satisfy hierarchy. Verify the relationship before recording
+the task key. Active/review child work moves a To Do Epic to In Progress; settling a phase marks
+its task Done; the Epic moves to Done only when all phase tasks recorded in STATE have Jira status
+category `done`.
+
 ```markdown
 ## Tracker
 - epic: {EPIC_KEY}

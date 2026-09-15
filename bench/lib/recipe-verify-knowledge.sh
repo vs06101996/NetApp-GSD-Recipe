@@ -3,17 +3,17 @@
 #
 # Usage:
 #   recipe-verify-knowledge.sh [--target DIR]              # exit 0 when ready
-#   recipe-verify-knowledge.sh --write-marker [--target DIR]
+#   recipe-verify-knowledge.sh --write-marker [--allow-no-graphify] [--target DIR]
 #   recipe-verify-knowledge.sh --json [--target DIR]
 #   recipe-verify-knowledge.sh --check-graphify [--target DIR]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET=""
-MODE="check"
 WRITE_MARKER=0
 JSON=0
 CHECK_GRAPHIFY=0
+ALLOW_NO_GRAPHIFY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -21,8 +21,9 @@ while [ $# -gt 0 ]; do
     --write-marker) WRITE_MARKER=1; shift ;;
     --json) JSON=1; shift ;;
     --check-graphify) CHECK_GRAPHIFY=1; shift ;;
+    --allow-no-graphify) ALLOW_NO_GRAPHIFY=1; shift ;;
     -h|--help)
-      echo "Usage: $0 [--write-marker] [--json] [--check-graphify] [--target DIR]"
+      echo "Usage: $0 [--write-marker] [--allow-no-graphify] [--json] [--check-graphify] [--target DIR]"
       exit 0
       ;;
     *) echo "$0: unknown arg: $1" >&2; exit 2 ;;
@@ -66,6 +67,19 @@ graphify_guard() {
   return 1
 }
 
+marker_skips_graphify() {
+  python3 - "$TARGET" <<'PY'
+import json, os, sys
+path = os.path.join(sys.argv[1], ".gsd-recipe", "KNOWLEDGE-BOOTSTRAPPED")
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1)
+raise SystemExit(0 if data.get("graphify") == "skipped" else 1)
+PY
+}
+
 if [ "$CHECK_GRAPHIFY" = "1" ]; then
   graphify_guard
   exit $?
@@ -77,10 +91,16 @@ if [ "$JSON" = "1" ]; then
 fi
 
 if [ "$WRITE_MARKER" = "1" ]; then
+  if [ "$ALLOW_NO_GRAPHIFY" = "1" ]; then
+    python3 "$KNOWLEDGE_PY" write-marker --allow-no-graphify --target "$TARGET"
+    exit $?
+  fi
   graphify_guard || exit 1
   python3 "$KNOWLEDGE_PY" write-marker --target "$TARGET"
   exit $?
 fi
 
-graphify_guard || exit 1
+if ! marker_skips_graphify; then
+  graphify_guard || exit 1
+fi
 python3 "$KNOWLEDGE_PY" check --target "$TARGET"

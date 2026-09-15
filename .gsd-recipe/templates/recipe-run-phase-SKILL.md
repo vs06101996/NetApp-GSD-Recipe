@@ -8,7 +8,7 @@ description: "Recipe: gated single-phase execute wrapper for the NetApp GSD reci
 
 Invoke by name (`recipe-run-phase`) with:
 - `N` — the phase number to execute (required).
-- `--wave W` — optional, forwarded verbatim to `gsd-execute-phase N --wave W`.
+- `--wave W` — optional, forwarded verbatim to `gsd-execute-phase N --tdd --wave W`.
 
 Examples:
 - `recipe-run-phase 3`
@@ -79,12 +79,14 @@ Examples:
    body, the `addCommentToJiraIssue` MCP call, and running `emit-stamp.sh`; this skill only
    decides *whether* to call it and *what* to pass.
 
-6. **Call native `gsd-execute-phase N [--wave W]` directly**, in this same turn. Invoking
+6. **Call native `gsd-execute-phase N --tdd [--wave W]` directly**, in this same turn. Invoking
    `recipe-run-phase` was itself the operator's deliberate act of choosing to execute this phase —
    that IS the manual GSD trigger; this is not an unapproved autonomous invocation. Add no DAG
    pre-req/post-op gating here (`RUNTIME-LLD.md` §1.c.2.a/b — parked pending TASK-009) and
    implement no `execute_wave` handling — `gsd-execute-phase` owns its own internal wave
-   orchestration; this skill never second-guesses it.
+   orchestration; this skill never second-guesses it. `--tdd` plus `workflow.tdd_mode` is the
+   default. If TDD gates cannot run, **warn and continue** executing — never fail the phase solely
+   because TDD did not engage.
 
 7. **Emit `execute_complete`** (only when step 4 resolved an issue key), the same skill-to-skill
    way as step 5, once `gsd-execute-phase` returns — idempotent via the same
@@ -144,7 +146,7 @@ own installer, `.gsd-recipe/scripts/install-recipe-run-phase.sh`, and is also co
 4. Resolve the phase's tracker issue key via `parse-state.sh resolve-issue`. Unresolved → warn and
    continue (fail-open).
 5. Emit `execute_started` via the `gsd-jira-sync` skill (idempotent), if an issue key resolved.
-6. Call native `gsd-execute-phase N [--wave W]` directly, in the same turn (Option B — the
+6. Call native `gsd-execute-phase N --tdd [--wave W]` directly, in the same turn (Option B — the
    operator's own invocation of `recipe-run-phase` is the manual GSD trigger).
 7. Emit `execute_complete` the same skill-to-skill way, once `gsd-execute-phase` returns.
 8. Summarize phase/issue/gate-result/post-results in one line.

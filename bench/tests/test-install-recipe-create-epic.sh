@@ -70,6 +70,9 @@ check "install never creates .planning/config.json" "$?"
 # gsd-jira-sync Option-B delegation.
 STAGED="$TARGET1/.cursor/skills/recipe-create-epic/SKILL.md"
 
+grep -q "getAccessibleAtlassianResources" "$STAGED" &&
+  grep -qi "discovery.*inconclusive\|discovery is empty" "$STAGED" && rc=0 || rc=$?
+check "staged skill wakes dormant Atlassian transport before declaring it unavailable" "$rc"
 grep -q "draft-jira-epic.sh" "$STAGED" && rc=0 || rc=$?
 check "staged skill delegates to bench/runners/draft-jira-epic.sh" "$rc"
 grep -q "recipe-prd-intake" "$STAGED" && rc=0 || rc=$?

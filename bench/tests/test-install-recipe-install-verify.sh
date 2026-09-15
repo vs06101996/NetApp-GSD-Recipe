@@ -88,6 +88,8 @@ grep -qi "MCP" "$STAGED" && rc=0 || rc=$?
 check "staged skill references MCP tool listing (item 8)" "$rc"
 grep -q "getAccessibleAtlassianResources" "$STAGED" && rc=0 || rc=$?
 check "staged skill requires a live read-only Atlassian probe before Jira pass" "$rc"
+grep -qi "discovery is empty\|empty enumeration.*inconclusive" "$STAGED" && rc=0 || rc=$?
+check "staged skill treats empty discovery as inconclusive and invokes a wake probe" "$rc"
 grep -q -- '\$INSTALL_SH --record-jira-check pass --target <target>' "$STAGED" && rc=0 || rc=$?
 check "staged skill records a live Jira pass through the script escape hatch" "$rc"
 python3 - "$STAGED" <<'PY'

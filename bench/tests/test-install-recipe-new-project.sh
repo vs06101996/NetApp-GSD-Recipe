@@ -82,6 +82,8 @@ grep -q "PROJECT.md" "$STAGED" && rc=0 || rc=$?
 check "staged skill references re-verifying PROJECT.md" "$rc"
 grep -q "recipe-verify-planning" "$STAGED" && rc=0 || rc=$?
 check "staged skill uses recipe-verify-planning guardrail" "$rc"
+grep -q "recipe-enable-defaults" "$STAGED" && rc=0 || rc=$?
+check "staged skill enables TDD/graphify defaults via circuit breaker" "$rc"
 grep -q "intake_started" "$STAGED" && rc=0 || rc=$?
 check "staged skill references intake_started" "$rc"
 grep -qi "never sync\|does not sync\|do not sync" "$STAGED" && rc=0 || rc=$?

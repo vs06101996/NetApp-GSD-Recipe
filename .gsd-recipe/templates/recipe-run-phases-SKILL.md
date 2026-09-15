@@ -171,9 +171,10 @@ Examples:
         declined"` (whichever applies), then skip straight to step 5.
       - Otherwise — all three concluded successfully (verify accepted; review+ship both completed
         with a PR link; settle's CI-`PASS` and PO-accept gates both cleared) — phase `N`'s `--full`
-        chain is complete. Record all three skills' own one-line summaries alongside phase `N`'s
-        completion for the final report, then loop back to step 4.a for `N+1`, or fall through to
-        step 5 if `N` was `end`.
+        chain is complete. `recipe-settle N` marks phase N's Jira task Done; its status roll-up
+        keeps the Epic In Progress while another recorded phase task remains incomplete, and marks
+        the Epic Done only after the final recorded child reaches Done. Record all three skills'
+        own one-line summaries alongside phase `N`'s completion, then loop to `N+1` or finish.
 
 5. **Print the final summary**, always (whether the loop finished the full range or stopped early):
    the list of phases completed successfully (each with the `recipe-plan-phase`/`recipe-run-phase`

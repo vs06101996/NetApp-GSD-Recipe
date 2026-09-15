@@ -52,7 +52,7 @@ check "get-phase-issue resolves a known phase_id" "$?"
 check "get-phase-issue fails on unknown phase_id" "$?"
 
 # 5. resolve-issue routes an epic-routed event to tracker.epic
-OUT="$("$LIB" resolve-issue settled --state "$VALID")"
+OUT="$("$LIB" resolve-issue intake_started --state "$VALID")"
 [ "$OUT" = "PROJ-100" ]
 check "resolve-issue routes epic-routed event to tracker.epic" "$?"
 
@@ -60,6 +60,10 @@ check "resolve-issue routes epic-routed event to tracker.epic" "$?"
 OUT="$("$LIB" resolve-issue plan_complete --phase 1 --state "$VALID")"
 [ "$OUT" = "PROJ-101" ]
 check "resolve-issue routes phase-routed event to matching phase_id" "$?"
+
+OUT="$("$LIB" resolve-issue settled --phase 2 --state "$VALID")"
+[ "$OUT" = "PROJ-102" ]
+check "resolve-issue routes settled to the phase task" "$?"
 
 # 7. resolve-issue fails non-zero (actionable error) when phase-routed event's
 #    phase_id has no matching row — DATA-CONTRACTS.md rule 8

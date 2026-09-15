@@ -116,6 +116,9 @@ grep -q "recipe-review-ship N" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-review-ship (skill-to-skill, --full chain)" "$rc"
 grep -q "recipe-settle N" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-settle (skill-to-skill, --full chain)" "$rc"
+grep -qi "Jira task Done" "$STAGED" &&
+  grep -qi "Epic Done only after.*recorded child.*Done" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents child-first settle and final aggregate Epic closure" "$rc"
 grep -qi "byte-for-byte identical" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents --full as strictly opt-in (byte-for-byte identical when omitted)" "$rc"
 grep -q -- "--full sub-step failed" "$STAGED" && rc=0 || rc=$?

@@ -58,6 +58,9 @@ check "install never creates .planning/config.json" "$?"
 # skill requires are actually present in the shipped skill file.
 STAGED="$TARGET1/.cursor/skills/recipe-onboard/SKILL.md"
 
+grep -q "getAccessibleAtlassianResources" "$STAGED" &&
+  grep -qi "discovery.*inconclusive\|discovery is empty" "$STAGED" && rc=0 || rc=$?
+check "staged skill wakes dormant Atlassian transport before declaring it unavailable" "$rc"
 grep -q "recipe-prd-intake" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-prd-intake by name" "$rc"
 grep -q "fotw-observer-bootstrap" "$STAGED" && rc=0 || rc=$?
@@ -76,6 +79,8 @@ grep -q "recipe-create-phase-tasks" "$STAGED" && rc=0 || rc=$?
 check "staged skill references invoking recipe-create-phase-tasks by name" "$rc"
 grep -q "recipe-bootstrap-knowledge" "$STAGED" && rc=0 || rc=$?
 check "staged skill invokes mandatory recipe-bootstrap-knowledge" "$rc"
+grep -q "recipe-enable-defaults" "$STAGED" && rc=0 || rc=$?
+check "staged onboard enables TDD/graphify defaults after roadmap exists" "$rc"
 grep -q "recipe-verify-knowledge" "$STAGED" && rc=0 || rc=$?
 check "staged skill verifies knowledge via recipe-verify-knowledge.sh" "$rc"
 grep -qi "do not.*Write tool\|never treat a hand-written marker" "$STAGED" && rc=0 || rc=$?

@@ -65,6 +65,9 @@ check "staged skill forbids writing Jira shape to docs/PRD.md" "$rc"
 
 grep -q "getJiraIssue" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
 check "staged skill fetches Jira issues via getJiraIssue" "$rc"
+grep -q "getAccessibleAtlassianResources" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" &&
+  grep -qi "discovery.*inconclusive\|enumeration is empty" "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" && rc=0 || rc=$?
+check "staged skill wakes dormant Atlassian transport before declaring it unavailable" "$rc"
 
 # 4. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null

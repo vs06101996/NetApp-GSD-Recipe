@@ -196,6 +196,8 @@ check "fresh install stages recipe-paths.sh, executable" "$?"
 check "fresh install stages recipe-verify-knowledge.sh guardrail" "$?"
 [ -x "$TARGET1/.gsd-recipe/scripts/recipe-verify-planning.sh" ]
 check "fresh install stages recipe-verify-planning.sh guardrail" "$?"
+[ -x "$TARGET1/.gsd-recipe/scripts/recipe-enable-defaults.sh" ]
+check "fresh install stages recipe-enable-defaults.sh circuit-breaker helper" "$?"
 [ -f "$TARGET1/.gsd-recipe/scripts/recipe_knowledge.py" ]
 check "fresh install stages recipe_knowledge.py guardrail lib" "$?"
 [ -f "$TARGET1/.gsd-recipe/scripts/recipe_verify_planning.py" ]
@@ -243,6 +245,10 @@ check "install.sh composes install-recipe-observe.sh (skill staged)" "$?"
 check "install.sh composes install-recipe-create-epic.sh (skill + runner staged)" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-create-phase-tasks/SKILL.md" ]
 check "install.sh composes install-recipe-create-phase-tasks.sh (skill staged)" "$?"
+[ -f "$TARGET1/.cursor/skills/recipe-report-issue/SKILL.md" ] &&
+  [ -x "$TARGET1/.gsd-recipe/scripts/report-recipe-issue.sh" ] &&
+  [ -f "$TARGET1/.gsd-recipe/templates/recipe-issue-body.template.md" ]
+check "install.sh composes install-recipe-report-issue.sh (skill, runner, template staged)" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-help/SKILL.md" ] && [ -f "$TARGET1/docs/RECIPE-COMMANDS.md" ] && [ -f "$TARGET1/docs/RECIPE-BENCHMARKS.md" ]
 check "install.sh composes install-recipe-help.sh (skill + docs staged)" "$?"
 [ -f "$TARGET1/.cursor/skills/recipe-prd-intake/SKILL.md" ]
@@ -298,6 +304,7 @@ assert 'recipe-install' in d and d['recipe-install'], d
 assert 'recipe-observe' in d and d['recipe-observe'], d
 assert 'recipe-create-epic' in d and d['recipe-create-epic'], d
 assert 'recipe-create-phase-tasks' in d and d['recipe-create-phase-tasks'], d
+assert 'recipe-report-issue' in d and d['recipe-report-issue'], d
 assert 'recipe-help' in d and d['recipe-help'], d
 assert 'recipe-prd-intake' in d and d['recipe-prd-intake'], d
 assert 'install-core' in d and d['install-core'], d
@@ -335,6 +342,7 @@ assert set(d['install-core']).isdisjoint(set(d['recipe-install'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-observe'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-epic'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-create-phase-tasks'])), d
+assert set(d['install-core']).isdisjoint(set(d['recipe-report-issue'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-help'])), d
 assert set(d['install-core']).isdisjoint(set(d['recipe-prd-intake'])), d
 for _opt in ('recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status', 'recipe-workspace', 'recipe-update', 'recipe-command-surface'):
@@ -467,6 +475,8 @@ echo "$VERIFY_OUT1" | grep -q "recipe-create-epic composed — pass" && rc=0 || 
 check "--verify output mentions recipe-create-epic composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-create-phase-tasks composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-create-phase-tasks composition" "$rc"
+echo "$VERIFY_OUT1" | grep -q "recipe-report-issue composed — pass" && rc=0 || rc=$?
+check "--verify output mentions recipe-report-issue composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-help composed — pass" && rc=0 || rc=$?
 check "--verify output mentions recipe-help composition" "$rc"
 echo "$VERIFY_OUT1" | grep -q "recipe-prd-intake composed — pass" && rc=0 || rc=$?
@@ -546,6 +556,10 @@ check "uninstall cascades to install-recipe-observe.sh --uninstall" "$?"
 check "uninstall cascades to install-recipe-create-epic.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-create-phase-tasks/SKILL.md" ]
 check "uninstall cascades to install-recipe-create-phase-tasks.sh --uninstall" "$?"
+[ ! -f "$TARGET3/.cursor/skills/recipe-report-issue/SKILL.md" ] &&
+  [ ! -f "$TARGET3/.gsd-recipe/scripts/report-recipe-issue.sh" ] &&
+  [ ! -f "$TARGET3/.gsd-recipe/templates/recipe-issue-body.template.md" ]
+check "uninstall cascades to install-recipe-report-issue.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-help/SKILL.md" ] && [ ! -f "$TARGET3/docs/RECIPE-COMMANDS.md" ] && [ ! -f "$TARGET3/docs/RECIPE-BENCHMARKS.md" ]
 check "uninstall cascades to install-recipe-help.sh --uninstall" "$?"
 [ ! -f "$TARGET3/.cursor/skills/recipe-prd-intake/SKILL.md" ]

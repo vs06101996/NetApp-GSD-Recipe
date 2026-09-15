@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-06T12:41:42Z",
+  "generated_at": "2026-09-11T05:06:24Z",
   "recipe": "netapp-gsd-recipe",
   "capabilities": [
     {
@@ -119,7 +119,7 @@
       "id": "recipe-bootstrap-knowledge",
       "task_id": "TASK-022",
       "kind": "cursor-skill",
-      "description": "Idempotent .knowledge/ skeleton scaffold + native gsd-map-codebase/gsd-graphify build/gsd-ingest-docs bootstrap-or-refresh wrapper.",
+      "description": "Idempotent .knowledge/ skeleton scaffold + native gsd-map-codebase, always-try gsd-graphify build (circuit breaker), and optional gsd-ingest-docs bootstrap-or-refresh wrapper.",
       "invoke_name": "recipe-bootstrap-knowledge",
       "staged_path": ".cursor/skills/recipe-bootstrap-knowledge/SKILL.md",
       "installer": ".gsd-recipe/scripts/install-recipe-bootstrap-knowledge.sh",
@@ -287,12 +287,26 @@
       "id": "recipe-create-phase-tasks",
       "task_id": "TASK-034",
       "kind": "cursor-skill",
-      "description": "Agent-mediated phase-task creation: detect then list, resolve issue type, assign via lookupJiraAccountId, confirm, then per pending phase createJiraIssue (assignee_account_id) + link + To Do transition, then mark-done/mark-failed.",
+      "description": "Agent-mediated phase-task creation with verified Jira hierarchy: create a standard Task with native Parent when supported, explicit legacy Epic Link fallback otherwise, reject orphans, assign and transition to To Do, then mark-done/mark-failed.",
       "invoke_name": "recipe-create-phase-tasks",
       "staged_path": ".cursor/skills/recipe-create-phase-tasks/SKILL.md",
       "installer": ".gsd-recipe/scripts/install-recipe-create-phase-tasks.sh",
       "composed_by_install_sh": true,
       "ledger_component": "recipe-create-phase-tasks",
+      "staged": false,
+      "ledger_tracked": false,
+      "version": "1.0.0"
+    },
+    {
+      "id": "recipe-report-issue",
+      "task_id": "TASK-062",
+      "kind": "cursor-skill",
+      "description": "Safe GitHub issue reporter for the fixed vs06101996/NetApp-GSD-Recipe repository. Drafts and redacts a structured report, previews before confirmation, checks duplicate titles, and creates bug, enhancement, or question issues through authenticated gh.",
+      "invoke_name": "recipe-report-issue",
+      "staged_path": ".cursor/skills/recipe-report-issue/SKILL.md",
+      "installer": ".gsd-recipe/scripts/install-recipe-report-issue.sh",
+      "composed_by_install_sh": true,
+      "ledger_component": "recipe-report-issue",
       "staged": false,
       "ledger_tracked": false,
       "version": "1.0.0"

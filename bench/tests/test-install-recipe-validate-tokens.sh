@@ -101,6 +101,9 @@ grep -q "CallMcpTool" "$STAGED" && rc=0 || rc=$?
 check "staged skill references CallMcpTool for the Jira/Atlassian probe" "$rc"
 grep -q "getAccessibleAtlassianResources" "$STAGED" && rc=0 || rc=$?
 check "staged skill references getAccessibleAtlassianResources as the lightweight probe" "$rc"
+grep -qi "entry is.*inconclusive" "$STAGED" &&
+  grep -qi "wake/probe invocation" "$STAGED" && rc=0 || rc=$?
+check "staged skill treats missing discovery as inconclusive and invokes the live probe" "$rc"
 grep -q "mcp_auth" "$STAGED" && rc=0 || rc=$?
 check "staged skill references mcp_auth as a remediation suggestion" "$rc"
 grep -qi "no MCP tool-calling access" "$STAGED" && rc=0 || rc=$?

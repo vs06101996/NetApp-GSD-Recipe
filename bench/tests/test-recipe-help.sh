@@ -35,6 +35,9 @@ check "output lists recipe-plan-phase" "$?"
 grep -q "recipe-help" "$TMP"
 check "output lists recipe-help" "$?"
 
+grep -q "recipe-report-issue" "$TMP"
+check "output lists the recipe issue reporter" "$?"
+
 grep -q "| built |" "$TMP"
 check "output marks installed capabilities as built" "$?"
 

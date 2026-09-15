@@ -291,9 +291,13 @@ After install, operator or agent runs (once per repo, refresh on major change):
 
 ```text
 /gsd-map-codebase [--fast]
-/gsd-graphify build
+/gsd-graphify build   # always try; continue without it if install/build fails
 /gsd-ingest-docs --manifest .gsd-recipe/ingest-manifest.yaml
 ```
+
+`recipe-bootstrap-knowledge` is the wrapper: map is required; graphify is a circuit breaker
+(success keeps graph artifacts; failure writes a map-only `KNOWLEDGE-BOOTSTRAPPED` marker).
+Ingest stays optional when the manifest is missing.
 
 Outputs land under `.knowledge/` and `.planning/intel/` per GSD defaults; recipe copies or links summaries into OKF paths.
 
@@ -305,6 +309,11 @@ Outputs land under `.knowledge/` and `.planning/intel/` per GSD defaults; recipe
 | **Human gates** | Consent prompt for executable MCP surfaces (capability install) |
 | **Failure handling** | Partial install → reconciliation via ledger; re-run is idempotent |
 | **Stamps** | None at install |
+
+The composed install also stages `recipe-report-issue`: its skill, fixed-repository GitHub runner,
+and safe body template. It never changes the target repository; after a sanitized dry-run preview
+and explicit confirmation it can create only `bug`, `enhancement`, or `question` issues in
+`vs06101996/NetApp-GSD-Recipe`.
 
 ---
 
@@ -353,7 +362,7 @@ Run after install; all must pass before declaring p0 complete.
 | 5 | Templates present | Assert `.templates/*.md` exist | [C] |
 | 6 | OKF index | Assert `.knowledge/index.md` exists | [C] |
 | 7 | Gitignore | Scaffold local-only: `.gsd-recipe/`, `.knowledge/`, `.templates/`, `.planning/`, `code_base_details/`, `skills/`, recipe docs, `.learnings/`, `.gsd-codebase/` | [C] |
-| 8 | MCP reachable | Smoke: list tools on `{TRACKER}-mcp` (optional) | [E] |
+| 8 | MCP reachable | Invoke a read-only `{TRACKER}-mcp` probe; an empty discovery list is inconclusive because an idle transport may be dormant | [E] |
 | 9 | Observer loop | Confirm loop/automation scheduled (optional v1) | [X] |
 | 10 | Bare metal Gate A | Run `bare_metal` bootstrap commands once | [X] |
 
@@ -373,6 +382,10 @@ reruns `install.sh --verify` in the same Agent turn, allowing that script to
 write `.gsd-recipe/INSTALL-VERIFIED.json`. If MCP is unavailable, `jira_check`
 stays `pending` and shell verification remains fail-closed. The
 `--record-jira-check` mode remains available for scripts and CI.
+
+Cursor may idle-suspend a healthy Atlassian HTTP transport so it disappears from tool discovery.
+The live read-only invocation is therefore also the wake probe; only its concrete
+authentication/transport result determines availability.
 
 ---
 

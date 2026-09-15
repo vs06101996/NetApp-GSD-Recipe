@@ -71,16 +71,11 @@ has already been covered:
 
 1. Read `.knowledge/log.md` and `.knowledge/index.md` for prior decisions or
    learnings relevant to this phase's subject area.
-2. If `.planning/config.json` has `graphify.enabled: true`, also run
-   `gsd-graphify query <topic>` for the phase's subject area and factor
-   anything relevant into the plan.
-3. Step 2 is **soft** — if `graphify.enabled` is `false`/missing, or the
-   `graphify` CLI itself isn't available, skip it gracefully and proceed
-   with just the `.knowledge/` read from step 1. Do not treat a missing/
-   disabled graphify as a blocker; this mirrors graphify's own warn-only
-   status in `install.sh`'s prerequisite bootstrap (`ensure_prereq`'s
-   `hard=0` treatment of it) — planning must never be blocked on an
-   optional tool.
+2. Always try `gsd-graphify query <topic>` for the phase's subject area (recipe
+   defaults `graphify.enabled` to true). Factor anything relevant into the plan.
+3. Step 2 is a **circuit breaker** — if the CLI is missing, the query fails, or
+   graphify was skipped at knowledge bootstrap, warn and proceed with just the
+   `.knowledge/` read from step 1. Never block planning on graphify.
 
 ## Do NOT
 

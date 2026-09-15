@@ -110,8 +110,10 @@ REPORT_LIB="$(<target>/.gsd-recipe/scripts/recipe-paths.sh resolve bench/lib/ins
    (default `jira` if unset/missing). Use `GetMcpTools` to list tools on the tracker's MCP server.
    For Jira, discover the Atlassian server/tool schema first, then make one non-mutating live
    `CallMcpTool` call to `getAccessibleAtlassianResources`, unless step 5 already produced that exact
-   live result. A non-empty successful response proves both reachability and authentication; record
-   item 8 `pass`. Merely listing schemas does **not** prove the Jira check passed.
+   live result. If discovery is empty, that invocation is still required as a wake probe because
+   Cursor can idle-suspend a healthy HTTP transport; empty enumeration alone is inconclusive. A
+   non-empty successful response proves both reachability and authentication; record item 8
+   `pass`. Merely listing schemas does **not** prove the Jira check passed.
    - After that live Jira pass, immediately run:
      ```
      $INSTALL_SH --record-jira-check pass --target <target>

@@ -31,6 +31,9 @@ Examples:
   closed in step 1 and tell the operator to run `recipe-prd-intake` first.
 - Atlassian MCP enabled and authenticated, with permission to create issues in the resolved
   project.
+- Empty MCP discovery is inconclusive because Cursor may idle-suspend the healthy Atlassian HTTP
+  transport. Invoke the known `getAccessibleAtlassianResources` operation as a wake probe, then
+  retry discovery; only a real invocation/authentication failure is unavailability.
 - `.planning/STATE.md` may or may not exist, and may or may not already have a `## Tracker`
   section — both are valid starting states (see step 2 and step 9's `init-tracker` semantics).
 
@@ -63,7 +66,9 @@ Examples:
 
 3. **Resolve the Jira project.**
    - `--project KEY` passed → use it directly, skip the live question.
-   - Not passed → `GetMcpTools` server `plugin-atlassian-atlassian` tool `getVisibleJiraProjects`,
+   - Not passed → if discovery is empty, invoke `getAccessibleAtlassianResources` once to wake the
+     transport and retry; never interpret empty enumeration alone as unavailable. Then
+     `GetMcpTools` server `plugin-atlassian-atlassian` tool `getVisibleJiraProjects`,
      then `CallMcpTool` it. Present the returned project list to the operator and ask them, live in
      this conversation, which one to use — a genuine, non-skippable question (same posture as
      `recipe-settle`'s PO-accept gate: only a live agent turn can reach the real human here). Never

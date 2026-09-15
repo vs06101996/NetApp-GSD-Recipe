@@ -8,7 +8,7 @@
 # phase" via adapter ops `create_subissue` + `link` (TRACEABILITY-LLD.md §
 # Tracker adapter). Same "bash has no MCP tool-calling access" constraint as
 # sync-reconcile.sh: this script can DETECT + DRAFT + QUEUE, but the actual
-# `createJiraIssue` (create_subissue) and `createIssueLink`/parent-field call
+# `createJiraIssue` (create_subissue) and native Parent/Epic Link verification
 # (link) must happen in an agent turn. So, mirroring sync-reconcile.sh's split
 # from its drain step:
 #
@@ -17,10 +17,10 @@
 #                    '## Phase tasks' table, draft a summary/description for
 #                    the rest from _phase_task.template.md, and queue them.
 #   (agent turn) -- for each queued phase: call createJiraIssue (project
-#                    inferred from the epic key's prefix, parent = epic — either
-#                    a parent field for a true sub-task issue type, or a
-#                    follow-up createIssueLink call, per whatever the target
-#                    Jira project's issue-type scheme supports), matching the
+#                    inferred from the epic key's prefix, parent = epic via
+#                    the issue type's writable native Parent field (preferred)
+#                    or its legacy Epic Link custom field), then verify that
+#                    hierarchy via getJiraIssue), matching the
 #                    exact MCP call shape proven live in
 #                    bench/report/gsd-jira-sync-live-test-report.md.
 #   list         -- (this script, no MCP; TASK-034) mirrors
@@ -41,7 +41,7 @@
 #                    drafted_description/target/key) -- never re-derived from
 #                    ROADMAP.md again. No MCP call happens here; the agent
 #                    turn that consumes `work` is the one that calls
-#                    createJiraIssue/createIssueLink (see
+#                    createJiraIssue/getJiraIssue (see
 #                    recipe-create-phase-tasks-SKILL.md, TASK-034).
 #   mark-done    -- (this script, no MCP) record the created issue_key: writes
 #                    it into STATE.md via `parse-state.sh add-phase-task`, and

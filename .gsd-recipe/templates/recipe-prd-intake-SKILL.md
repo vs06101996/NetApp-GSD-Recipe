@@ -34,6 +34,9 @@ fetch it (do not treat the URL string as the PRD body).
 - `docs/` directory may or may not exist yet — create it if needed.
 - Atlassian MCP enabled and authenticated — required only when the input is a
   Jira issue key or browse URL.
+  Empty discovery is inconclusive for an idle-suspended transport: invoke the known
+  `getAccessibleAtlassianResources` operation once to wake it, then retry discovery. Only a real
+  invocation/authentication failure means Jira is unavailable.
 
 ## C. Tool Usage
 
@@ -50,7 +53,8 @@ fetch it (do not treat the URL string as the PRD body).
      via `.gsd-recipe/scripts/recipe-paths.sh resolve` when that helper exists;
      otherwise apply the same parse rules. Then:
      1. Discover MCP tools (`GetDynamicTools` / `GetMcpTools`) for the
-        Atlassian Jira namespace.
+        Atlassian Jira namespace. If enumeration is empty, invoke
+        `getAccessibleAtlassianResources` as a wake probe and retry; never stop on discovery alone.
      2. `getAccessibleAtlassianResources` if `cloudId` is not already known;
         use the site hostname from the browse URL when present
         (e.g. `netapp.atlassian.net`).

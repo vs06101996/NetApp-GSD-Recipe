@@ -87,8 +87,11 @@ Optional field:
 5. `phase_id` values must be unique and map to planned phases; duplicates fail validation.
 6. `issue_key` must be non-empty for each phase row.
 7. Event routing:
-   - Epic-routed events: `intake_started`, `discuss_complete`, `settled`
-   - Phase-routed events: `plan_complete`, `plan_revised`, `execute_started`, `execute_wave`, `execute_complete`, `verify_complete`, `review_complete`, `learning_stored`, `reopened`
+   - Epic-routed events: `intake_started`, `discuss_complete`
+   - Phase-routed events: `plan_complete`, `plan_revised`, `execute_started`, `execute_wave`, `execute_complete`, `verify_complete`, `review_complete`, `learning_stored`, `settled`, `reopened`
+   - Phase-event status roll-up is status-only: active children move a To Do Epic to In Progress;
+     `settled` moves its phase task to Done, and the Epic reaches Done only when every phase task
+     recorded in this table has Jira status category `done`.
 8. Parser behavior for unresolved phase-routed event key: fail non-zero with actionable error.
 
 Validation implementation target: TASK-008 in [BACKLOG.md](../BACKLOG.md) · [INSTALL-LLD.md](../lld/INSTALL-LLD.md).

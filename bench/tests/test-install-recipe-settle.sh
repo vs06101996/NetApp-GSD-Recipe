@@ -116,10 +116,14 @@ grep -q "sync-ledger.sh" "$STAGED" && rc=0 || rc=$?
 check "staged skill uses sync-ledger.sh for settled idempotency" "$rc"
 grep -q "resolve-issue settled\|resolve-issue .settled." "$STAGED" && rc=0 || rc=$?
 check "staged skill resolves the settled event via parse-state.sh resolve-issue settled" "$rc"
-grep -qi "epic-routed" "$STAGED" && rc=0 || rc=$?
-check "staged skill documents settled as an epic-routed event" "$rc"
+grep -q "resolve-issue settled --phase N" "$STAGED" && rc=0 || rc=$?
+check "staged skill resolves settled against phase N" "$rc"
+grep -qi "phase-routed" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents settled as a phase-routed event" "$rc"
+grep -qi "every.*phase task.*Done\|all.*phase tasks.*Done" "$STAGED" && rc=0 || rc=$?
+check "staged skill closes the Epic only after all phase tasks are Done" "$rc"
 grep -qi "fail-open" "$STAGED" && rc=0 || rc=$?
-check "staged skill documents fail-open behavior on a missing tracker epic" "$rc"
+check "staged skill documents fail-open behavior on a missing phase task" "$rc"
 grep -qi "never fabricat" "$STAGED" && rc=0 || rc=$?
 check "staged skill disclaims fabricating a CI result" "$rc"
 grep -qi "out of scope\|parked" "$STAGED" && grep -qi "grader" "$STAGED" && rc=0 || rc=$?

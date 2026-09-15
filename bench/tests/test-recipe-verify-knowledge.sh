@@ -74,6 +74,13 @@ check "write-marker succeeds when artifacts present" "$rc"
 [ -f "$WRITE/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED" ]
 check "write-marker creates KNOWLEDGE-BOOTSTRAPPED" "$?"
 
+python3 -c "
+import json
+d=json.load(open('$WRITE/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED'))
+assert d.get('graphify') == 'ready', d
+"
+check "write-marker records graphify ready when graph exists" "$?"
+
 STUBBIN="$(mktemp -d)"
 cat > "$STUBBIN/graphify" <<'EOF'
 #!/usr/bin/env bash
@@ -86,6 +93,22 @@ rm -f "$NOWRITE/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED"
 (PATH="$STUBBIN:$PATH" "$VERIFY" --write-marker --target "$NOWRITE") && rc=0 || rc=$?
 [ "$rc" != "0" ]
 check "write-marker fails on no-op graphify stub" "$?"
+
+MAPONLY="$(new_repo)"
+mkdir -p "$MAPONLY/.gsd-recipe" "$MAPONLY/.planning/codebase"
+printf '# Stack\n\nLanguages and runtime for the repo under test.\n' > "$MAPONLY/.planning/codebase/STACK.md"
+printf '# Architecture\n\nLayered layout for the repo under test.\n' > "$MAPONLY/.planning/codebase/ARCHITECTURE.md"
+(PATH="$STUBBIN:$PATH" "$VERIFY" --write-marker --allow-no-graphify --target "$MAPONLY") && rc=0 || rc=$?
+check "write-marker --allow-no-graphify succeeds without graphify" "$rc"
+python3 -c "
+import json
+d=json.load(open('$MAPONLY/.gsd-recipe/KNOWLEDGE-BOOTSTRAPPED'))
+assert d.get('status') == 'ready', d
+assert d.get('graphify') == 'skipped', d
+"
+check "allow-no-graphify marker records graphify skipped" "$?"
+(PATH="$STUBBIN:$PATH" "$VERIFY" --target "$MAPONLY") && rc=0 || rc=$?
+check "check passes for skipped-graphify marker without functional CLI" "$rc"
 
 PLAN="$(new_repo)"
 mkdir -p "$PLAN/.planning"
