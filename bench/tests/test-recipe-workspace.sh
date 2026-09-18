@@ -294,6 +294,29 @@ bash "$LIB" snapshot main --target "$T21" >/dev/null
 check "snapshot: untracked PRD-*.md alone is captured" "$?"
 rm -rf "$T21"
 
+# ── 21b. Gitignored PRDs still round-trip; a committed PRD is left alone ─────
+T21B="$(new_repo)"
+mkdir -p "$T21B/docs"
+printf 'docs/PRD.md\ndocs/PRD-*.md\n' > "$T21B/.gitignore"
+echo "committed product prd" > "$T21B/docs/PRD-product.md"
+git -C "$T21B" add -f .gitignore docs/PRD-product.md
+git -C "$T21B" commit -qm "track a product PRD"
+echo "generated" > "$T21B/docs/PRD.md"
+echo "generated source" > "$T21B/docs/PRD-next.md"
+bash "$LIB" snapshot main --target "$T21B" >/dev/null
+[ -f "$T21B/.gsd-recipe/workspaces/main/docs/PRD.md" ] &&
+  [ -f "$T21B/.gsd-recipe/workspaces/main/docs/PRD-next.md" ]
+check "snapshot: gitignored PRDs are captured (not skipped as excluded)" "$?"
+[ ! -f "$T21B/.gsd-recipe/workspaces/main/docs/PRD-product.md" ]
+check "snapshot: a committed PRD is left to the product, not the initiative" "$?"
+rm -f "$T21B/docs/PRD.md" "$T21B/docs/PRD-next.md"
+bash "$LIB" restore main --target "$T21B" --clear >/dev/null
+grep -q "generated" "$T21B/docs/PRD.md" &&
+  grep -q "generated source" "$T21B/docs/PRD-next.md" &&
+  grep -q "committed product prd" "$T21B/docs/PRD-product.md"
+check "restore: gitignored PRDs come back and the committed one is untouched" "$?"
+rm -rf "$T21B"
+
 # ── 22. malformed config blocks snapshot before any later clear can occur ────
 T22="$(new_repo)"
 mkdir -p "$T22/.planning" "$T22/.gsd-recipe"

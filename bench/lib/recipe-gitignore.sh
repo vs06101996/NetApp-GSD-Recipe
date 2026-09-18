@@ -56,6 +56,8 @@ recipe_gitignore_lines() {
 .planning/
 code_base_details/
 skills/
+docs/PRD.md
+docs/PRD-*.md
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
 docs/RECIPE-SEQUENCE.md

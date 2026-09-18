@@ -178,6 +178,20 @@ cmd_sanitize() {
   sanitize_branch "${POSITIONAL[0]}"
 }
 
+# Intake-generated PRDs are gitignored, so `ls-files --others --exclude-standard`
+# cannot see them. Select on "present but not tracked" instead, which holds
+# whether or not the branch's .gitignore carries the recipe lines yet.
+list_local_prds() {
+  local prd rel
+  [ -d "$TARGET/docs" ] || return 0
+  for prd in "$TARGET/docs/PRD.md" "$TARGET/docs"/PRD-*.md; do
+    [ -f "$prd" ] || continue
+    rel="docs/$(basename "$prd")"
+    git -C "$TARGET" ls-files --error-unmatch "$rel" >/dev/null 2>&1 && continue
+    printf '%s\n' "$rel"
+  done
+}
+
 cmd_snapshot() {
   [ "${#POSITIONAL[@]}" -ge 1 ] || { echo "workspace-swap.sh: snapshot requires <branch>" >&2; exit 2; }
   local branch="${POSITIONAL[0]}"
@@ -197,19 +211,11 @@ cmd_snapshot() {
   [ -d "$TARGET/.gsd" ] && has_recipe_state=1
   has_skip_tracker && has_recipe_state=1
 
-  # Include docs/PRD.md only if it is untracked/gitignored (not committed)
-  if [ -f "$TARGET/docs/PRD.md" ]; then
-    if ! git -C "$TARGET" ls-files --error-unmatch "docs/PRD.md" >/dev/null 2>&1; then
-      has_prd=1
-    fi
-  fi
-  if [ -d "$TARGET/docs" ]; then
-    while IFS= read -r rel_path; do
-      case "$(basename "$rel_path")" in
-        PRD-*.md) has_prd=1 ;;
-      esac
-    done < <(git -C "$TARGET" ls-files --others --exclude-standard -- "docs/" 2>/dev/null || true)
-  fi
+  local prd_rel
+  while IFS= read -r prd_rel; do
+    [ -n "$prd_rel" ] || continue
+    has_prd=1
+  done < <(list_local_prds)
 
   if [ "$has_planning" -eq 0 ] && [ "$has_prd" -eq 0 ] && [ "$has_recipe_state" -eq 0 ]; then
     echo "workspace-swap.sh: nothing to snapshot for '$branch' (no initiative-local recipe state)"
@@ -227,25 +233,13 @@ cmd_snapshot() {
     cp -r "$TARGET/.planning" "$tmp_dir/.planning"
   fi
 
-  # Copy docs/PRD.md
-  if [ "$has_prd" -eq 1 ] && [ -f "$TARGET/docs/PRD.md" ]; then
+  # Copy every untracked docs/PRD*.md; a committed PRD belongs to the product,
+  # not to the initiative, and is left alone.
+  while IFS= read -r prd_rel; do
+    [ -n "$prd_rel" ] || continue
     mkdir -p "$tmp_dir/docs"
-    cp "$TARGET/docs/PRD.md" "$tmp_dir/docs/PRD.md"
-  fi
-
-  # Copy untracked docs/PRD-*.md
-  if [ -d "$TARGET/docs" ]; then
-    while IFS= read -r rel_path; do
-      local basename
-      basename="$(basename "$rel_path")"
-      case "$basename" in
-        PRD-*.md)
-          mkdir -p "$tmp_dir/docs"
-          cp "$TARGET/$rel_path" "$tmp_dir/docs/$basename"
-          ;;
-      esac
-    done < <(git -C "$TARGET" ls-files --others --exclude-standard -- "docs/" 2>/dev/null || true)
-  fi
+    cp "$TARGET/$prd_rel" "$tmp_dir/$prd_rel"
+  done < <(list_local_prds)
 
   copy_recipe_state "$tmp_dir"
 

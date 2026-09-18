@@ -29,6 +29,10 @@ grep -qxF ".planning/" "$T/.gitignore" &&
   grep -qxF "graphify-out/" "$T/.gitignore"
 check "ensure writes recipe ignore lines including Cursor recipe rules/hooks" "$?"
 
+grep -qxF "docs/PRD.md" "$T/.gitignore" &&
+  grep -qxF "docs/PRD-*.md" "$T/.gitignore"
+check "ensure ignores generated PRDs so they never reach a product PR" "$?"
+
 before="$(wc -l < "$T/.gitignore")"
 bash "$LIB" ensure --target "$T" >/dev/null
 after="$(wc -l < "$T/.gitignore")"

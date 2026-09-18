@@ -217,6 +217,8 @@ Recipe scaffold is **local-only by default** (not committed with product/feature
 .planning/
 code_base_details/
 skills/
+docs/PRD.md
+docs/PRD-*.md
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
 docs/RECIPE-SEQUENCE.md
@@ -364,7 +366,7 @@ Run after install; all must pass before declaring p0 complete.
 | 4 | Token still valid | Re-run step 1 probes | [X] |
 | 5 | Templates present | Assert `.templates/*.md` exist | [C] |
 | 6 | OKF index | Assert `.knowledge/index.md` exists | [C] |
-| 7 | Gitignore | Scaffold local-only: `.gsd-recipe/`, `.knowledge/`, `.templates/`, `.planning/`, `code_base_details/`, `skills/`, recipe docs, `.learnings/`, `.gsd-codebase/`, `.cursor/rules/recipe-*`, recipe hook scripts | [C] |
+| 7 | Gitignore | Scaffold local-only: `.gsd-recipe/`, `.knowledge/`, `.templates/`, `.planning/`, `code_base_details/`, `skills/`, generated `docs/PRD*.md`, recipe docs, `.learnings/`, `.gsd-codebase/`, `.cursor/rules/recipe-*`, recipe hook scripts | [C] |
 | 8 | MCP reachable | Invoke a read-only `{TRACKER}-mcp` probe; an empty discovery list is inconclusive because an idle transport may be dormant | [E] |
 | 9 | Observer loop | Confirm loop/automation scheduled (optional v1) | [X] |
 | 10 | Bare metal Gate A | Run `bare_metal` bootstrap commands once | [X] |
