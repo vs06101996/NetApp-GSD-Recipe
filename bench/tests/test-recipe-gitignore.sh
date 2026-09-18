@@ -23,8 +23,11 @@ bash "$LIB" ensure --target "$T" >/dev/null
 grep -qxF ".planning/" "$T/.gitignore" &&
   grep -qxF ".gsd/" "$T/.gitignore" &&
   grep -qxF ".gsd-recipe/" "$T/.gitignore" &&
+  grep -qxF ".cursor/rules/recipe-*" "$T/.gitignore" &&
+  grep -qxF ".cursor/hooks/workspace-swap-cursor-fallback.sh" "$T/.gitignore" &&
+  grep -qxF ".cursor/hooks/fotw-observer-nudge.sh" "$T/.gitignore" &&
   grep -qxF "graphify-out/" "$T/.gitignore"
-check "ensure writes recipe ignore lines including .gsd/ and graphify-out/" "$?"
+check "ensure writes recipe ignore lines including Cursor recipe rules/hooks" "$?"
 
 before="$(wc -l < "$T/.gitignore")"
 bash "$LIB" ensure --target "$T" >/dev/null

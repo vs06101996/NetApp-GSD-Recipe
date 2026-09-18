@@ -83,6 +83,25 @@ bash "$LIB" validate gsd/clean --target "$T5" >/dev/null
 check "validate: permits gitignored and generated initiative state" "$?"
 rm -rf "$T5"
 
+# 5b. Recipe-install dirt (.gitignore + Cursor recipe hooks/rules) is eligible.
+T5B="$(new_repo)"
+printf '# product\n' > "$T5B/.gitignore"
+git -C "$T5B" add .gitignore
+git -C "$T5B" commit -qm ignore
+printf '.planning/\n.gsd-recipe/\n.cursor/rules/recipe-*\n' >> "$T5B/.gitignore"
+mkdir -p "$T5B/.cursor/hooks" "$T5B/.cursor/rules"
+echo '{"hooks":{}}' > "$T5B/.cursor/hooks.json"
+echo "hook" > "$T5B/.cursor/hooks/fotw-observer-nudge.sh"
+echo "swap" > "$T5B/.cursor/hooks/workspace-swap-cursor-fallback.sh"
+echo "rule" > "$T5B/.cursor/rules/recipe-command-surface.mdc"
+bash "$LIB" validate feat/from-github-issue --target "$T5B" >/dev/null
+check "validate: permits recipe-install .gitignore and Cursor hook/rule dirt" "$?"
+echo "product" > "$T5B/src.go"
+bash "$LIB" validate feat/from-github-issue --target "$T5B" >/dev/null 2>&1 && rc=0 || rc=$?
+[ "$rc" != "0" ]
+check "validate: still rejects other untracked product files" "$?"
+rm -rf "$T5B"
+
 # 6. Tracked planning is never deleted or treated as swappable state.
 T6="$(new_repo)"
 mkdir -p "$T6/.planning"

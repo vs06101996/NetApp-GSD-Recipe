@@ -83,7 +83,8 @@ Examples:
        A dirty product worktree, tracked initiative-local artifacts, detached
        HEAD, existing local/remote branch, invalid branch name, or missing workspace runtime is
        a hard pre-preview failure. Do not stash, discard, reuse an existing branch, or invent
-       a suffix.
+       a suffix. Recipe-install dirt is not product work: `.gitignore` (recipe ignore
+       lines), `.cursor/hooks.json`, recipe hook scripts, and `.cursor/rules/recipe-*`.
    - If no PRD source was supplied, set **resume mode**. Existing artifacts may be skipped
      idempotently as documented below.
    - `Glob`/`Read` for `docs/PRD.md`. Present → step 2 ("PRD intake") will be **skipped**. Missing →

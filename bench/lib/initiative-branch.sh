@@ -92,19 +92,25 @@ preflight() {
     exit 1
   }
 
-  local dirty_product_state
-  dirty_product_state="$(
-    git -C "$TARGET" status --porcelain --untracked-files=all |
-      while IFS= read -r status_line; do
-        if [[ "$status_line" == "?? docs/PRD.md" ||
-              "$status_line" == "?? docs/PRD-"*.md ||
-              "$status_line" == "?? .gsd/"* ]]; then
-          # Generated initiative state; workspace-swap owns it.
-          continue
-        fi
-        printf '%s\n' "$status_line"
-      done
-  )"
+  local dirty_product_state="" status_line path
+  while IFS= read -r status_line; do
+    [ -n "$status_line" ] || continue
+    path="${status_line:3}"
+    if [[ "$status_line" == "?? docs/PRD.md" ||
+          "$status_line" == "?? docs/PRD-"*.md ||
+          "$status_line" == "?? .gsd/"* ]]; then
+      continue
+    fi
+    # Recipe install always appends ignore lines and stages Cursor
+    # hooks/rules. Those are not product work; do not block onboard.
+    case "$path" in
+      .gitignore|.cursor/hooks.json|.cursor/hooks/workspace-swap-cursor-fallback.sh|.cursor/hooks/fotw-observer-nudge.sh|.cursor/rules/recipe-*)
+        continue
+        ;;
+    esac
+    dirty_product_state="${dirty_product_state}${dirty_product_state:+$'\n'}${status_line}"
+  done < <(git -C "$TARGET" status --porcelain --untracked-files=all)
+
   if [ -n "$dirty_product_state" ]; then
     echo "initiative-branch.sh: tracked/untracked product changes are present; commit or stash them before fresh onboarding" >&2
     printf '%s\n' "$dirty_product_state" | sed 's/^/  - /' >&2

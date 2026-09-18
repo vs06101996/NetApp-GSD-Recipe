@@ -220,9 +220,12 @@ skills/
 docs/RECIPE-COMMANDS.md
 docs/RECIPE-BENCHMARKS.md
 docs/RECIPE-SEQUENCE.md
+.cursor/rules/recipe-*
+.cursor/hooks/workspace-swap-cursor-fallback.sh
+.cursor/hooks/fotw-observer-nudge.sh
 ```
 
-**Not** a blanket `docs/*` — that would hide product docs in the target repo. Only recipe-owned doc filenames are ignored. Cursor skills under `.cursor/skills/` follow whatever `.cursor/` policy the target already uses (installer also adds specific `.cursor/gsd-*` ignores). `.planning/` is GSD-native working state (plans, STATE, ROADMAP) — local-only by default so feature PRs stay free of agent planning artifacts. `recipe-onboard` re-runs the same additive list after cutting an initiative branch from trunk, because the previous initiative's `.gitignore` updates may still be sitting in an unmerged PR.
+**Not** a blanket `docs/*` — that would hide product docs in the target repo. Only recipe-owned doc filenames are ignored. Cursor skills under `.cursor/skills/` follow whatever `.cursor/` policy the target already uses (installer also adds specific `.cursor/gsd-*` ignores plus recipe rule/hook files). `.planning/` is GSD-native working state (plans, STATE, ROADMAP) — local-only by default so feature PRs stay free of agent planning artifacts. `recipe-onboard` re-runs the same additive list after cutting an initiative branch from trunk, because the previous initiative's `.gitignore` updates may still be sitting in an unmerged PR.
 
 ### OKF convention [E]
 
@@ -361,7 +364,7 @@ Run after install; all must pass before declaring p0 complete.
 | 4 | Token still valid | Re-run step 1 probes | [X] |
 | 5 | Templates present | Assert `.templates/*.md` exist | [C] |
 | 6 | OKF index | Assert `.knowledge/index.md` exists | [C] |
-| 7 | Gitignore | Scaffold local-only: `.gsd-recipe/`, `.knowledge/`, `.templates/`, `.planning/`, `code_base_details/`, `skills/`, recipe docs, `.learnings/`, `.gsd-codebase/` | [C] |
+| 7 | Gitignore | Scaffold local-only: `.gsd-recipe/`, `.knowledge/`, `.templates/`, `.planning/`, `code_base_details/`, `skills/`, recipe docs, `.learnings/`, `.gsd-codebase/`, `.cursor/rules/recipe-*`, recipe hook scripts | [C] |
 | 8 | MCP reachable | Invoke a read-only `{TRACKER}-mcp` probe; an empty discovery list is inconclusive because an idle transport may be dormant | [E] |
 | 9 | Observer loop | Confirm loop/automation scheduled (optional v1) | [X] |
 | 10 | Bare metal Gate A | Run `bare_metal` bootstrap commands once | [X] |

@@ -133,6 +133,8 @@ grep -q "phase-tasks-queue.jsonl" "$STAGED" &&
 check "staged skill treats tracker queue and sync ledger as prior initiative state" "$rc"
 grep -qi "dirty product worktree\\|tracked/untracked product changes" "$STAGED" && rc=0 || rc=$?
 check "staged skill fails closed on dirty product state" "$rc"
+grep -q "Recipe-install dirt is not product work" "$STAGED" && rc=0 || rc=$?
+check "staged skill excludes recipe-install gitignore/hooks from product dirt" "$rc"
 
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null

@@ -64,6 +64,9 @@ bench/
 .cursor/gsd-install-state.json
 .cursor/gsd-file-manifest.json
 .cursor/.gsd-profile
+.cursor/rules/recipe-*
+.cursor/hooks/workspace-swap-cursor-fallback.sh
+.cursor/hooks/fotw-observer-nudge.sh
 graphify-out/
 EOF
 }
