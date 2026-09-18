@@ -189,6 +189,44 @@ grep -q "initiative one" "$T7/.planning/ROADMAP.md" &&
 check "restore: returning to initiative one restores its planning and tracker queue" "$?"
 rm -rf "$T7"
 
+# 11. Base selection: explicit --base wins, ambiguity is reported not guessed.
+T8="$(new_repo)"
+TRUNK="$(git -C "$T8" branch --show-current)"
+RECIPE_WORKSPACE_SWAP=0 git -C "$T8" switch -q -c dev
+git -C "$T8" commit --allow-empty -qm "dev-only integration commit"
+
+bash "$LIB" validate feat/from-dev --target "$T8" --base dev |
+  grep -q "ready to create 'feat/from-dev' from 'dev'"
+check "validate: --base overrides the default base resolution" "$?"
+
+! bash "$LIB" validate feat/from-dev --target "$T8" --base dev | grep -q "base-ambiguous"
+check "validate: an explicit --base suppresses the ambiguity question" "$?"
+
+bash "$LIB" validate feat/from-dev --target "$T8" --base no/such/ref >/dev/null 2>&1 && rc=0 || rc=$?
+[ "$rc" != "0" ]
+check "validate: rejects a --base that does not resolve to a commit" "$?"
+
+NOTE="$(bash "$LIB" validate feat/from-dev --target "$T8")"
+printf '%s\n' "$NOTE" | grep -q "ready to create 'feat/from-dev' from '$TRUNK'" &&
+  printf '%s\n' "$NOTE" | grep -q "base-ambiguous current='dev' default='$TRUNK' ahead=1 recommend='dev'"
+check "validate: reports base ambiguity when on an integration branch ahead of the default" "$?"
+
+RECIPE_WORKSPACE_SWAP=0 git -C "$T8" switch -q -c feat/prior-initiative
+git -C "$T8" commit --allow-empty -qm "prior initiative commit"
+bash "$LIB" validate feat/next-initiative --target "$T8" |
+  grep -q "recommend='$TRUNK'"
+check "validate: recommends the default base when the current branch is a prior initiative" "$?"
+
+RECIPE_WORKSPACE_SWAP=0 git -C "$T8" switch -q "$TRUNK"
+! bash "$LIB" validate feat/from-trunk --target "$T8" | grep -q "base-ambiguous"
+check "validate: stays silent when already on the default base" "$?"
+
+bash "$LIB" create feat/cut-from-dev --target "$T8" --base dev >/dev/null 2>&1
+[ "$(git -C "$T8" branch --show-current)" = "feat/cut-from-dev" ] &&
+  git -C "$T8" log -1 --format=%s | grep -q "dev-only integration commit"
+check "create: --base cuts the new branch from the requested ref" "$?"
+rm -rf "$T8"
+
 echo
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

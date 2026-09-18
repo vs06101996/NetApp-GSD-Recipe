@@ -4,19 +4,21 @@
 # creates the requested branch, and clears/restores initiative-local state.
 #
 # Usage:
-#   initiative-branch.sh create <branch> [--target <repo_root>]
-#   initiative-branch.sh validate <branch> [--target <repo_root>]
+#   initiative-branch.sh create <branch> [--target <repo_root>] [--base <ref>]
+#   initiative-branch.sh validate <branch> [--target <repo_root>] [--base <ref>]
 set -euo pipefail
 
 SUBCOMMAND="${1:-}"
 shift || true
 
 TARGET=""
+BASE=""
 POSITIONAL=()
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --target) TARGET="$2"; shift 2 ;;
+    --base) BASE="$2"; shift 2 ;;
     -*) echo "initiative-branch.sh: unknown flag: $1" >&2; exit 2 ;;
     *) POSITIONAL+=("$1"); shift ;;
   esac
@@ -55,6 +57,18 @@ validate_branch() {
 resolve_base_ref() {
   local current="$1"
 
+  # An explicit base wins over every default. Repos whose integration branch
+  # is not origin/HEAD (e.g. a 'dev' trunk) would otherwise silently branch
+  # off main and drop the integration-only commits.
+  if [ -n "$BASE" ]; then
+    if ! git -C "$TARGET" rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+      echo "initiative-branch.sh: base ref '$BASE' does not resolve to a commit" >&2
+      return 1
+    fi
+    printf '%s\n' "$BASE"
+    return 0
+  fi
+
   case "$current" in
     main|master)
       printf '%s\n' "$current"
@@ -79,6 +93,42 @@ resolve_base_ref() {
 
   echo "initiative-branch.sh: cannot determine a base branch (origin/HEAD, main, or master)" >&2
   return 1
+}
+
+# Branches that conventionally carry integration history rather than a single
+# initiative. Used only to pick which base to recommend, never to decide.
+looks_like_integration_branch() {
+  case "$1" in
+    dev|develop|development|trunk|integration|staging) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# The default base is origin/HEAD, which is wrong for repos that integrate on a
+# non-default branch. Rather than guess, report the fork so the caller's gate can
+# ask. Silent when the operator already passed --base or when the current branch
+# adds nothing over the default base.
+emit_base_note() {
+  local current="$1" base="$2"
+  [ -z "$BASE" ] || return 0
+  [ "$current" != "$base" ] || return 0
+
+  local ahead
+  ahead="$(git -C "$TARGET" rev-list --count "$base..$current" 2>/dev/null || printf '0')"
+  [ "$ahead" -gt 0 ] 2>/dev/null || return 0
+
+  local recommend detail
+  if looks_like_integration_branch "$current"; then
+    recommend="$current"
+    detail="'$current' looks like an integration branch; basing on '$base' would drop $ahead commit(s) it already carries"
+  else
+    recommend="$base"
+    detail="'$current' looks like a prior initiative branch; basing on it would inherit its $ahead commit(s) into the next PR"
+  fi
+
+  printf "initiative-branch.sh: base-ambiguous current='%s' default='%s' ahead=%s recommend='%s'\n" \
+    "$current" "$base" "$ahead" "$recommend"
+  printf "initiative-branch.sh: %s. Ask the operator, then pass --base <ref>.\n" "$detail"
 }
 
 preflight() {
@@ -156,6 +206,7 @@ cmd_validate() {
     exit 1
   fi
   echo "initiative-branch.sh: ready to create '${POSITIONAL[0]}' from '$base'"
+  emit_base_note "$current" "$base"
 }
 
 cmd_create() {
@@ -173,6 +224,7 @@ cmd_create() {
     exit 1
   fi
   workspace_lib="$TARGET/.gsd-recipe/lib/workspace-swap.sh"
+  emit_base_note "$current" "$base" >&2
 
   # Disable the installed post-checkout hook for this switch because this
   # helper performs the same sequence explicitly and can roll it back.

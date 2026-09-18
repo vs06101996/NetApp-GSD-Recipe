@@ -18,6 +18,10 @@ Invoke by name (`recipe-onboard`) with:
   `.gsd-recipe/lib/derive-initiative-branch.sh`. Validate with `git check-ref-format`;
   never silently add a numeric suffix.
 - `--fix` — optional. Use the `fix/` prefix instead of `feat/` when deriving the branch.
+- `--base REF` — optional fresh-onboarding override for the new branch's base. Forwarded
+  verbatim to `initiative-branch.sh`, where it wins over every default. Use it when the repo's
+  integration branch is not `origin/HEAD` (e.g. a `dev` trunk); otherwise the new branch is cut
+  from `main` and silently loses the integration-only commits.
 - `--no-branch` — optional fresh-onboarding escape hatch. Stay on the current branch and
   archive the prior initiative in place before intake. This retains TASK-054 behavior for
   operators who deliberately do not want an initiative branch.
@@ -42,6 +46,7 @@ Examples:
   question if that step runs.
 - `recipe-onboard docs/PRD.md --branch feat/object-store-reconcile-KAN-53` — choose the initiative branch.
 - `recipe-onboard "Null pointer in ingest" --fix --skip-tracker` — derive `fix/<title>`.
+- `recipe-onboard docs/PRD.md --base dev` — cut the new branch from a non-default integration branch.
 - `recipe-onboard docs/PRD.md --no-branch` — archive and restart on the current branch.
 - `recipe-onboard --skip-tracker` — PRD + `.planning/` + knowledge; no Jira Epic, link, or phase tasks.
 - `recipe-onboard --project KAN --assignee "Ada Lovelace"` — skips the live Jira-project question if the Epic **create** step runs; assigns created tickets.
@@ -77,9 +82,14 @@ Examples:
        `--title <concise-title>` for pasted/freeform input. The derived name is
        `feat|fix/<feature-title>[-<Ticket>]`. Do not invent a `gsd/` prefix.
      - Run `.gsd-recipe/lib/initiative-branch.sh validate <branch> --target <root>` during
-       reconnaissance and retain the base ref it reports. From `main`/`master`, the base is the
-       current branch; from an initiative branch, it resolves `origin/HEAD`, then local
+       reconnaissance and retain the base ref it reports. Pass `--base REF` through when the
+       operator supplied it. Without `--base`: from `main`/`master`, the base is the
+       current branch; from any other branch, it resolves `origin/HEAD`, then local
        `main`/`master`. This prevents initiative 2 / PR 2 from inheriting initiative 1 / PR 1.
+     - If validate also prints a `base-ambiguous` line, the current branch carries commits the
+       default base does not, and the correct base is a judgement call the skill must not make
+       alone. Retain `current`, `default`, `ahead`, and `recommend` and put the choice in the
+       step 2 preview gate. Never auto-select and never suppress the line.
        A dirty product worktree, tracked initiative-local artifacts, detached
        HEAD, existing local/remote branch, invalid branch name, or missing workspace runtime is
        a hard pre-preview failure. Do not stash, discard, reuse an existing branch, or invent
@@ -128,6 +138,13 @@ Examples:
    - in initiative-branch mode, the exact new branch, resolved base ref, and prior active paths that will be
      snapshotted under `.gsd-recipe/workspaces/<current-branch>/` before the new branch starts
      clean;
+   - when validate reported `base-ambiguous` and `--base` was not passed, the base choice as part
+     of this same gate — do not open a second gate. State that the current branch is `ahead`
+     commits beyond the default base, offer exactly two options (`default` or `current`), mark
+     `recommend` as recommended, and say what each costs: basing on `default` drops those commits
+     from the new branch, basing on `current` carries them into the next PR. Do not proceed on a
+     bare "yes" that did not resolve the base; treat an unresolved base as a decline. Re-run
+     validate with `--base <chosen>` before create so the preview's base is the one used;
    - in `--no-branch` mode, prior active paths that will be archived under
      `.gsd-recipe/workspace-archives/<branch>/<run-id>/` and cleared;
    - that recipe `.gitignore` entries will be re-applied **after** the initiative
@@ -153,8 +170,10 @@ Examples:
      onboarding not run" as the final summary.
    - **Confirm, initiative-branch mode** → run:
      ```
-     "$ROOT/.gsd-recipe/lib/initiative-branch.sh" create "$BRANCH" --target "$ROOT"
+     "$ROOT/.gsd-recipe/lib/initiative-branch.sh" create "$BRANCH" --target "$ROOT" [--base "$BASE"]
      ```
+     Include `--base` whenever the operator passed it or resolved a `base-ambiguous` choice, using
+     the exact ref shown in the preview.
      A non-zero result is a hard failure: stop before intake. This helper explicitly snapshots
      the current branch, creates the branch, restores/clears its independent initiative state,
      and rolls back if initialization fails. Verify `git branch --show-current` equals the

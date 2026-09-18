@@ -135,6 +135,13 @@ grep -qi "dirty product worktree\\|tracked/untracked product changes" "$STAGED" 
 check "staged skill fails closed on dirty product state" "$rc"
 grep -q "Recipe-install dirt is not product work" "$STAGED" && rc=0 || rc=$?
 check "staged skill excludes recipe-install gitignore/hooks from product dirt" "$rc"
+grep -q -- "--base REF" "$STAGED" && rc=0 || rc=$?
+check "staged skill documents the --base override for non-default integration branches" "$rc"
+grep -q "base-ambiguous" "$STAGED" &&
+  grep -qi "never auto-select" "$STAGED" && rc=0 || rc=$?
+check "staged skill asks for the base instead of guessing when validate reports ambiguity" "$rc"
+grep -qi "do not open a second gate" "$STAGED" && rc=0 || rc=$?
+check "staged skill folds the base question into the single preview gate" "$rc"
 
 # 5. Idempotent re-run: no duplicate ledger rows
 "$INSTALLER" --yes --target "$TARGET1" >/dev/null
