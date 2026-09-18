@@ -79,7 +79,7 @@ WORKFLOW_GROUPS = [
     ]),
     ("Knowledge bootstrap", ["recipe-bootstrap-knowledge"]),
     ("Plan and run", [
-        "recipe-plan-phase", "recipe-run-phase", "recipe-run-phases",
+        "recipe-grill", "recipe-plan-phase", "recipe-run-phase", "recipe-run-phases",
     ]),
     ("Verify and ship", [
         "recipe-verify-feature", "recipe-review-ship", "recipe-settle",
@@ -93,6 +93,7 @@ WORKFLOW_GROUPS = [
 
 INJECTED = [
     ("recipe-planning-policy", "Injected into gsd-planner via agent_skills (not invoke-by-name)"),
+    ("recipe-tdd", "Injected into gsd-planner and gsd-executor via agent_skills (Pocock TDD adapter)"),
 ]
 
 GSD_COMMANDS = [
@@ -168,12 +169,12 @@ lines.append("recipe-onboard (or step-by-step intake/epic/tasks)")
 lines.append("recipe-onboard <new source>  (creates feat/<title>[-<Ticket>] or fix/... branch)")
 lines.append("recipe-onboard --skip-tracker  (skip Jira only; knowledge still runs)")
 lines.append("  → knowledge is verified during onboard")
-lines.append("  → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)")
+lines.append("  → recipe-plan-phase N (runs grilling internally in Plan mode) → recipe-run-phase N  (or recipe-run-phases)")
 lines.append("  → recipe-verify-feature N → recipe-review-ship N → recipe-settle")
 lines.append("  → recipe-sync / tracker-sync as needed")
 lines.append("```")
 lines.append("")
-lines.append("Enable planning policy: add `\"agent_skills\": {\"gsd-planner\": [\"skills/recipe-planning-policy\"]}` to `.planning/config.json` (print-only during install).")
+lines.append("Enable planning policy and TDD adapters: add `\"agent_skills\": {\"gsd-planner\": [\"skills/recipe-planning-policy\", \"skills/recipe-tdd\"], \"gsd-executor\": [\"skills/recipe-tdd\"], \"gsd-code-reviewer\": [\"skills/recipe-two-axis-review\"]}` to `.planning/config.json` (print-only during install). Do not `npx skills add mattpocock/skills`.")
 lines.append("")
 lines.append("## PRD input formats")
 lines.append("")

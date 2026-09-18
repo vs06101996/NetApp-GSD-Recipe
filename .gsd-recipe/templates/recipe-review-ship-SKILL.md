@@ -33,6 +33,12 @@ Examples:
    `recipe-plan-phase`'s direct call to `gsd-plan-phase` and `recipe-run-phase`'s direct call to
    `gsd-execute-phase`). This produces `REVIEW.md` per `RUNTIME-LLD.md` §4.a.
 
+1b. **Append two-axis Standards vs Spec** using `skills/recipe-two-axis-review/SKILL.md` and the
+    vendored Pocock `code-review` sheet. Native `REVIEW.md` stays canonical; this only appends
+    `## Standards` and `## Spec`. Missing vendor/skill, empty diff, or missing spec → warn and
+    continue (fail-open). Never replace `gsd-code-review`, never skip later steps because the
+    append failed.
+
 2. **Resolve the issue key.** `bench/lib/parse-state.sh` is not duplicated into every target by
    design — resolve its real path via `.gsd-recipe/scripts/recipe-paths.sh` first (same mechanism
    `recipe-validate-tokens-SKILL.md` § C step 1 documents in full), then run:

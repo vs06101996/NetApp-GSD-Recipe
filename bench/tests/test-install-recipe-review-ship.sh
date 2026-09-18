@@ -72,6 +72,10 @@ STAGED="$TARGET1/.cursor/skills/recipe-review-ship/SKILL.md"
 
 grep -q "gsd-code-review" "$STAGED" && rc=0 || rc=$?
 check "staged skill references calling native gsd-code-review directly" "$rc"
+grep -q "recipe-two-axis-review" "$STAGED" && rc=0 || rc=$?
+check "staged skill appends two-axis review after native gsd-code-review" "$rc"
+grep -qi "Never replace \`gsd-code-review\`\|never replace" "$STAGED" && rc=0 || rc=$?
+check "staged skill keeps native REVIEW.md canonical" "$rc"
 grep -q "review_complete" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the review_complete sync event" "$rc"
 grep -q "gsd-jira-sync" "$STAGED" && rc=0 || rc=$?

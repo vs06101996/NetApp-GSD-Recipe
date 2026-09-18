@@ -6,7 +6,7 @@ Recipe scaffold is **gitignored** on external product repos so feature PRs stay 
 
 | Situation | What to run |
 |-----------|-------------|
-| New laptop / `git clone` of the product, with no recipe skills | Run the first-install runner below |
+| New laptop / `git clone` of the product, with no recipe skills | Run the first-install runner below, or the Cursor plugin **Install into this workspace** (same bash) |
 | Switched git branch and recipe skills still exist | Invoke `recipe-install` in Cursor to restage |
 | Switched branch or clone and recipe skills are missing | Run the first-install runner below again (idempotent; does not wipe `.planning/`). If `git switch` refuses because install dirtied `.gitignore`, stash or keep that file, switch, then restage. |
 | Recipe is installed and you only need a health check | Invoke `recipe-install-verify` in Cursor |
@@ -23,7 +23,9 @@ From the **recipe source** repo (`gsd-benchmark` / NetApp-GSD-Recipe):
 
 This is the only first-install command. The runner already calls `install.sh`;
 do not choose `install.sh` as another front door. `bin/recipe install` is kept
-only as a thin compatibility alias of this runner.
+only as a thin compatibility alias of this runner. The Cursor plugin
+(`extensions/netapp-gsd-recipe`) wraps this same runner and then prefills
+`recipe-start`; it never submits the prompt.
 
 Dummy test target:
 

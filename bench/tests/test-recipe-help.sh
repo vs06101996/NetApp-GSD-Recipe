@@ -38,6 +38,12 @@ check "output lists recipe-help" "$?"
 grep -q "recipe-report-issue" "$TMP"
 check "output lists the recipe issue reporter" "$?"
 
+grep -q "recipe-grill" "$TMP"
+check "output lists recipe-grill" "$?"
+
+grep -q "recipe-tdd" "$TMP"
+check "output lists recipe-tdd injection" "$?"
+
 grep -q "| built |" "$TMP"
 check "output marks installed capabilities as built" "$?"
 

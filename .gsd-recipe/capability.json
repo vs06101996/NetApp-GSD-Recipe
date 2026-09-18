@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-11T05:06:24Z",
+  "generated_at": "2026-09-18T09:20:09Z",
   "recipe": "netapp-gsd-recipe",
   "capabilities": [
     {
@@ -391,6 +391,34 @@
       "installer": ".gsd-recipe/scripts/install-recipe-update.sh",
       "composed_by_install_sh": true,
       "ledger_component": "recipe-update",
+      "staged": false,
+      "ledger_tracked": false,
+      "version": "1.0.0"
+    },
+    {
+      "id": "recipe-grill",
+      "task_id": "TASK-063",
+      "kind": "cursor-skill",
+      "description": "Manual standalone entry to the vendored Matt Pocock grilling sheet. recipe-plan-phase runs the same accuracy pass internally in Cursor Plan mode and writes .planning/GRILL.md. Does not replace recipe-prd-intake or install the full pack.",
+      "invoke_name": "recipe-grill",
+      "staged_path": ".cursor/skills/recipe-grill/SKILL.md",
+      "installer": ".gsd-recipe/scripts/install-recipe-pocock.sh",
+      "composed_by_install_sh": true,
+      "ledger_component": "recipe-pocock-skills",
+      "staged": false,
+      "ledger_tracked": false,
+      "version": "1.0.0"
+    },
+    {
+      "id": "recipe-tdd",
+      "task_id": "TASK-063",
+      "kind": "agent-skill",
+      "description": "Injected TDD adapter for gsd-planner and gsd-executor: vendored Pocock red-green-refactor mapped onto .planning/ and docs/PRD.md. Not invoke-by-name.",
+      "invoke_name": null,
+      "staged_path": "skills/recipe-tdd/SKILL.md",
+      "installer": ".gsd-recipe/scripts/install-recipe-pocock.sh",
+      "composed_by_install_sh": true,
+      "ledger_component": "recipe-pocock-skills",
       "staged": false,
       "ledger_tracked": false,
       "version": "1.0.0"

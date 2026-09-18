@@ -1,6 +1,6 @@
 ---
 name: recipe-plan-phase
-description: "Recipe: gated single-phase plan wrapper for the NetApp GSD recipe (TASK-017). Determines first-plan vs re-plan before calling gsd-plan-phase (informational only), resolves the phase's tracker issue key via parse-state.sh, calls native gsd-plan-phase N directly, then post-hoc verifies the resulting PLAN.md against the 7 mandatory sections + a filled Prerequisites table (soft warn-and-confirm, never fills/fabricates), prints any declared depends_on/touches as a non-blocking DAG-out-of-scope reminder, and emits plan_complete/plan_revised by invoking the gsd-jira-sync skill (idempotent via sync-ledger.sh)."
+description: "Recipe: gated single-phase plan wrapper for the NetApp GSD recipe (TASK-017/063). Runs the vendored grilling accuracy pass internally in Cursor Plan mode, determines first-plan vs re-plan, resolves the phase tracker issue, calls native gsd-plan-phase N, verifies planning-policy compliance, and emits plan_complete/plan_revised through gsd-jira-sync."
 ---
 
 <cursor_skill_adapter>
@@ -48,6 +48,20 @@ Examples:
    - Fails (no `.planning/STATE.md`, no `## Tracker` section, or no matching phase-task row for
      `N`) → do not block. Warn the operator ("No tracker issue linked for phase N — skipping Jira
      sync, continuing with gsd-plan-phase") and continue straight to step 3.
+
+2b. **Run the grill internally in Cursor Plan mode.** If `.planning/GRILL.md` is missing or does
+    not cover phase `N`, switch this same Agent turn into Plan mode and resolve the vendored sheet:
+    ```
+    GRILL="$(.gsd-recipe/scripts/recipe-paths.sh resolve \
+      .gsd-recipe/vendor/mattpocock/skills/productivity/grilling/SKILL.md)"
+    ```
+    Follow its round/frontier interview directly, using `docs/PRD.md`, `.planning/`, and
+    `.knowledge/` instead of `CONTEXT.md`. Do **not** dispatch the separate `recipe-grill` command:
+    that command remains a manual entry point, while phase planning owns this internal accuracy
+    pass. Ask only unresolved questions, then write/update `.planning/GRILL.md` with the phase,
+    settled decisions, and open leftovers before continuing. If the sheet cannot be resolved or
+    the operator declines further questions, warn and continue to step 3; never fail planning
+    solely because grilling could not complete. Stay in Plan mode for step 3.
 
 3. **Call native `gsd-plan-phase N --tdd` directly**, in this same turn. Invoking `recipe-plan-phase`
    was itself the operator's deliberate act of choosing to plan this phase now — that IS the
@@ -145,9 +159,9 @@ Examples:
 Recipe configuration on top of native GSD (`RUNTIME-LLD.md` §1.c "Planning", tag **[N]** for the
 underlying `gsd-plan-phase` call, **[C]** for this wrapper's linkage/verification layer) — GSD
 stays the orchestrator; this skill adds an informational first-plan/re-plan determination, tracker
-issue resolution, a direct same-turn call to native `gsd-plan-phase`, a read-only post-hoc
-planning-policy compliance check, an informational `depends_on`/`touches` reminder, and
-`plan_complete`/`plan_revised` tracker sync around it.
+issue resolution, an internal vendored grilling pass in Cursor Plan mode, a direct same-turn call
+to native `gsd-plan-phase`, a read-only post-hoc planning-policy compliance check, an informational
+`depends_on`/`touches` reminder, and `plan_complete`/`plan_revised` tracker sync around it.
 
 **Spec:** `docs/netapp-recipe/lld/RUNTIME-LLD.md` §1.c · `docs/netapp-recipe/BACKLOG.md` TASK-017.
 
@@ -163,7 +177,8 @@ fifth sub-installer.
    never blocks calling `gsd-plan-phase` either way).
 2. Resolve the phase's tracker issue key via `parse-state.sh resolve-issue plan_complete --phase
    N`. Unresolved → warn and continue (fail-open).
-3. Call native `gsd-plan-phase N --tdd` directly, in the same turn (Option B — the operator's own
+3. Run the vendored grilling accuracy pass internally in Cursor Plan mode, then call native
+   `gsd-plan-phase N --tdd` directly in the same turn (Option B — the operator's own
    invocation of `recipe-plan-phase` is the manual GSD trigger).
 4. Re-resolve `PLAN.md` for phase `N`. Not found → native `gsd-plan-phase` produced no plan; stop
    here, report plainly, no fabrication.

@@ -80,7 +80,7 @@
 #     "recipe-install-verify"/"recipe-run-phases"/"recipe-verify-feature"/
 #     "recipe-review-ship"/"recipe-settle"/"gsd-jira-sync"/"recipe-sync"/
 #     "recipe-pr-comment"/"recipe-install"/"recipe-observe"/
-#     "recipe-create-epic"/"recipe-create-phase-tasks"/"recipe-report-issue"/"recipe-help"/
+#     "recipe-create-epic"/"recipe-create-phase-tasks"/"recipe-report-issue"/"recipe-pocock-skills"/"recipe-help"/
 #     "recipe-new-project"/"recipe-onboard"/"recipe-start"/"recipe-status"/
 #     "recipe-workspace"/"recipe-update"/"recipe-command-surface", which the sub-installers/skills track under their
 #     own component names.
@@ -163,6 +163,7 @@ RECIPE_OBSERVE_INSTALLER="$SCRIPT_DIR/install-recipe-observe.sh"
 RECIPE_CREATE_EPIC_INSTALLER="$SCRIPT_DIR/install-recipe-create-epic.sh"
 RECIPE_CREATE_PHASE_TASKS_INSTALLER="$SCRIPT_DIR/install-recipe-create-phase-tasks.sh"
 RECIPE_REPORT_ISSUE_INSTALLER="$SCRIPT_DIR/install-recipe-report-issue.sh"
+RECIPE_POCOCK_INSTALLER="$SCRIPT_DIR/install-recipe-pocock.sh"
 RECIPE_HELP_INSTALLER="$SCRIPT_DIR/install-recipe-help.sh"
 RECIPE_PRD_INTAKE_INSTALLER="$SCRIPT_DIR/install-recipe-prd-intake.sh"
 RECIPE_NEW_PROJECT_INSTALLER="$SCRIPT_DIR/install-recipe-new-project.sh"
@@ -613,7 +614,9 @@ print_agent_skills_snippet() {
 Per docs/netapp-recipe/lld/INSTALL-LLD.md § "agent_skills injection [C]":
 {
   "agent_skills": {
-    "gsd-planner": ["skills/recipe-planning-policy"]
+    "gsd-planner": ["skills/recipe-planning-policy", "skills/recipe-tdd"],
+    "gsd-executor": ["skills/recipe-tdd"],
+    "gsd-code-reviewer": ["skills/recipe-two-axis-review"]
   }
 }
 install.sh never auto-edits .planning/config.json — it's GSD's own config
@@ -624,7 +627,8 @@ Paste checklist:
   2. Merge the agent_skills entry above; preserve all existing JSON keys.
   3. Save the file and restart the Cursor Agent (start a new Agent chat).
   4. Run gsd-surface status and confirm the planner lists
-     skills/recipe-planning-policy before relying on the injection.
+     skills/recipe-planning-policy and skills/recipe-tdd before relying
+     on the injection.
 EOF
 }
 
@@ -709,7 +713,7 @@ install() {
   fi
 
   if [ "$YES" -ne 1 ]; then
-    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-report-issue + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status + recipe-workspace + recipe-update + recipe-command-surface) into $TARGET? [y/N] " reply
+    read -r -p "Install NetApp GSD recipe scaffold (install-core + observer + tracker-sync + recipe-planning-policy + recipe-run-phase + recipe-plan-phase + recipe-validate-tokens + recipe-bootstrap-knowledge + recipe-install-verify + recipe-run-phases + recipe-verify-feature + recipe-review-ship + recipe-settle + gsd-jira-sync + recipe-sync + recipe-pr-comment + recipe-install + recipe-observe + recipe-create-epic + recipe-create-phase-tasks + recipe-report-issue + recipe-pocock-skills + recipe-help + recipe-prd-intake + recipe-new-project + recipe-onboard + recipe-start + recipe-status + recipe-workspace + recipe-update + recipe-command-surface) into $TARGET? [y/N] " reply
     case "$reply" in
       [yY]|[yY][eE][sS]) : ;;
       *) echo "install.sh: aborted, no consent given."; exit 0 ;;
@@ -824,7 +828,7 @@ EOF
     fi
   done
 
-  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-report-issue, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start, recipe-status, recipe-workspace, recipe-update, recipe-command-surface)..."
+  echo "install.sh: composing sub-installers (observer, tracker-sync, recipe-planning-policy, recipe-run-phase, recipe-plan-phase, recipe-validate-tokens, recipe-bootstrap-knowledge, recipe-install-verify, recipe-run-phases, recipe-verify-feature, recipe-review-ship, recipe-settle, gsd-jira-sync, recipe-sync, recipe-pr-comment, recipe-install, recipe-observe, recipe-create-epic, recipe-create-phase-tasks, recipe-report-issue, recipe-pocock-skills, recipe-help, recipe-prd-intake, recipe-new-project, recipe-onboard, recipe-start, recipe-status, recipe-workspace, recipe-update, recipe-command-surface)..."
   "$OBSERVER_INSTALLER" --yes --target "$TARGET"
   "$TRACKER_SYNC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PLANNING_POLICY_INSTALLER" --yes --target "$TARGET"
@@ -845,6 +849,7 @@ EOF
   "$RECIPE_CREATE_EPIC_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_REPORT_ISSUE_INSTALLER" --yes --target "$TARGET"
+  "$RECIPE_POCOCK_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_HELP_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_PRD_INTAKE_INSTALLER" --yes --target "$TARGET"
   "$RECIPE_NEW_PROJECT_INSTALLER" --yes --target "$TARGET"
@@ -1120,6 +1125,12 @@ if o['enabled']:
     echo "    recipe-report-issue composed — FAIL (recipe-report-issue ledger component absent)"
     ok=0
   fi
+  if ledger_has_component "recipe-pocock-skills"; then
+    echo "    recipe-pocock-skills composed — pass"
+  else
+    echo "    recipe-pocock-skills composed — FAIL (recipe-pocock-skills ledger component absent)"
+    ok=0
+  fi
   if ledger_has_component "recipe-help"; then
     echo "    recipe-help composed — pass"
   else
@@ -1280,6 +1291,7 @@ PY
   "$RECIPE_CREATE_EPIC_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_CREATE_PHASE_TASKS_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_REPORT_ISSUE_INSTALLER" --uninstall --target "$TARGET"
+  "$RECIPE_POCOCK_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_HELP_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_PRD_INTAKE_INSTALLER" --uninstall --target "$TARGET"
   "$RECIPE_NEW_PROJECT_INSTALLER" --uninstall --target "$TARGET"

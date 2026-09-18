@@ -2,7 +2,7 @@
 
 # NetApp GSD Recipe — command reference
 
-_Generated: 2026-09-11T05:10:46Z_
+_Generated: 2026-09-18T09:20:09Z_
 
 In Cursor, invoke **`recipe-help`** for a guided tour. For native GSD depth, use **`gsd-help`**.
 
@@ -14,12 +14,12 @@ recipe-onboard (or step-by-step intake/epic/tasks)
 recipe-onboard <new source>  (creates feat/<title>[-<Ticket>] or fix/... branch)
 recipe-onboard --skip-tracker  (skip Jira only; knowledge still runs)
   → knowledge is verified during onboard
-  → recipe-plan-phase N → recipe-run-phase N  (or recipe-run-phases)
+  → recipe-plan-phase N (runs grilling internally in Plan mode) → recipe-run-phase N  (or recipe-run-phases)
   → recipe-verify-feature N → recipe-review-ship N → recipe-settle
   → recipe-sync / tracker-sync as needed
 ```
 
-Enable planning policy: add `"agent_skills": {"gsd-planner": ["skills/recipe-planning-policy"]}` to `.planning/config.json` (print-only during install).
+Enable planning policy and TDD adapters: add `"agent_skills": {"gsd-planner": ["skills/recipe-planning-policy", "skills/recipe-tdd"], "gsd-executor": ["skills/recipe-tdd"], "gsd-code-reviewer": ["skills/recipe-two-axis-review"]}` to `.planning/config.json` (print-only during install). Do not `npx skills add mattpocock/skills`.
 
 ## PRD input formats
 
@@ -85,6 +85,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 
 | Command | Status | Purpose |
 |---------|--------|---------|
+| `recipe-grill` | built | Manual standalone entry to the vendored Matt Pocock grilling sheet. recipe-plan-phase runs the same accuracy pass int... |
 | `recipe-plan-phase` | built | Gated single-phase plan wrapper around native gsd-plan-phase. |
 | `recipe-run-phase` | built | Gated single-phase execute wrapper around native gsd-execute-phase. |
 | `recipe-run-phases` | built | Sequential ascending multi-phase loop wrapper around recipe-plan-phase N / recipe-run-phase N (skill-to-skill); stops... |
@@ -125,6 +126,7 @@ Regenerate: `bench/lib/generate-recipe-benchmarks.sh`
 | Skill path | Notes |
 |------------|-------|
 | `skills/recipe-planning-policy/SKILL.md` | built — Injected into gsd-planner via agent_skills (not invoke-by-name) |
+| `skills/recipe-tdd/SKILL.md` | built — Injected into gsd-planner and gsd-executor via agent_skills (Pocock TDD adapter) |
 
 ## Native GSD commands (summary)
 

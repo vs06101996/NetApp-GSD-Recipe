@@ -12,6 +12,8 @@ From a clone of this repo, into your product repo:
 ./bench/runners/install-recipe-to-target.sh --target /path/to/product --yes --no-open-start
 ```
 
+Or, after sideloading [`extensions/netapp-gsd-recipe`](extensions/netapp-gsd-recipe/README.md), use **NetApp GSD Recipe: Install into this workspace**. The plugin still runs that bash runner. It prefills `recipe-start`; you press **Enter**. It does not skip onboard, MCP login, or PO accept.
+
 Then open the target repo in Cursor and type:
 
 ```text

@@ -93,6 +93,18 @@ ID="$("$NEXT" --id --target "$EMPTY")"
 [ "$ID" = "PLAN" ]
 check "knowledge marker + phase without PLAN.md → PLAN" "$?"
 
+mkdir -p "$EMPTY/.cursor/skills/recipe-grill"
+touch "$EMPTY/.cursor/skills/recipe-grill/SKILL.md"
+OUT="$("$NEXT" --target "$EMPTY")"
+echo "$OUT" | grep -q "recipe-grill" && rc=1 || rc=0
+check "PLAN how-text does not expose the internal grill as a separate command" "$rc"
+echo "$OUT" | grep -E "^Command: recipe-plan-phase " && rc=0 || rc=$?
+check "PLAN Command line stays recipe-plan-phase with internal grilling" "$rc"
+printf '# grill\n' > "$EMPTY/.planning/GRILL.md"
+OUT="$("$NEXT" --target "$EMPTY")"
+echo "$OUT" | grep -q "recipe-grill" && rc=1 || rc=0
+check "PLAN how-text still omits separate recipe-grill after GRILL.md exists" "$rc"
+
 MARKER_ONLY="$(new_repo)"
 mkdir -p "$MARKER_ONLY/.cursor/skills/recipe-onboard" "$MARKER_ONLY/.gsd-recipe" "$MARKER_ONLY/docs" "$MARKER_ONLY/.planning" "$MARKER_ONLY/.knowledge"
 touch "$MARKER_ONLY/.cursor/skills/recipe-onboard/SKILL.md"

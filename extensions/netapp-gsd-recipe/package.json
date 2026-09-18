@@ -1,0 +1,58 @@
+{
+  "name": "netapp-gsd-recipe",
+  "displayName": "NetApp GSD Recipe",
+  "description": "Install and update the NetApp GSD recipe by wrapping install-recipe-to-target.sh. Prefills recipe-start; never submits Agent prompts or skips onboard, MCP, or PO gates.",
+  "version": "0.1.0",
+  "publisher": "netapp",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:netappGsdRecipe.install",
+    "onCommand:netappGsdRecipe.update",
+    "onCommand:netappGsdRecipe.start",
+    "onCommand:netappGsdRecipe.onboard",
+    "onCommand:netappGsdRecipe.status",
+    "onCommand:netappGsdRecipe.verify"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "netappGsdRecipe.install",
+        "title": "NetApp GSD Recipe: Install into this workspace"
+      },
+      {
+        "command": "netappGsdRecipe.update",
+        "title": "NetApp GSD Recipe: Prefill recipe-update"
+      },
+      {
+        "command": "netappGsdRecipe.start",
+        "title": "NetApp GSD Recipe: Prefill recipe-start"
+      },
+      {
+        "command": "netappGsdRecipe.onboard",
+        "title": "NetApp GSD Recipe: Prefill recipe-onboard"
+      },
+      {
+        "command": "netappGsdRecipe.status",
+        "title": "NetApp GSD Recipe: Prefill recipe-status"
+      },
+      {
+        "command": "netappGsdRecipe.verify",
+        "title": "NetApp GSD Recipe: Prefill recipe-install-verify"
+      }
+    ],
+    "configuration": {
+      "title": "NetApp GSD Recipe",
+      "properties": {
+        "netappGsdRecipe.recipeSource": {
+          "type": "string",
+          "default": "",
+          "description": "Filesystem path to a clone of the recipe source repo (gsd-benchmark / NetApp-GSD-Recipe). Required unless this workspace is that clone. The plugin does not reimplement install.sh."
+        }
+      }
+    }
+  }
+}

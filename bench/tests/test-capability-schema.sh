@@ -159,7 +159,7 @@ python3 -c "
 import json
 d = json.load(open('$GEN_OUT'))
 by_id = {c['id']: c for c in d['capabilities']}
-for cid in ('recipe-prd-intake', 'recipe-plan-phase', 'fotw-observer', 'recipe-validate-tokens', 'recipe-bootstrap-knowledge', 'recipe-install-verify', 'recipe-run-phases', 'recipe-verify-feature', 'recipe-review-ship', 'recipe-settle', 'gsd-jira-sync', 'recipe-sync', 'recipe-pr-comment', 'recipe-install', 'recipe-observe', 'recipe-create-epic', 'recipe-create-phase-tasks', 'recipe-report-issue', 'recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status', 'recipe-workspace', 'recipe-update', 'recipe-help'):
+for cid in ('recipe-prd-intake', 'recipe-plan-phase', 'fotw-observer', 'recipe-validate-tokens', 'recipe-bootstrap-knowledge', 'recipe-install-verify', 'recipe-run-phases', 'recipe-verify-feature', 'recipe-review-ship', 'recipe-settle', 'gsd-jira-sync', 'recipe-sync', 'recipe-pr-comment', 'recipe-install', 'recipe-observe', 'recipe-create-epic', 'recipe-create-phase-tasks', 'recipe-report-issue', 'recipe-grill', 'recipe-tdd', 'recipe-new-project', 'recipe-onboard', 'recipe-start', 'recipe-status', 'recipe-workspace', 'recipe-update', 'recipe-help'):
     assert by_id[cid]['staged'] is False, f'{cid} should NOT be staged in this scratch target'
 "
 check "generate-capability correctly reports staged=false for absent capabilities" "$?"
@@ -170,9 +170,9 @@ import json
 d = json.load(open('$GEN_OUT'))
 ids = [c['id'] for c in d['capabilities']]
 assert len(ids) == len(set(ids)), 'duplicate capability ids'
-assert len(ids) == 29, f'expected 29 catalog entries, got {len(ids)}'
+assert len(ids) == 31, f'expected 31 catalog entries, got {len(ids)}'
 "
-check "generate-capability emits exactly 29 catalog entries with unique ids" "$?"
+check "generate-capability emits exactly 31 catalog entries with unique ids" "$?"
 
 # 22. task_id values match BACKLOG.md's task table
 python3 -c "
@@ -201,6 +201,9 @@ assert by_id['recipe-observe']['task_id'] == 'TASK-032'
 assert by_id['recipe-create-epic']['task_id'] == 'TASK-033'
 assert by_id['recipe-create-phase-tasks']['task_id'] == 'TASK-034'
 assert by_id['recipe-report-issue']['task_id'] == 'TASK-062'
+assert by_id['recipe-grill']['task_id'] == 'TASK-063'
+assert by_id['recipe-tdd']['task_id'] == 'TASK-063'
+assert by_id['recipe-tdd']['kind'] == 'agent-skill'
 assert by_id['recipe-new-project']['task_id'] == 'TASK-036'
 assert by_id['recipe-onboard']['task_id'] == 'TASK-037'
 assert by_id['recipe-start']['task_id'] == 'TASK-056'

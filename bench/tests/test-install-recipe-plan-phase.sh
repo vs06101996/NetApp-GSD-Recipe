@@ -72,6 +72,13 @@ grep -qi "soft.*gate\|soft warn-and-confirm" "$STAGED" && rc=0 || rc=$?
 check "staged skill documents the compliance check as a soft warn-and-confirm gate" "$rc"
 grep -qi "never fill\|never fill or fabricate" "$STAGED" && rc=0 || rc=$?
 check "staged skill disclaims filling/fabricating the Prerequisites table itself" "$rc"
+grep -q "Run the grill internally in Cursor Plan mode" "$STAGED" && rc=0 || rc=$?
+check "staged skill runs grilling internally in Cursor Plan mode" "$rc"
+grep -q "dispatch the separate.*recipe-grill" "$STAGED" && rc=0 || rc=$?
+check "staged skill does not expose the accuracy pass as a second command" "$rc"
+grep -q "operator declines further questions" "$STAGED" && \
+  grep -q "warn and continue to step 3" "$STAGED" && rc=0 || rc=$?
+check "staged skill remains fail-open if internal grilling cannot complete" "$rc"
 grep -q "depends_on" "$STAGED" && rc=0 || rc=$?
 check "staged skill references the non-blocking depends_on reminder" "$rc"
 grep -q "touches" "$STAGED" && rc=0 || rc=$?

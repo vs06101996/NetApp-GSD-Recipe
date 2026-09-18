@@ -396,16 +396,18 @@ Add to `.planning/config.json` (or workstream config):
 ```json
 {
   "agent_skills": {
-    "gsd-planner": ["skills/recipe-planning-policy"]
+    "gsd-planner": ["skills/recipe-planning-policy", "skills/recipe-tdd"],
+    "gsd-executor": ["skills/recipe-tdd"],
+    "gsd-code-reviewer": ["skills/recipe-two-axis-review"]
   }
 }
 ```
 
-Every listed path must be a directory actually staged with a `SKILL.md`; the
-current bundle stages only `skills/recipe-planning-policy` for this mechanism.
+Every listed path must be a directory actually staged with a `SKILL.md`.
 The installer prints but never auto-edits this GSD-owned config. Merge the
 snippet into `.planning/config.json`, preserve existing keys, restart the
-Agent, then run `gsd-surface status` and confirm the planner lists the policy.
+Agent, then run `gsd-surface status` and confirm the planner lists the policy
+and TDD adapter. Do not install the full mattpocock/skills pack.
 
 ---
 
@@ -413,7 +415,7 @@ Agent, then run `gsd-surface status` and confirm the planner lists the policy.
 
 | Action | Mechanism |
 |--------|-----------|
-| Upgrade recipe | **`recipe-update`** (TASK-058, planned) — restage from `recipe_source` without uninstall; until then: re-run `install-recipe-to-target.sh` / `install.sh` (idempotent restage) or `gsd capability update gsd-recipe` when capability install exists |
+| Upgrade recipe | **`recipe-update`** (TASK-058) or Cursor plugin **Prefill recipe-update** (TASK-064) — restage from `recipe_source` without uninstall. First install remains `install-recipe-to-target.sh` or plugin **Install into this workspace** (same bash). |
 | Remove recipe | `gsd capability remove gsd-recipe --purge-data` or `install.sh --uninstall` via ledger |
 | Preserve human data | `code_base_details/`, `.knowledge/` (review before delete) |
 
